@@ -42,7 +42,9 @@ Configuration is read from the environment and validated at start-up:
 | `AUTH_RATE_LIMIT_PER_MINUTE`, `API_RATE_LIMIT_PER_MINUTE` | In-process rate limits |
 
 `PUBLIC_API_URL` and `WEB_APP_URL` must use HTTPS unless they point at
-localhost. Registered OAuth callback URLs must match exactly.
+localhost. Registered OAuth callback URLs must match exactly. The web frontend
+and the API must be same-site (for example `app.example.com` and
+`api.example.com`): the session cookie is `SameSite=Lax`, not `None`.
 
 The current slice implements accounts and authentication: OAuth login, sessions,
 `GET /api/v1/me`, session listing and revocation, and plan entitlements. The
