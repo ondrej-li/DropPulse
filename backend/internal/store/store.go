@@ -42,6 +42,7 @@ type rowScanner interface {
 
 const userColumns = `
 	u.id::text,
+	coalesce(u.username, ''),
 	coalesce(u.email, ''),
 	u.email_verified,
 	coalesce(u.display_name, ''),
@@ -65,6 +66,7 @@ func scanUser(row rowScanner) (domain.User, error) {
 	)
 	if err := row.Scan(
 		&user.ID,
+		&user.Username,
 		&user.Email,
 		&user.EmailVerified,
 		&user.DisplayName,

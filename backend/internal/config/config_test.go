@@ -127,6 +127,92 @@ func TestLoadRejectsMalformedAdminEmail(t *testing.T) {
 	}
 }
 
+func TestLoadSingleUserDefaults(t *testing.T) {
+	env := baseEnv()
+	env["SINGLE_USER_MODE"] = "true"
+	env["PORT"] = "8090"
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SingleUserName != "admin" {
+		t.Fatalf("SingleUserName = %q", cfg.SingleUserName)
+	}
+	if got := cfg.WebAppURL.String(); got != "http://localhost:8090" {
+		t.Fatalf("WebAppURL = %q, want the API origin", got)
+	}
+	for _, origin := range []string{"http://localhost:8090", "http://127.0.0.1:8090", "http://[::1]:8090"} {
+		if !cfg.OriginAllowed(origin) {
+			t.Errorf("loopback origin %q is not allowed", origin)
+		}
+	}
+	if cfg.OriginAllowed("http://evil.example") {
+		t.Fatal("non-loopback origin was allowed")
+	}
+}
+
+func TestLoadSingleUserRequiresLoopback(t *testing.T) {
+	env := baseEnv()
+	env["SINGLE_USER_MODE"] = "true"
+	env["BIND_ADDR"] = "0.0.0.0"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("single-user mode on a public listener must be rejected")
+	}
+}
+
+func TestLoadRejectsBadSingleUserName(t *testing.T) {
+	env := baseEnv()
+	env["SINGLE_USER_MODE"] = "true"
+	env["SINGLE_USER_NAME"] = "not a user"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("invalid single-user name must be rejected")
+	}
+}
+
+func TestLoadNotificationConfig(t *testing.T) {
+	env := baseEnv()
+	env["SINGLE_USER_MODE"] = "true"
+	env["NOTIFICATION_EMAIL"] = "alerts@example.com"
+	env["SMTP_FROM"] = "agent@example.com"
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.NotificationEmail != "alerts@example.com" || cfg.SMTPFrom != "agent@example.com" {
+		t.Fatalf("notification config = %q / %q", cfg.NotificationEmail, cfg.SMTPFrom)
+	}
+	if cfg.SendmailPath != "/usr/sbin/sendmail" {
+		t.Fatalf("SendmailPath = %q", cfg.SendmailPath)
+	}
+}
+
+func TestLoadRejectsNotificationsOutsideSingleUser(t *testing.T) {
+	env := baseEnv()
+	env["NOTIFICATION_EMAIL"] = "alerts@example.com"
+	env["SMTP_FROM"] = "agent@example.com"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("notifications outside single-user mode must be rejected")
+	}
+}
+
+func TestLoadRejectsNotificationWithoutSender(t *testing.T) {
+	env := baseEnv()
+	env["SINGLE_USER_MODE"] = "true"
+	env["NOTIFICATION_EMAIL"] = "alerts@example.com"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("notification recipient without a sender must be rejected")
+	}
+}
+
+func TestLoadRejectsRelativeSendmailPath(t *testing.T) {
+	env := baseEnv()
+	env["SINGLE_USER_MODE"] = "true"
+	env["SENDMAIL_PATH"] = "sendmail"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("a relative sendmail path must be rejected")
+	}
+}
+
 func TestProviderNamesStable(t *testing.T) {
 	env := baseEnv()
 	env["FACEBOOK_CLIENT_ID"] = "fb-id"

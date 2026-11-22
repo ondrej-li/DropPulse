@@ -8,12 +8,14 @@ import (
 )
 
 type meResponse struct {
-	User         domain.User         `json:"user"`
-	Plan         planResponse        `json:"plan"`
-	Entitlements domain.Entitlements `json:"entitlements"`
-	Usage        usageResponse       `json:"usage"`
-	Session      sessionResponse     `json:"session"`
-	Providers    []string            `json:"providers"`
+	User                 domain.User         `json:"user"`
+	Plan                 planResponse        `json:"plan"`
+	Entitlements         domain.Entitlements `json:"entitlements"`
+	Usage                usageResponse       `json:"usage"`
+	Session              *sessionResponse    `json:"session,omitempty"`
+	Providers            []string            `json:"providers"`
+	SingleUser           bool                `json:"single_user"`
+	NotificationsEnabled bool                `json:"notifications_enabled"`
 }
 
 type planResponse struct {
@@ -44,6 +46,25 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		s.unauthenticated(w, r)
 		return
 	}
+	if principal.AuthKind == "local" {
+		active, err := s.events.CountActive(r.Context(), principal.User.ID)
+		if err != nil {
+			s.logger.Error("count active events", "err", err, "user_id", principal.User.ID, "request_id", requestIDFrom(r.Context()))
+			internalError(w)
+			return
+		}
+		writeJSON(w, http.StatusOK, meResponse{
+			User:                 principal.User,
+			Plan:                 planResponse{Code: principal.Entitlements.PlanCode},
+			Entitlements:         principal.Entitlements,
+			Usage:                usageResponse{ActiveWatches: active},
+			Providers:            []string{},
+			SingleUser:           true,
+			NotificationsEnabled: s.cfg.NotificationEmail != "",
+		})
+		return
+	}
+	session := sessionForResponse(principal.Session, principal.Session.ID)
 	writeJSON(w, http.StatusOK, meResponse{
 		User:         principal.User,
 		Plan:         planResponse{Code: principal.Entitlements.PlanCode},
@@ -55,7 +76,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 			AISetupPreviewsToday: 0,
 			AIChecksToday:        0,
 		},
-		Session:   sessionForResponse(principal.Session, principal.Session.ID),
+		Session:   &session,
 		Providers: s.auth.Providers(),
 	})
 }
