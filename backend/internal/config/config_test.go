@@ -27,6 +27,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.Port != "8080" {
 		t.Fatalf("Port = %q", cfg.Port)
 	}
+	if cfg.BindAddr != "127.0.0.1" {
+		t.Fatalf("BindAddr = %q, want loopback by default", cfg.BindAddr)
+	}
 	if cfg.CookieSecure {
 		t.Fatal("local http development must not set Secure cookies")
 	}
@@ -62,6 +65,14 @@ func TestLoadSecureOrigins(t *testing.T) {
 	}
 	if !cfg.OriginAllowed("https://app.example.com") {
 		t.Fatal("web origin missing")
+	}
+}
+
+func TestLoadRejectsInvalidBindAddr(t *testing.T) {
+	env := baseEnv()
+	env["BIND_ADDR"] = "localhost"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("BIND_ADDR must be an IP address")
 	}
 }
 

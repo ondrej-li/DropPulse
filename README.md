@@ -21,15 +21,16 @@ cd backend
 DATABASE_URL='postgres://localhost/droppulse?sslmode=disable' go run ./cmd/server
 ```
 
-It listens on `:8080` unless `PORT` is set. `GET /healthz` answers with
-`{"status":"ok"}`. All product routes require a session; the only public routes
-are `/healthz` and the OAuth start/callback endpoints.
+It listens on `127.0.0.1:8080` unless `BIND_ADDR` or `PORT` is set. `GET /healthz`
+answers with `{"status":"ok"}`. All product routes require a session; the only
+public routes are `/healthz` and the OAuth start/callback endpoints.
 
 Configuration is read from the environment and validated at start-up:
 
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | Required Postgres connection string |
+| `BIND_ADDR` | Address to bind (default `127.0.0.1`) |
 | `PUBLIC_API_URL` | Public origin of this API (default `http://localhost:8080`); its `/api/v1/auth/<provider>/callback` paths are the OAuth redirect URIs |
 | `WEB_APP_URL` | Frontend origin users are redirected to after login (default `http://localhost:8000`) |
 | `ALLOWED_ORIGINS` | Exact comma-separated CORS origins; defaults to `WEB_APP_URL`. Wildcards are rejected |
@@ -51,6 +52,17 @@ The current slice implements accounts and authentication: OAuth login, sessions,
 ticket/event/watch API, scheduler, plugins and notifications are not implemented
 yet. Provenance, design and the phased plan are in
 [`backend/docs/`](backend/docs/).
+
+The default loopback bind keeps a development instance unreachable from
+outside the host. Reach it through an SSH tunnel from your own machine:
+
+```sh
+ssh -N -L 8080:127.0.0.1:8080 <user>@<host>
+curl http://localhost:8080/healthz
+```
+
+Set `BIND_ADDR=0.0.0.0` only when a reverse proxy or firewall policy requires a
+non-loopback listener.
 
 The frontend is static — open `frontend/index.html` in a browser, or serve the
 directory:

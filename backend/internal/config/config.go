@@ -15,6 +15,7 @@ import (
 
 const (
 	defaultPort              = "8080"
+	defaultBindAddr          = "127.0.0.1"
 	defaultPublicAPIURL      = "http://localhost:8080"
 	defaultWebAppURL         = "http://localhost:8000"
 	defaultSessionIdle       = 30 * 24 * time.Hour
@@ -43,6 +44,7 @@ type ProviderConfig struct {
 type Config struct {
 	Environment string
 	Port        string
+	BindAddr    string
 
 	DatabaseURL string
 	DBMaxConns  int32
@@ -89,6 +91,7 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	cfg := Config{
 		Environment:        getDefault("APP_ENV", "development"),
 		Port:               getDefault("PORT", defaultPort),
+		BindAddr:           getDefault("BIND_ADDR", defaultBindAddr),
 		DatabaseURL:        get("DATABASE_URL"),
 		RunMigrations:      true,
 		LogLevel:           slog.LevelInfo,
@@ -108,6 +111,9 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	}
 	if err := validatePort(cfg.Port); err != nil {
 		return Config{}, err
+	}
+	if _, err := netip.ParseAddr(cfg.BindAddr); err != nil {
+		return Config{}, errors.New("BIND_ADDR must be an IP address such as 127.0.0.1")
 	}
 
 	var err error
