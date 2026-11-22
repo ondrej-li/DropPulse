@@ -99,6 +99,13 @@ Intervals are 60 to 86400 seconds (default 300). The scheduler runs every 15
 seconds and checks whatever is due. The UI is served at `/` and refreshes every
 15 seconds.
 
+The UI creates events through a three-step wizard: choose a provider template,
+fill in template-specific details and watch settings, then choose a notification
+channel. The template catalogue lives in `frontend/index.html` and currently has
+one placeholder, `Example.com`; template management will move it server-side for
+higher tiers. Email is the only notification channel. A theme control switches
+between Automatic, Light and Dark and stores the choice in `localStorage`.
+
 ### Email
 
 When `NOTIFICATION_EMAIL` and `SMTP_FROM` are set, the backend sends one plain

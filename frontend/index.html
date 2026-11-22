@@ -3,10 +3,28 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <title>DropPulse</title>
+    <script>
+      // Apply the saved theme before the first paint so a dark-mode reload does
+      // not flash a light page. "auto" follows the operating system.
+      (() => {
+        "use strict";
+        try {
+          const saved = localStorage.getItem("droppulse-theme");
+          const preference = saved === "light" || saved === "dark" ? saved : "auto";
+          const dark = preference === "dark" ||
+            (preference === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (_) {
+          document.documentElement.dataset.theme =
+            window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+      })();
+    </script>
     <style>
       :root {
-        color-scheme: light dark;
+        color-scheme: light;
         --bg: #f4f5f7;
         --panel: #ffffff;
         --text: #171920;
@@ -26,26 +44,25 @@
         --ok-text: #116329;
       }
 
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #101216;
-          --panel: #181b21;
-          --text: #eef1f5;
-          --muted: #9aa3b0;
-          --line: #2a2f38;
-          --accent: #4c8dff;
-          --accent-text: #07101f;
-          --on-bg: #143a22;
-          --on-text: #79d995;
-          --off-bg: #23272f;
-          --off-text: #aab2be;
-          --new-bg: #3a2d0b;
-          --new-text: #f0c766;
-          --danger: #ff8a80;
-          --danger-bg: #3a1614;
-          --ok-bg: #143a22;
-          --ok-text: #79d995;
-        }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #101216;
+        --panel: #181b21;
+        --text: #eef1f5;
+        --muted: #9aa3b0;
+        --line: #2a2f38;
+        --accent: #4c8dff;
+        --accent-text: #07101f;
+        --on-bg: #143a22;
+        --on-text: #79d995;
+        --off-bg: #23272f;
+        --off-text: #aab2be;
+        --new-bg: #3a2d0b;
+        --new-text: #f0c766;
+        --danger: #ff8a80;
+        --danger-bg: #3a1614;
+        --ok-bg: #143a22;
+        --ok-text: #79d995;
       }
 
       * { box-sizing: border-box; }
@@ -82,6 +99,40 @@
         margin: 4px 0 0;
         color: var(--muted);
         font-size: 0.9rem;
+      }
+
+      .header-tools {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+        flex: none;
+      }
+
+      .theme-switch {
+        display: inline-flex;
+        gap: 2px;
+        padding: 2px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--panel);
+      }
+
+      button.theme-choice {
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        padding: 5px 9px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      button.theme-choice[aria-pressed="true"] {
+        background: var(--bg);
+        color: var(--text);
+        box-shadow: inset 0 0 0 1px var(--line);
       }
 
       .badge {
@@ -127,7 +178,7 @@
 
       .section-head {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 14px;
@@ -145,11 +196,9 @@
         font-size: 0.84rem;
       }
 
-      .grid {
+      .stack {
         display: grid;
-        grid-template-columns: minmax(150px, 1.1fr) minmax(220px, 2fr) 130px auto;
-        gap: 12px;
-        align-items: end;
+        gap: 14px;
       }
 
       label {
@@ -166,7 +215,6 @@
         flex-direction: row;
         align-items: center;
         gap: 7px;
-        padding-bottom: 9px;
         color: var(--text);
       }
 
@@ -187,14 +235,6 @@
       button:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
-      }
-
-      .form-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 14px;
       }
 
       button {
@@ -221,9 +261,23 @@
         border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
       }
 
+      button.icon-button {
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        padding: 2px 8px;
+        font-size: 1.25rem;
+        line-height: 1;
+      }
+
+      button.icon-button:hover {
+        border-color: var(--line);
+        color: var(--text);
+      }
+
       button:disabled {
         opacity: 0.55;
-        cursor: wait;
+        cursor: not-allowed;
       }
 
       .btn-sm {
@@ -232,8 +286,11 @@
       }
 
       .muted { color: var(--muted); }
+      .small { font-size: 0.82rem; }
 
       .form-status {
+        min-height: 1.2em;
+        margin: 10px 0 0;
         font-size: 0.84rem;
       }
 
@@ -334,11 +391,258 @@
       .notify-on { color: var(--ok-text); font-weight: 600; }
       .notify-off { color: var(--muted); font-weight: 600; }
 
+      dialog.dialog {
+        width: min(680px, calc(100vw - 32px));
+        max-height: calc(100vh - 32px);
+        margin: auto;
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        color: var(--text);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      }
+
+      dialog.dialog[open] {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .dialog form {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      dialog.dialog::backdrop {
+        background: rgba(8, 10, 14, 0.58);
+      }
+
+      .dialog-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px 0;
+      }
+
+      .dialog-head h2 {
+        font-size: 1.12rem;
+      }
+
+      .dialog-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 18px 22px;
+        overflow-y: auto;
+      }
+
+      .dialog-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 22px 20px;
+        border-top: 1px solid var(--line);
+      }
+
+      .step-label {
+        margin: 0 0 3px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .steps {
+        display: flex;
+        gap: 8px;
+        margin: 0 0 18px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .steps li {
+        flex: 1;
+        padding: 7px 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .steps li[aria-current="step"] {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        color: var(--text);
+      }
+
+      .steps li.done {
+        border-color: color-mix(in srgb, var(--ok-text) 30%, var(--line));
+        color: var(--ok-text);
+      }
+
+      .template-picker {
+        margin-top: 14px;
+      }
+
+      .template-list {
+        margin-top: 8px;
+        max-height: 230px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+      }
+
+      button.template-option {
+        display: block;
+        width: 100%;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        font-weight: 400;
+      }
+
+      button.template-option + button.template-option {
+        border-top: 1px solid var(--line);
+      }
+
+      button.template-option:hover,
+      button.template-option.active {
+        background: var(--bg);
+      }
+
+      button.template-option[aria-selected="true"] {
+        box-shadow: inset 3px 0 0 var(--accent);
+      }
+
+      .option-title {
+        display: block;
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+
+      .option-meta {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .template-card {
+        margin-top: 14px;
+        padding: 13px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--bg);
+      }
+
+      .template-card h3 {
+        margin: 1px 0 4px;
+        font-size: 0.92rem;
+      }
+
+      .template-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.83rem;
+      }
+
+      .template-provider {
+        color: var(--muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .template-url {
+        margin-top: 7px !important;
+        overflow-wrap: anywhere;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.76rem !important;
+      }
+
+      .choice {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--bg);
+        color: var(--text);
+        font-weight: 400;
+      }
+
+      .choice input {
+        margin-top: 4px;
+      }
+
+      .choice strong {
+        display: block;
+        font-size: 0.9rem;
+      }
+
+      .choice small {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .review {
+        margin-top: 14px;
+        padding: 13px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .review h3 {
+        margin: 0;
+        font-size: 0.88rem;
+      }
+
+      .review dl {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 6px 12px;
+        margin: 10px 0 0;
+      }
+
+      .review dt {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .review dd {
+        margin: 0;
+        font-size: 0.84rem;
+        overflow-wrap: anywhere;
+      }
+
       @media (max-width: 760px) {
         .wrap { padding-top: 24px; }
-        .grid { grid-template-columns: 1fr; }
-        label.check { padding-bottom: 0; }
-        header { align-items: center; }
+        header { flex-direction: column; }
+        .header-tools { justify-content: space-between; width: 100%; }
+        .steps { flex-direction: column; }
+        .dialog-head,
+        .dialog-actions { padding-left: 16px; padding-right: 16px; }
+        .dialog-body { padding: 16px; }
+        .review dl { grid-template-columns: 1fr; gap: 2px; }
+        .review dd + dt { margin-top: 8px; }
       }
     </style>
   </head>
@@ -349,43 +653,25 @@
           <h1>DropPulse</h1>
           <p class="sub">Ticket availability, single-user proof of concept. HTTP 200 means the event is on.</p>
         </div>
-        <span class="badge">localhost only</span>
+        <div class="header-tools">
+          <div class="theme-switch" role="group" aria-label="Colour theme">
+            <button type="button" class="theme-choice" data-theme-choice="auto" aria-pressed="true">Automatic</button>
+            <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">Light</button>
+            <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">Dark</button>
+          </div>
+          <span class="badge">localhost only</span>
+        </div>
       </header>
 
       <p id="notice" class="notice" hidden></p>
 
-      <section class="card" aria-labelledby="add-title">
-        <div class="section-head">
-          <h2 id="add-title">Add an event</h2>
-          <p>Only an HTTPS status page is checked.</p>
-        </div>
-        <form id="event-form" novalidate>
-          <div class="grid">
-            <label>Name
-              <input id="name" name="name" type="text" maxlength="120" required placeholder="Saturday show">
-            </label>
-            <label>HTTPS URL
-              <input id="url" name="url" type="url" required placeholder="https://tickets.example/show">
-            </label>
-            <label>Every (seconds)
-              <input id="interval" name="interval" type="number" min="60" max="86400" step="1" value="300" required>
-            </label>
-            <label class="check">
-              <input id="enabled" name="enabled" type="checkbox" checked> Enabled
-            </label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" id="submit">Add event</button>
-            <button type="button" id="cancel" class="secondary" hidden>Cancel</button>
-            <span id="form-status" class="form-status muted" role="status"></span>
-          </div>
-        </form>
-      </section>
-
       <section class="card" aria-labelledby="events-title">
         <div class="section-head">
-          <h2 id="events-title">Events</h2>
-          <p id="summary"></p>
+          <div>
+            <h2 id="events-title">Events</h2>
+            <p id="summary">Loading…</p>
+          </div>
+          <button type="button" id="add-event">Add event</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -410,27 +696,227 @@
       </footer>
     </div>
 
+    <dialog id="edit-dialog" class="dialog" aria-labelledby="edit-title">
+      <div class="dialog-head">
+        <h2 id="edit-title">Edit event</h2>
+        <button type="button" class="icon-button" data-close-dialog="edit-dialog" aria-label="Close edit dialog">×</button>
+      </div>
+      <form id="edit-form" novalidate>
+        <div class="dialog-body">
+          <div class="stack">
+            <label>Name
+              <input id="edit-name" type="text" maxlength="120" required>
+            </label>
+            <label>HTTPS URL
+              <input id="edit-url" type="url" required>
+            </label>
+            <label>Check every (seconds)
+              <input id="edit-interval" type="number" min="60" max="86400" step="1" required>
+            </label>
+            <label class="check">
+              <input id="edit-enabled" type="checkbox"> Watch is active
+            </label>
+          </div>
+          <p id="edit-status" class="form-status muted" role="status"></p>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" data-close-dialog="edit-dialog">Cancel</button>
+          <button type="submit" id="edit-submit">Save changes</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="wizard" class="dialog" aria-labelledby="wizard-title">
+      <div class="dialog-head">
+        <div>
+          <p class="step-label" id="wizard-progress">Step 1 of 3</p>
+          <h2 id="wizard-title">Choose a provider template</h2>
+        </div>
+        <button type="button" class="icon-button" data-close-dialog="wizard" aria-label="Close add-event wizard">×</button>
+      </div>
+      <form id="wizard-form" novalidate>
+        <div class="dialog-body">
+          <ol class="steps" aria-label="Wizard steps">
+            <li data-step-marker="1" aria-current="step">Template</li>
+            <li data-step-marker="2">Details</li>
+            <li data-step-marker="3">Notification</li>
+          </ol>
+
+          <section data-step="1">
+            <p class="muted small">Pick the provider this watch is for. A template defines what is checked and which URL it uses. Free-form watches are not available yet.</p>
+            <div class="template-picker">
+              <label for="template-search">Provider template
+                <input id="template-search" type="text" autocomplete="off" spellcheck="false"
+                  placeholder="Search by provider or template"
+                  role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
+                  aria-controls="template-list" aria-expanded="false">
+              </label>
+              <div id="template-list" class="template-list" role="listbox" aria-label="Provider templates"></div>
+            </div>
+            <p id="template-empty" class="muted small" hidden>No templates match that search.</p>
+            <div id="template-selected" hidden></div>
+          </section>
+
+          <section data-step="2" hidden>
+            <p class="muted small">The template fixes the URL. Add any details it asks for and review the watch settings.</p>
+            <div id="template-summary"></div>
+            <div id="template-fields" class="stack"></div>
+            <p id="template-no-fields" class="muted small" hidden>This template needs no extra details.</p>
+            <div class="stack">
+              <label>Watch name
+                <input id="watch-name" type="text" maxlength="120" required>
+              </label>
+              <label>Check every (seconds)
+                <input id="watch-interval" type="number" min="60" max="86400" step="1" required>
+              </label>
+              <label class="check">
+                <input id="watch-enabled" type="checkbox" checked> Watch is active
+              </label>
+            </div>
+          </section>
+
+          <section data-step="3" hidden>
+            <p class="muted small">Choose how DropPulse should tell you when this event becomes available.</p>
+            <label class="choice">
+              <input type="radio" name="notification-channel" value="email" checked>
+              <span>
+                <strong>Email</strong>
+                <small id="email-channel-note">One message when the event goes from off to on.</small>
+              </span>
+            </label>
+            <div class="review">
+              <h3>Ready to create</h3>
+              <dl id="wizard-review"></dl>
+            </div>
+          </section>
+
+          <p id="wizard-status" class="form-status muted" role="status"></p>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="wizard-back" class="secondary" hidden>Back</button>
+          <button type="submit" id="wizard-next" disabled>Continue</button>
+        </div>
+      </form>
+    </dialog>
+
     <script>
       (() => {
         "use strict";
+
+        // UI-side catalogue for now. When templates become manageable (and tier
+        // aware), this should move behind an API and be fetched here instead.
+        const TEMPLATES = Object.freeze([
+          Object.freeze({
+            id: "example-com",
+            provider: "Example.com",
+            title: "Example.com availability",
+            description: "Checks the example.com home page. HTTP 200 means the event is available.",
+            url: "https://example.com/",
+            defaultInterval: 300,
+            fields: Object.freeze([]),
+          }),
+        ]);
+
+        const THEME_KEY = "droppulse-theme";
+        const WIZARD_TITLES = {
+          1: "Choose a provider template",
+          2: "Review the template",
+          3: "Choose how to be notified",
+        };
+        const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
+        let themePreference = "auto";
+        let noticeTimer = null;
 
         const els = {
           notice: document.getElementById("notice"),
           summary: document.getElementById("summary"),
           notifications: document.getElementById("notifications"),
           events: document.getElementById("events"),
-          form: document.getElementById("event-form"),
-          name: document.getElementById("name"),
-          url: document.getElementById("url"),
-          interval: document.getElementById("interval"),
-          enabled: document.getElementById("enabled"),
-          submit: document.getElementById("submit"),
-          cancel: document.getElementById("cancel"),
-          formStatus: document.getElementById("form-status"),
+          addEvent: document.getElementById("add-event"),
+
+          editDialog: document.getElementById("edit-dialog"),
+          editForm: document.getElementById("edit-form"),
+          editName: document.getElementById("edit-name"),
+          editUrl: document.getElementById("edit-url"),
+          editInterval: document.getElementById("edit-interval"),
+          editEnabled: document.getElementById("edit-enabled"),
+          editSubmit: document.getElementById("edit-submit"),
+          editStatus: document.getElementById("edit-status"),
+
+          wizard: document.getElementById("wizard"),
+          wizardForm: document.getElementById("wizard-form"),
+          wizardTitle: document.getElementById("wizard-title"),
+          wizardProgress: document.getElementById("wizard-progress"),
+          wizardBack: document.getElementById("wizard-back"),
+          wizardNext: document.getElementById("wizard-next"),
+          wizardStatus: document.getElementById("wizard-status"),
+          templateSearch: document.getElementById("template-search"),
+          templateList: document.getElementById("template-list"),
+          templateEmpty: document.getElementById("template-empty"),
+          templateSelected: document.getElementById("template-selected"),
+          templateSummary: document.getElementById("template-summary"),
+          templateFields: document.getElementById("template-fields"),
+          templateNoFields: document.getElementById("template-no-fields"),
+          watchName: document.getElementById("watch-name"),
+          watchInterval: document.getElementById("watch-interval"),
+          watchEnabled: document.getElementById("watch-enabled"),
+          wizardReview: document.getElementById("wizard-review"),
+          emailChannelNote: document.getElementById("email-channel-note"),
         };
 
-        const state = { events: [], me: null, editing: null, loading: false };
-        let noticeTimer = null;
+        const state = {
+          events: [],
+          me: null,
+          editing: null,
+          loading: false,
+          wizard: {
+            step: 1,
+            template: null,
+            active: -1,
+            filtered: [],
+            draft: null,
+            creating: false,
+          },
+        };
+
+        function readThemePreference() {
+          try {
+            const saved = localStorage.getItem(THEME_KEY);
+            if (saved === "light" || saved === "dark") return saved;
+          } catch (_) {
+            /* storage is optional */
+          }
+          return "auto";
+        }
+
+        function applyTheme(preference, persist) {
+          themePreference = preference;
+          const dark = preference === "dark" ||
+            (preference === "auto" && themeMedia.matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+          if (persist) {
+            try { localStorage.setItem(THEME_KEY, preference); } catch (_) { /* ignore */ }
+          }
+          for (const button of document.querySelectorAll("[data-theme-choice]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.themeChoice === preference));
+          }
+        }
+
+        function initTheme() {
+          themePreference = readThemePreference();
+          applyTheme(themePreference, false);
+          for (const button of document.querySelectorAll("[data-theme-choice]")) {
+            button.addEventListener("click", () => applyTheme(button.dataset.themeChoice, true));
+          }
+          const followSystem = () => {
+            if (themePreference === "auto") applyTheme("auto", false);
+          };
+          if (typeof themeMedia.addEventListener === "function") {
+            themeMedia.addEventListener("change", followSystem);
+          } else if (typeof themeMedia.addListener === "function") {
+            themeMedia.addListener(followSystem);
+          }
+        }
 
         function api(path, options = {}) {
           const opts = { cache: "no-store", ...options };
@@ -459,9 +945,9 @@
           noticeTimer = setTimeout(() => { els.notice.hidden = true; }, isError ? 9000 : 4000);
         }
 
-        function setFormStatus(message, isError = false) {
-          els.formStatus.textContent = message;
-          els.formStatus.className = "form-status " + (isError ? "error-text" : "muted");
+        function setStatus(element, message, isError = false) {
+          element.textContent = message;
+          element.className = "form-status " + (isError ? "error-text" : "muted");
         }
 
         async function load() {
@@ -506,7 +992,7 @@
             const cell = document.createElement("td");
             cell.colSpan = 6;
             cell.className = "empty";
-            cell.textContent = "No events yet. Add one above.";
+            cell.textContent = "No events yet. Use Add event to create one from a provider template.";
             row.append(cell);
             els.events.replaceChildren(row);
             return;
@@ -644,27 +1130,420 @@
           return value + " " + unit + (value === 1 ? "" : "s") + (seconds >= 0 ? " ago" : " from now");
         }
 
-        function resetForm() {
-          state.editing = null;
-          els.form.reset();
-          els.interval.value = "300";
-          els.enabled.checked = true;
-          els.submit.textContent = "Add event";
-          els.cancel.hidden = true;
-          setFormStatus("");
+        function templateCard(template) {
+          const card = document.createElement("div");
+          card.className = "template-card";
+
+          const provider = document.createElement("p");
+          provider.className = "template-provider";
+          provider.textContent = template.provider;
+
+          const title = document.createElement("h3");
+          title.textContent = template.title;
+
+          const description = document.createElement("p");
+          description.textContent = template.description;
+
+          const url = document.createElement("p");
+          url.className = "template-url";
+          url.textContent = template.url;
+
+          card.append(provider, title, description, url);
+          return card;
         }
 
-        function startEdit(event) {
+        function filteredTemplates() {
+          const query = els.templateSearch.value.trim().toLowerCase();
+          if (!query) return TEMPLATES;
+          return TEMPLATES.filter((template) => {
+            const haystack = template.provider + " " + template.title + " " +
+              template.description + " " + template.url;
+            return haystack.toLowerCase().includes(query);
+          });
+        }
+
+        function renderTemplateOptions() {
+          const options = filteredTemplates();
+          state.wizard.filtered = options;
+          if (state.wizard.active >= options.length) {
+            state.wizard.active = options.length - 1;
+          }
+          els.templateList.replaceChildren();
+
+          if (!options.length) {
+            els.templateList.hidden = true;
+            els.templateEmpty.hidden = false;
+            els.templateSearch.setAttribute("aria-expanded", "false");
+            els.templateSearch.removeAttribute("aria-activedescendant");
+            return;
+          }
+
+          els.templateList.hidden = false;
+          els.templateEmpty.hidden = true;
+          els.templateSearch.setAttribute("aria-expanded", "true");
+
+          for (const [index, template] of options.entries()) {
+            const option = document.createElement("button");
+            option.type = "button";
+            option.className = "template-option";
+            option.id = "template-option-" + template.id;
+            option.dataset.templateId = template.id;
+            option.setAttribute("role", "option");
+            option.setAttribute("aria-selected", String(
+              state.wizard.template !== null && state.wizard.template.id === template.id,
+            ));
+            if (index === state.wizard.active) {
+              option.classList.add("active");
+              els.templateSearch.setAttribute("aria-activedescendant", option.id);
+            }
+
+            const title = document.createElement("span");
+            title.className = "option-title";
+            title.textContent = template.provider + " — " + template.title;
+
+            const meta = document.createElement("span");
+            meta.className = "option-meta";
+            meta.textContent = template.description;
+
+            option.append(title, meta);
+            els.templateList.append(option);
+          }
+
+          if (state.wizard.active < 0) {
+            els.templateSearch.removeAttribute("aria-activedescendant");
+          }
+        }
+
+        function renderSelectedTemplate() {
+          if (!state.wizard.template) {
+            els.templateSelected.replaceChildren();
+            els.templateSelected.hidden = true;
+            return;
+          }
+          els.templateSelected.replaceChildren(templateCard(state.wizard.template));
+          els.templateSelected.hidden = false;
+        }
+
+        function renderDetailsStep(resetFields = false) {
+          const template = state.wizard.template;
+          if (!template) {
+            els.templateSummary.replaceChildren();
+            els.templateFields.replaceChildren();
+            els.templateNoFields.hidden = true;
+            return;
+          }
+
+          const existing = {};
+          if (!resetFields) {
+            for (const input of els.templateFields.querySelectorAll("input")) {
+              existing[input.name] = input.value;
+            }
+          }
+
+          els.templateSummary.replaceChildren(templateCard(template));
+          els.templateFields.replaceChildren();
+
+          const fields = Array.isArray(template.fields) ? template.fields : [];
+          for (const field of fields) {
+            const label = document.createElement("label");
+            label.textContent = field.label;
+
+            const input = document.createElement("input");
+            input.type = field.type || "text";
+            input.id = "template-field-" + field.name;
+            input.name = field.name;
+            input.value = Object.prototype.hasOwnProperty.call(existing, field.name)
+              ? existing[field.name]
+              : (field.value || "");
+            input.maxLength = field.maxLength || 200;
+            if (field.placeholder) input.placeholder = field.placeholder;
+            if (field.required) input.required = true;
+
+            label.append(input);
+            els.templateFields.append(label);
+          }
+
+          els.templateNoFields.hidden = fields.length > 0;
+        }
+
+        function selectTemplate(id) {
+          const template = TEMPLATES.find((candidate) => candidate.id === id);
+          if (!template) return;
+
+          state.wizard.template = template;
+          state.wizard.active = -1;
+          state.wizard.draft = null;
+          els.templateSearch.value = template.provider;
+          els.watchName.value = template.title;
+          els.watchInterval.value = String(template.defaultInterval);
+          els.watchEnabled.checked = true;
+          els.wizardNext.disabled = false;
+
+          renderTemplateOptions();
+          renderSelectedTemplate();
+          renderDetailsStep(true);
+          setStatus(els.wizardStatus, "");
+          els.templateSearch.focus();
+        }
+
+        function buildTemplateURL(template, values) {
+          let url = template.url;
+          for (const [name, value] of Object.entries(values)) {
+            url = url.split("{" + name + "}").join(encodeURIComponent(value));
+          }
+          return url;
+        }
+
+        function validateDetails() {
+          const template = state.wizard.template;
+          if (!template) {
+            setStatus(els.wizardStatus, "Choose a provider template first.", true);
+            return null;
+          }
+
+          const name = els.watchName.value.trim();
+          if (!name) {
+            setStatus(els.wizardStatus, "Give the watch a name.", true);
+            els.watchName.focus();
+            return null;
+          }
+          if (Array.from(name).length > 120) {
+            setStatus(els.wizardStatus, "The watch name is too long.", true);
+            els.watchName.focus();
+            return null;
+          }
+
+          const interval = Number(els.watchInterval.value);
+          if (!Number.isInteger(interval) || interval < 60 || interval > 86400) {
+            setStatus(els.wizardStatus, "The interval must be a whole number from 60 to 86400 seconds.", true);
+            els.watchInterval.focus();
+            return null;
+          }
+
+          const values = {};
+          for (const field of template.fields || []) {
+            const input = document.getElementById("template-field-" + field.name);
+            const value = input ? input.value.trim() : "";
+            if (field.required && !value) {
+              setStatus(els.wizardStatus, "Enter " + String(field.label).toLowerCase() + ".", true);
+              if (input) input.focus();
+              return null;
+            }
+            values[field.name] = value;
+          }
+
+          const url = buildTemplateURL(template, values);
+          if (!/^https:\/\//i.test(url)) {
+            setStatus(els.wizardStatus, "The template did not produce an HTTPS URL.", true);
+            return null;
+          }
+
+          return {
+            name,
+            url,
+            check_interval_seconds: interval,
+            enabled: els.watchEnabled.checked,
+          };
+        }
+
+        function renderReview() {
+          const template = state.wizard.template;
+          const draft = state.wizard.draft;
+          if (!template || !draft) return;
+
+          // Email is the only channel the backend supports, so the selection is
+          // informational; the create payload does not carry a channel field.
+          const emailConfigured = Boolean(state.me && state.me.notifications_enabled);
+          els.emailChannelNote.textContent = emailConfigured
+            ? "One message when the event goes from off to on."
+            : "Email is not configured on the server; this watch will be created without notifications.";
+
+          const rows = [
+            ["Template", template.provider + " — " + template.title],
+            ["Watch name", draft.name],
+            ["URL", draft.url],
+            ["Check every", every(draft.check_interval_seconds)],
+            ["Status", draft.enabled ? "Active" : "Paused"],
+            ["Notify", emailConfigured ? "Email" : "Email (not configured)"],
+          ];
+
+          const nodes = [];
+          for (const [term, value] of rows) {
+            const dt = document.createElement("dt");
+            dt.textContent = term;
+            const dd = document.createElement("dd");
+            dd.textContent = value;
+            nodes.push(dt, dd);
+          }
+          els.wizardReview.replaceChildren(...nodes);
+        }
+
+        function updateStepUI(step) {
+          els.wizardProgress.textContent = "Step " + step + " of 3";
+          els.wizardTitle.textContent = WIZARD_TITLES[step];
+
+          for (const marker of els.wizard.querySelectorAll("[data-step-marker]")) {
+            const number = Number(marker.dataset.stepMarker);
+            marker.classList.toggle("done", number < step);
+            if (number === step) {
+              marker.setAttribute("aria-current", "step");
+            } else {
+              marker.removeAttribute("aria-current");
+            }
+          }
+
+          els.wizardBack.hidden = step === 1;
+          els.wizardNext.textContent = step === 3 ? "Create watch" : "Continue";
+        }
+
+        function setStep(step, focus) {
+          state.wizard.step = step;
+          for (const section of els.wizard.querySelectorAll("[data-step]")) {
+            section.hidden = Number(section.dataset.step) !== step;
+          }
+          updateStepUI(step);
+          setStatus(els.wizardStatus, "");
+
+          if (step === 1) {
+            els.wizardNext.disabled = !state.wizard.template;
+            renderTemplateOptions();
+            if (focus) requestAnimationFrame(() => els.templateSearch.focus());
+            return;
+          }
+
+          els.wizardNext.disabled = false;
+          if (step === 2) {
+            renderDetailsStep();
+            if (focus) requestAnimationFrame(() => els.watchName.focus());
+          }
+          if (step === 3) {
+            renderReview();
+            if (focus) {
+              requestAnimationFrame(() => {
+                const radio = els.wizard.querySelector('input[name="notification-channel"]');
+                if (radio) radio.focus();
+              });
+            }
+          }
+        }
+
+        function resetWizard() {
+          state.wizard = {
+            step: 1,
+            template: null,
+            active: -1,
+            filtered: [],
+            draft: null,
+            creating: false,
+          };
+          els.wizardForm.reset();
+          els.templateSearch.value = "";
+          els.templateList.replaceChildren();
+          els.templateList.hidden = false;
+          els.templateEmpty.hidden = true;
+          els.templateSelected.replaceChildren();
+          els.templateSelected.hidden = true;
+          els.templateSummary.replaceChildren();
+          els.templateFields.replaceChildren();
+          els.templateNoFields.hidden = true;
+          els.watchName.value = "";
+          els.watchInterval.value = "300";
+          els.watchEnabled.checked = true;
+          els.wizardReview.replaceChildren();
+          setStatus(els.wizardStatus, "");
+          els.wizardNext.disabled = true;
+          els.wizardNext.textContent = "Continue";
+          els.wizardBack.hidden = true;
+          updateStepUI(1);
+        }
+
+        function openWizard() {
+          resetWizard();
+          els.wizard.showModal();
+          renderTemplateOptions();
+          setStep(1, true);
+        }
+
+        function openEdit(event) {
           state.editing = event.id;
-          els.name.value = event.name;
-          els.url.value = event.url;
-          els.interval.value = String(event.check_interval_seconds);
-          els.enabled.checked = event.enabled;
-          els.submit.textContent = "Save changes";
-          els.cancel.hidden = false;
-          setFormStatus("Editing " + event.name);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          els.name.focus();
+          els.editName.value = event.name;
+          els.editUrl.value = event.url;
+          els.editInterval.value = String(event.check_interval_seconds);
+          els.editEnabled.checked = event.enabled;
+          setStatus(els.editStatus, "");
+          els.editDialog.showModal();
+          requestAnimationFrame(() => els.editName.focus());
+        }
+
+        function resetEdit() {
+          state.editing = null;
+          els.editForm.reset();
+          setStatus(els.editStatus, "");
+          els.editSubmit.disabled = false;
+          els.editSubmit.textContent = "Save changes";
+        }
+
+        function closeDialog(button) {
+          const dialog = document.getElementById(button.dataset.closeDialog);
+          if (dialog && dialog.open) dialog.close();
+        }
+
+        function advanceWizard() {
+          if (state.wizard.step === 1) {
+            if (!state.wizard.template) {
+              setStatus(els.wizardStatus, "Choose a provider template to continue.", true);
+              return;
+            }
+            setStep(2, true);
+            return;
+          }
+
+          if (state.wizard.step === 2) {
+            const draft = validateDetails();
+            if (!draft) return;
+            state.wizard.draft = draft;
+            setStep(3, true);
+            return;
+          }
+
+          if (state.wizard.step === 3) {
+            createEvent();
+          }
+        }
+
+        async function createEvent() {
+          if (state.wizard.creating) return;
+          const draft = state.wizard.draft;
+          if (!draft) {
+            setStep(2, true);
+            return;
+          }
+
+          state.wizard.creating = true;
+          els.wizardNext.disabled = true;
+          els.wizardNext.textContent = "Creating…";
+          setStatus(els.wizardStatus, "Creating the watch…");
+
+          try {
+            await api("/api/v1/events", {
+              method: "POST",
+              body: JSON.stringify(draft),
+            });
+            const emailConfigured = Boolean(state.me && state.me.notifications_enabled);
+            els.wizard.close();
+            showNotice(
+              emailConfigured
+                ? "Watch created. Its first check is due now."
+                : "Watch created, but email is not configured on the server; no notification will be sent.",
+              !emailConfigured,
+            );
+            await load();
+          } catch (err) {
+            state.wizard.creating = false;
+            setStatus(els.wizardStatus, err.message, true);
+            els.wizardNext.disabled = false;
+            els.wizardNext.textContent = "Create watch";
+          }
         }
 
         els.events.addEventListener("click", async (event) => {
@@ -675,7 +1554,7 @@
           if (!item) return;
 
           if (button.dataset.action === "edit") {
-            startEdit(item);
+            openEdit(item);
             return;
           }
 
@@ -684,7 +1563,6 @@
             button.disabled = true;
             try {
               await api("/api/v1/events/" + encodeURIComponent(id), { method: "DELETE" });
-              if (state.editing === id) resetForm();
               showNotice("Event deleted.");
               await load();
             } catch (err) {
@@ -710,59 +1588,116 @@
           }
         });
 
-        els.cancel.addEventListener("click", resetForm);
+        els.addEvent.addEventListener("click", openWizard);
 
-        els.form.addEventListener("submit", async (event) => {
+        els.wizard.addEventListener("close", resetWizard);
+
+        els.wizardForm.addEventListener("submit", (event) => {
           event.preventDefault();
+          advanceWizard();
+        });
+
+        els.wizardBack.addEventListener("click", () => {
+          if (state.wizard.step > 1) setStep(state.wizard.step - 1, true);
+        });
+
+        els.templateSearch.addEventListener("input", () => {
+          if (state.wizard.template && els.templateSearch.value !== state.wizard.template.provider) {
+            state.wizard.template = null;
+            state.wizard.draft = null;
+            renderSelectedTemplate();
+            els.wizardNext.disabled = true;
+          }
+          state.wizard.active = -1;
+          renderTemplateOptions();
+        });
+
+        els.templateSearch.addEventListener("keydown", (event) => {
+          const options = state.wizard.filtered;
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            if (!options.length) return;
+            event.preventDefault();
+            if (state.wizard.active < 0) {
+              state.wizard.active = event.key === "ArrowDown" ? 0 : options.length - 1;
+            } else {
+              const delta = event.key === "ArrowDown" ? 1 : -1;
+              state.wizard.active = (state.wizard.active + delta + options.length) % options.length;
+            }
+            renderTemplateOptions();
+            const active = els.templateList.querySelector(".template-option.active");
+            if (active) active.scrollIntoView({ block: "nearest" });
+            return;
+          }
+
+          if (event.key === "Enter" && state.wizard.step === 1 && !event.isComposing) {
+            const choice = options[state.wizard.active] ||
+              (options.length === 1 ? options[0] : null);
+            if (choice) {
+              event.preventDefault();
+              selectTemplate(choice.id);
+            }
+          }
+        });
+
+        els.templateList.addEventListener("click", (event) => {
+          const option = event.target.closest("[data-template-id]");
+          if (option) selectTemplate(option.dataset.templateId);
+        });
+
+        for (const button of document.querySelectorAll("[data-close-dialog]")) {
+          button.addEventListener("click", () => closeDialog(button));
+        }
+
+        els.editDialog.addEventListener("close", resetEdit);
+
+        els.editForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (!state.editing) return;
+
           const payload = {
-            name: els.name.value.trim(),
-            url: els.url.value.trim(),
-            check_interval_seconds: Number(els.interval.value),
-            enabled: els.enabled.checked,
+            name: els.editName.value.trim(),
+            url: els.editUrl.value.trim(),
+            check_interval_seconds: Number(els.editInterval.value),
+            enabled: els.editEnabled.checked,
           };
+
           if (!payload.name) {
-            setFormStatus("Name is required.", true);
-            els.name.focus();
+            setStatus(els.editStatus, "Name is required.", true);
+            els.editName.focus();
             return;
           }
           if (!/^https:\/\//i.test(payload.url)) {
-            setFormStatus("The URL must start with https://.", true);
-            els.url.focus();
+            setStatus(els.editStatus, "The URL must start with https://.", true);
+            els.editUrl.focus();
             return;
           }
           if (!Number.isInteger(payload.check_interval_seconds) ||
               payload.check_interval_seconds < 60 ||
               payload.check_interval_seconds > 86400) {
-            setFormStatus("The interval must be a whole number from 60 to 86400 seconds.", true);
-            els.interval.focus();
+            setStatus(els.editStatus, "The interval must be a whole number from 60 to 86400 seconds.", true);
+            els.editInterval.focus();
             return;
           }
 
           const editing = state.editing;
-          els.submit.disabled = true;
-          setFormStatus(editing ? "Saving…" : "Adding…");
+          els.editSubmit.disabled = true;
+          els.editSubmit.textContent = "Saving…";
           try {
-            if (editing) {
-              await api("/api/v1/events/" + encodeURIComponent(editing), {
-                method: "PUT",
-                body: JSON.stringify(payload),
-              });
-            } else {
-              await api("/api/v1/events", {
-                method: "POST",
-                body: JSON.stringify(payload),
-              });
-            }
-            resetForm();
-            showNotice(editing ? "Event saved." : "Event added. Its first check is due now.");
+            await api("/api/v1/events/" + encodeURIComponent(editing), {
+              method: "PUT",
+              body: JSON.stringify(payload),
+            });
+            els.editDialog.close();
+            showNotice("Event saved.");
             await load();
           } catch (err) {
-            setFormStatus(err.message, true);
-          } finally {
-            els.submit.disabled = false;
+            setStatus(els.editStatus, err.message, true);
+            els.editSubmit.disabled = false;
+            els.editSubmit.textContent = "Save changes";
           }
         });
 
+        initTheme();
         load();
         setInterval(() => {
           if (!document.hidden) load();
