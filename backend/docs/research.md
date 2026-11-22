@@ -1,7 +1,10 @@
 # Ticket availability backend — research
 
 Status: **research only**, no implementation. Written 2026-11-22 against the
-scaffolding in [`../`](../).
+scaffolding in [`../`](../). Authentication, accounts and tiers are specified
+separately in [`users-auth-tiers.md`](users-auth-tiers.md); where this document
+still reads as "anonymous" or "auth later", that companion document is
+authoritative.
 
 ## What the backend has to do
 
@@ -13,13 +16,16 @@ scaffolding in [`../`](../).
   throttling rules and whether an API or a rendered page is the only way in.
 - Some sites need **arbitrary code**, so an embedded scripting runtime is a
   first-class requirement.
-- Users, authentication and notifications are deliberately out of scope for
-  now, but the schema must not make them hard to add later.
+- Every watch belongs to an authenticated user. OAuth (Google, Facebook,
+  Apple), sessions and tier limits are designed in
+  [`users-auth-tiers.md`](users-auth-tiers.md); there is no anonymous access.
+- Notifications are still a later phase.
 
 ## Recommendation at a glance
 
 | Area | Recommendation |
 |---|---|
+| Auth | OAuth only (Google, Facebook, Apple); every API route authenticated; see [`users-auth-tiers.md`](users-auth-tiers.md) |
 | Storage | Postgres, `pgx/v5` + `sqlc`, migrations with `goose` |
 | Domain | `sites → venues → events → monitors → checks`, config in layered JSONB |
 | Plugins | In-process Go `Plugin` interface, three flavours: native, declarative, scripted |
@@ -30,9 +36,9 @@ scaffolding in [`../`](../).
 | HTTP | One shared fetch client: allowlist, size/time caps, conditional requests, `robots.txt` |
 | Policy | Official APIs first; never bypass CAPTCHA, anti-bot or queues |
 
-The two decisions that need the owner's input are at the end: whether scripts
-are trusted (written by us) or untrusted (supplied by users), and which sites
-come first.
+The decisions that need the owner's input are at the end: whether scripts are
+trusted (written by us) or untrusted (supplied by users), which sites come
+first, and the tier limits in the companion document.
 
 ## 1. Policy constraints shape the design
 
@@ -56,17 +62,22 @@ The plugin API therefore has an explicit `blocked` outcome and the scheduler has
 policy-aware backoff. If a site cannot be accessed legitimately, it is
 unsupported — and that is a valid product answer.
 
+This applies to every tier. There is no paid "CAPTCHA watch": see
+[`users-auth-tiers.md`](users-auth-tiers.md#the-one-decision-that-is-not-negotiable)
+for the challenge-detection alternative and why automated solving is out of
+scope.
+
 ## 2. Domain model (Postgres)
 
 ### Entities
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `users` | Minimal owner record | `id`, `email`; auth added later |
+| `users` | Authenticated account | Full identity/session schema in [`users-auth-tiers.md`](users-auth-tiers.md) |
 | `sites` | An integration instance | `kind` names the plugin; `config` holds connection defaults |
 | `venues` | Site-scoped venue | `external_id` is the site's identifier; venue is optional for events |
-| `events` | Site-scoped event and check target | `(site_id, external_id)` natural key; holds connection overrides, interval and schedule state; shared by all users |
-| `monitors` | A user's subscription to an event | Filters and notification preferences only; many users share one event check |
+| `events` | Site-scoped event and check target | `(site_id, external_id)` natural key; holds connection overrides, interval, watch mode and schedule state; owned by a user, shared by subscribers |
+| `monitors` | A user's subscription to an event | Required `user_id`; filters and notification preferences only; many users share one event check |
 | `checks` | Append-only per-event history | One row per check; availability summary + offers JSONB |
 
 Design choices:
@@ -80,6 +91,13 @@ Design choices:
   the requests to the site. The event is scheduled while at least one enabled
   monitor exists (`next_check_at` is set on the first subscription); the last
   unsubscribe stops the schedule but keeps history.
+- **Authenticated ownership.** An event is created by an authenticated user and
+  records `created_by_user_id` and a `watch_mode` (`basic`, `scripted` or
+  `ai_assisted`). The creator owns the connection config and watch mode;
+  subscribers may only subscribe if their tier allows that mode. There is no
+  anonymous monitor: `monitors.user_id` is required. The full auth, tier and
+  enforcement model is in [`users-auth-tiers.md`](users-auth-tiers.md); this
+  document still owns the ticket/plugin design.
 - **Config is layered**: plugin defaults < `sites.config` <
   `events.check_config`. Only overrides are stored, so changing a site default
   affects every event that did not override it. The effective config is
@@ -101,6 +119,8 @@ Design choices:
 ### Schema sketch
 
 ```sql
+create extension if not exists citext;
+
 create table sites (
     id          uuid primary key default gen_random_uuid(),
     kind        text not null,                    -- plugin identifier
@@ -124,10 +144,25 @@ create table venues (
     unique (site_id, external_id)
 );
 
+-- Abbreviated here; the full identity, session and plan schema lives in
+-- users-auth-tiers.md.
+create table users (
+    id         uuid primary key default gen_random_uuid(),
+    email      citext,
+    status     text not null default 'active',
+    deleted_at timestamptz,
+    created_at timestamptz not null default now()
+);
+
+create unique index users_email_active_idx
+    on users (email)
+    where email is not null and deleted_at is null;
+
 create table events (
     id                   uuid primary key default gen_random_uuid(),
     site_id              uuid not null references sites (id) on delete cascade,
     venue_id             uuid references venues (id) on delete set null,
+    created_by_user_id   uuid references users (id) on delete set null,
     external_id          text not null,
     name                 text not null,
     starts_at            timestamptz,
@@ -135,6 +170,8 @@ create table events (
     url                  text,
     status               text,                     -- site-reported: onsale, cancelled…
     metadata             jsonb not null default '{}',
+    watch_mode           text not null default 'basic'
+                         check (watch_mode in ('basic', 'scripted', 'ai_assisted')),
     check_config         jsonb not null default '{}', -- event-level connection overrides
     interval_seconds     integer not null default 300 check (interval_seconds >= 60),
     next_check_at        timestamptz,              -- null until the first subscriber
@@ -148,29 +185,17 @@ create table events (
     unique (site_id, external_id)
 );
 
--- Minimal for now; authentication and profiles are a later phase.
-create table users (
-    id         uuid primary key default gen_random_uuid(),
-    email      text unique,
-    created_at timestamptz not null default now()
-);
-
 create table monitors (
     id            uuid primary key default gen_random_uuid(),
-    user_id       uuid references users (id) on delete cascade,
+    user_id       uuid not null references users (id) on delete cascade,
     event_id      uuid not null references events (id) on delete cascade,
     filters       jsonb not null default '{}',   -- max price, quantity, sections
     notifications jsonb not null default '{}',
     enabled       boolean not null default true,
     created_at    timestamptz not null default now(),
-    updated_at    timestamptz not null default now()
+    updated_at    timestamptz not null default now(),
+    unique (user_id, event_id)
 );
-
--- NULL user_id rows are anonymous and therefore distinct under a plain UNIQUE
--- constraint; the partial index enforces one subscription per owner per event.
-create unique index monitors_owner_event_idx
-    on monitors (user_id, event_id)
-    where user_id is not null;
 
 create index monitors_event_idx
     on monitors (event_id)
@@ -179,6 +204,9 @@ create index monitors_event_idx
 create index events_due_idx
     on events (next_check_at)
     where not paused and next_check_at is not null;
+
+create index events_owner_idx
+    on events (created_by_user_id);
 
 create table checks (
     id             bigint generated always as identity primary key,
@@ -195,6 +223,12 @@ create table checks (
     duration_ms    integer,
     plugin         text not null,
     plugin_version text,
+    extractor      text not null default 'plugin'
+                   check (extractor in ('plugin', 'ai')),
+    ai_confidence  numeric(3, 2)
+                   check (ai_confidence is null or ai_confidence between 0 and 1),
+    ai_model       text,
+    ai_prompt_version text,
     unique (event_id, checked_at)
 );
 
@@ -205,6 +239,9 @@ create index checks_event_time_idx
 `unique (event_id, checked_at)` is a cheap idempotency guard if a check is
 accidentally retried within the same instant; it is not a substitute for
 idempotent writes. Checks are otherwise insert-only, so retries are safe.
+AI-assisted results carry their provenance (`extractor`, confidence, model and
+prompt version) so a bad extraction can be audited and a low-confidence result
+can be treated as `unknown` rather than as availability.
 
 ### Configuration shape
 
@@ -514,24 +551,30 @@ scripted plugins:
 
 ## 7. API surface (for the web and mobile clients)
 
-Minimal v1, no auth yet; `user_id` is nullable so it can become required later.
+Every route below requires an authenticated session. The only public routes are
+`/healthz`, the auth endpoints that establish or renew a session
+(`/api/v1/auth/*`), and the signed provider webhooks; there is no anonymous
+access. The full auth/session/tier API, including `/api/v1/me`, is in
+[`users-auth-tiers.md`](users-auth-tiers.md#9-api-surface).
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/healthz` | Liveness (exists) |
 | GET | `/api/v1/plugins` | Registered site kinds + config schemas |
 | POST | `/api/v1/events/resolve` | Site + URL/ID/query → candidate events |
-| POST | `/api/v1/events` | Register a resolved event |
-| GET | `/api/v1/events` | List/filter events |
-| PATCH | `/api/v1/events/{id}` | Edit event check config and interval |
-| POST | `/api/v1/monitors` | Subscribe to an event |
-| GET | `/api/v1/monitors` | List subscriptions |
+| POST | `/api/v1/events` | Register a resolved event (owner becomes a watcher) |
+| GET | `/api/v1/events` | Events the caller watches or created |
+| GET | `/api/v1/events/{id}` | Event metadata |
+| PATCH | `/api/v1/events/{id}` | Owner: edit check config, interval and watch mode |
+| DELETE | `/api/v1/events/{id}` | Owner: only when there are no other watchers |
+| POST | `/api/v1/monitors` | Subscribe to an event (tier-gated by watch mode) |
+| GET | `/api/v1/monitors` | List the caller's subscriptions |
 | PATCH | `/api/v1/monitors/{id}` | Enable/pause, edit filters and notification prefs |
 | DELETE | `/api/v1/monitors/{id}` | Unsubscribe |
-| GET | `/api/v1/events/{id}/checks` | Shared availability history |
+| GET | `/api/v1/events/{id}/checks` | Availability history for watchers/owner/admin |
 
-Auth, rate limiting and CORS for the public API come with the user work; do not
-open CORS broadly in the meantime.
+Rate limiting, exact-origin CORS and CSRF rules are part of the auth design; do
+not open CORS broadly in the meantime.
 
 ## 8. Testing
 
@@ -584,13 +627,19 @@ can resolve events by search.
 1. **Foundations** — migrations, config validation, plugin contract and
    registry, shared fetch client, one native plugin (API-based) and one generic
    HTML plugin, conformance tests.
-2. **Registration** — resolve/register events, monitor CRUD, API endpoints.
-3. **Monitoring** — due-row scheduler, leases, checks, backoff, per-site rate
+2. **Auth foundation** — users, identities, sessions, Google/Apple web login,
+   authenticated middleware; no ticket route is exposed anonymously. Details
+   in [`users-auth-tiers.md`](users-auth-tiers.md#13-phased-implementation).
+3. **Registration** — tier-aware event resolution/registration, monitor CRUD,
+   ownership checks, API endpoints.
+4. **Monitoring** — due-row scheduler, leases, checks, backoff, per-site rate
    limits, history endpoint.
-4. **Scripting** — sobek runtime, host API, two real site scripts, fixture
+5. **Scripting** — sobek runtime, host API, two real site scripts, fixture
    tests.
-5. **Notifications and users** — auth, alert channels, transition detection.
-6. **Browser plugins** — only if a supported site genuinely requires them.
+6. **AI-assisted watch** — setup preview, extraction fallback, fixture evals,
+   quotas and cost accounting.
+7. **Notifications** — alert channels and transition detection.
+8. **Browser plugins** — only if a supported site genuinely requires them.
 
 ## 12. Open questions for the owner
 
@@ -609,8 +658,10 @@ can resolve events by search.
    only on transitions/price thresholds?
 6. **Raw response retention**: keep HTML/JSON snapshots for debugging, or only
    the normalized result?
-7. **User/auth scope**: anonymous monitors now and accounts later, or accounts
-   from the start? The `user_id`-nullable schema supports either.
+7. **Tier limits, pricing and scripted-watch scope**: accounts are required
+   from the start (resolved — see
+   [`users-auth-tiers.md`](users-auth-tiers.md)); the remaining tier questions
+   are in §14 of that document.
 
 ## Sources
 
