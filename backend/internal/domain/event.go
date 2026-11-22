@@ -26,6 +26,10 @@ type Event struct {
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 
+	// UserEmail is the verified address on the owning account, when there is
+	// one. It is loaded for notifications and never exposed by the API.
+	UserEmail string `json:"-"`
+
 	// NotifiedOn is the edge-trigger state: true once the on transition has
 	// produced an email. It is deliberately not exposed by the API.
 	NotifiedOn bool `json:"-"`

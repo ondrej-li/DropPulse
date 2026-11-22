@@ -46,13 +46,17 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		s.unauthenticated(w, r)
 		return
 	}
-	if principal.AuthKind == "local" {
-		active, err := s.events.CountActive(r.Context(), principal.User.ID)
+	active := 0
+	if s.events != nil {
+		var err error
+		active, err = s.events.CountActive(r.Context(), principal.User.ID)
 		if err != nil {
 			s.logger.Error("count active events", "err", err, "user_id", principal.User.ID, "request_id", requestIDFrom(r.Context()))
 			internalError(w)
 			return
 		}
+	}
+	if principal.AuthKind == "local" {
 		writeJSON(w, http.StatusOK, meResponse{
 			User:                 principal.User,
 			Plan:                 planResponse{Code: principal.Entitlements.PlanCode},
@@ -60,25 +64,34 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 			Usage:                usageResponse{ActiveWatches: active},
 			Providers:            []string{},
 			SingleUser:           true,
-			NotificationsEnabled: s.cfg.NotificationEmail != "",
+			NotificationsEnabled: s.notificationsEnabled(),
 		})
 		return
 	}
 	session := sessionForResponse(principal.Session, principal.Session.ID)
+	providers := []string{}
+	if s.auth != nil {
+		providers = s.auth.Providers()
+	}
 	writeJSON(w, http.StatusOK, meResponse{
-		User:         principal.User,
-		Plan:         planResponse{Code: principal.Entitlements.PlanCode},
-		Entitlements: principal.Entitlements,
-		Usage: usageResponse{
-			// Ticket tables land in the next slice; these counters are wired
-			// to real queries as each domain table is added.
-			ActiveWatches:        0,
-			AISetupPreviewsToday: 0,
-			AIChecksToday:        0,
-		},
-		Session:   &session,
-		Providers: s.auth.Providers(),
+		User:                 principal.User,
+		Plan:                 planResponse{Code: principal.Entitlements.PlanCode},
+		Entitlements:         principal.Entitlements,
+		Usage:                usageResponse{ActiveWatches: active},
+		Session:              &session,
+		Providers:            providers,
+		NotificationsEnabled: s.notificationsEnabled(),
 	})
+}
+
+// notificationsEnabled reports whether the server can submit availability
+// mail. In multi-user mode the recipient is the verified account address; a
+// fixed NOTIFICATION_EMAIL is a single-user-only convenience.
+func (s *Server) notificationsEnabled() bool {
+	if s.cfg.SingleUserMode {
+		return s.cfg.NotificationEmail != ""
+	}
+	return s.cfg.SMTPFrom != ""
 }
 
 func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {

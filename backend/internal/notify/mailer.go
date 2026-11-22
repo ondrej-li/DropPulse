@@ -27,7 +27,9 @@ import (
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 )
 
-// Mailer sends one email per off->on transition.
+// Mailer sends one email per off->on transition. A non-empty to address is a
+// fixed recipient (the single-user mode); otherwise the verified address on the
+// event's owning account is used.
 type Mailer struct {
 	sendmail string
 	from     string
@@ -37,13 +39,16 @@ type Mailer struct {
 }
 
 // New validates the addresses and sendmail command and returns a mailer for
-// the local MTA.
+// the local MTA. The recipient may be empty when notifications go to the
+// event owner instead of a fixed address.
 func New(sendmail, from, to string, timeout time.Duration) (*Mailer, error) {
 	if err := validateAddress(from); err != nil {
 		return nil, fmt.Errorf("sender address: %w", err)
 	}
-	if err := validateAddress(to); err != nil {
-		return nil, fmt.Errorf("recipient address: %w", err)
+	if to != "" {
+		if err := validateAddress(to); err != nil {
+			return nil, fmt.Errorf("recipient address: %w", err)
+		}
 	}
 	if !filepath.IsAbs(sendmail) {
 		return nil, errors.New("sendmail path must be absolute")
@@ -65,11 +70,15 @@ func New(sendmail, from, to string, timeout time.Duration) (*Mailer, error) {
 // available. The caller decides whether this transition is new; the mailer
 // only formats and submits the message.
 func (m *Mailer) SendEventOn(ctx context.Context, event domain.Event, uiURL string) error {
+	recipient := m.recipient(event)
+	if err := validateAddress(recipient); err != nil {
+		return fmt.Errorf("notification recipient: %w", err)
+	}
 	message := m.buildMessage(event, uiURL)
 	ctx, cancel := context.WithTimeout(ctx, m.timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, m.sendmail, "-i", "-f", m.from, "--", m.to)
+	cmd := exec.CommandContext(ctx, m.sendmail, "-i", "-f", m.from, "--", recipient)
 	cmd.Stdin = bytes.NewReader(message)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -86,9 +95,19 @@ func (m *Mailer) SendEventOn(ctx context.Context, event domain.Event, uiURL stri
 	return nil
 }
 
+// recipient prefers the fixed single-user address and falls back to the
+// verified email on the account that owns the event.
+func (m *Mailer) recipient(event domain.Event) string {
+	if m.to != "" {
+		return m.to
+	}
+	return strings.TrimSpace(event.UserEmail)
+}
+
 func (m *Mailer) buildMessage(event domain.Event, uiURL string) []byte {
 	now := m.now().UTC()
 	name := headerSafe(event.Name)
+	to := m.recipient(event)
 	subject := "DropPulse: " + name + " is on"
 	status := "no HTTP response"
 	if event.LastStatusCode != nil {
@@ -107,7 +126,7 @@ You will get another email for this event after it goes off and then on again.
 
 	headers := []string{
 		"From: DropPulse <" + m.from + ">",
-		"To: " + m.to,
+		"To: " + to,
 		"Subject: " + mime.QEncoding.Encode("utf-8", subject),
 		"Date: " + now.Format(time.RFC1123Z),
 		"Message-ID: " + m.messageID(now),

@@ -10,6 +10,19 @@ import (
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
 )
 
+// handleAuthProviders is public because the landing page needs to know which
+// buttons to render before the user has a session. It exposes names only.
+func (s *Server) handleAuthProviders(w http.ResponseWriter, r *http.Request) {
+	if !s.allowAuthRate(w, r, "providers") {
+		return
+	}
+	providers := []string{}
+	if s.auth != nil {
+		providers = s.auth.Providers()
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"providers": providers})
+}
+
 func (s *Server) handleAuthStart(w http.ResponseWriter, r *http.Request) {
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("provider")))
 	if !s.allowAuthRate(w, r, "start:"+provider) {

@@ -81,6 +81,52 @@ func TestNewRejectsMissingSendmail(t *testing.T) {
 	}
 }
 
+func TestSendEventOnUsesVerifiedAccountRecipient(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(dir, "sendmail")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$OUT/args\"\ncat > \"$OUT/message\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("OUT", dir)
+
+	m, err := New(script, "agent@example.com", "", time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := 200
+	if err := m.SendEventOn(context.Background(), domain.Event{
+		Name:           "Saturday show",
+		URL:            "https://example.com/tickets",
+		LastStatusCode: &code,
+		UserEmail:      "viewer@example.com",
+	}, "http://localhost:8090"); err != nil {
+		t.Fatal(err)
+	}
+
+	args, err := os.ReadFile(filepath.Join(dir, "args"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantArgs := "-i\n-f\nagent@example.com\n--\nviewer@example.com\n"
+	if string(args) != wantArgs {
+		t.Fatalf("sendmail args = %q, want %q", args, wantArgs)
+	}
+	message, err := os.ReadFile(filepath.Join(dir, "message"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(message), "To: viewer@example.com") {
+		t.Fatalf("account recipient missing from message:\n%s", message)
+	}
+}
+
+func TestSendEventOnRejectsMissingRecipient(t *testing.T) {
+	m := &Mailer{from: "agent@example.com", now: time.Now}
+	if err := m.SendEventOn(context.Background(), domain.Event{Name: "Show"}, "http://localhost:8090"); err == nil {
+		t.Fatal("an event with no fixed or account recipient must be rejected")
+	}
+}
+
 func TestSendEventOnInvokesLocalSendmail(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "sendmail")

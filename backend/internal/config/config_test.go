@@ -151,6 +151,37 @@ func TestLoadSingleUserDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadFrontendDefaultsWebAppToAPIOrigin(t *testing.T) {
+	env := baseEnv()
+	env["FRONTEND_FILE"] = "../frontend/index.html"
+	env["PORT"] = "8090"
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cfg.WebAppURL.String(); got != "http://localhost:8090" {
+		t.Fatalf("WebAppURL = %q, want the API origin", got)
+	}
+	if !cfg.OriginAllowed("http://localhost:8090") {
+		t.Fatal("the served frontend origin must be allowed")
+	}
+}
+
+func TestLoadAllowsVerifiedAccountNotifications(t *testing.T) {
+	env := baseEnv()
+	env["SMTP_FROM"] = "agent@example.com"
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SMTPFrom != "agent@example.com" {
+		t.Fatalf("SMTPFrom = %q", cfg.SMTPFrom)
+	}
+	if cfg.NotificationEmail != "" {
+		t.Fatalf("NotificationEmail = %q, want no fixed recipient outside single-user mode", cfg.NotificationEmail)
+	}
+}
+
 func TestLoadSingleUserRequiresLoopback(t *testing.T) {
 	env := baseEnv()
 	env["SINGLE_USER_MODE"] = "true"

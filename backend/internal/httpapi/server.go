@@ -1,6 +1,6 @@
-// Package httpapi wires the public HTTP surface. Every product route is
-// authenticated; the only public routes are health, the OAuth/session
-// establishing endpoints and signed provider webhooks (not yet implemented).
+// Package httpapi wires the public HTTP surface. The landing page, health check,
+// configured-provider list and OAuth endpoints are public; every route that
+// reads or changes a user's watches is authenticated.
 package httpapi
 
 import (
@@ -34,11 +34,15 @@ type Server struct {
 	localEntitlements domain.Entitlements
 }
 
-// New creates the API server. In single-user mode it loads the fixed local
-// account and the frontend file once at start-up.
+// New creates the API server. It loads the frontend file once at start-up when
+// one is configured; single-user mode additionally requires the fixed local
+// account and the frontend.
 func New(cfg config.Config, st *store.Store, authSvc *auth.Service, eventsSvc *events.Service, logger *slog.Logger) (*Server, error) {
 	if logger == nil {
 		logger = slog.Default()
+	}
+	if eventsSvc == nil {
+		return nil, errors.New("the events service is required")
 	}
 	s := &Server{
 		cfg:     cfg,
@@ -49,22 +53,21 @@ func New(cfg config.Config, st *store.Store, authSvc *auth.Service, eventsSvc *e
 		limiter: NewLimiter(time.Now),
 		now:     time.Now,
 	}
-	if !cfg.SingleUserMode {
-		return s, nil
-	}
-	if eventsSvc == nil {
-		return nil, errors.New("single-user mode requires the events service")
-	}
-	s.admin = eventsSvc.Admin()
-	s.localEntitlements = domain.Entitlements{
-		PlanCode:           "local",
-		MaxActiveWatches:   100,
-		AllowedModes:       []domain.Mode{domain.ModeBasic},
-		MinIntervalSeconds: domain.MinCheckInterval,
-		HistoryDays:        365,
+	if cfg.SingleUserMode {
+		s.admin = eventsSvc.Admin()
+		s.localEntitlements = domain.Entitlements{
+			PlanCode:           "local",
+			MaxActiveWatches:   100,
+			AllowedModes:       []domain.Mode{domain.ModeBasic},
+			MinIntervalSeconds: domain.MinCheckInterval,
+			HistoryDays:        365,
+		}
 	}
 	if cfg.FrontendFile == "" {
-		return nil, errors.New("single-user mode requires FRONTEND_FILE")
+		if cfg.SingleUserMode {
+			return nil, errors.New("single-user mode requires FRONTEND_FILE")
+		}
+		return s, nil
 	}
 	frontend, err := os.ReadFile(cfg.FrontendFile)
 	if err != nil {
@@ -86,16 +89,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 
 	if s.cfg.SingleUserMode {
-		local := s.singleUser
-		mux.Handle("GET /api/v1/me", local(http.HandlerFunc(s.handleMe)))
-		mux.Handle("GET /api/v1/events", local(http.HandlerFunc(s.handleListEvents)))
-		mux.Handle("POST /api/v1/events", local(http.HandlerFunc(s.handleCreateEvent)))
-		mux.Handle("GET /api/v1/events/{id}", local(http.HandlerFunc(s.handleGetEvent)))
-		mux.Handle("PUT /api/v1/events/{id}", local(http.HandlerFunc(s.handleUpdateEvent)))
-		mux.Handle("DELETE /api/v1/events/{id}", local(http.HandlerFunc(s.handleDeleteEvent)))
-		mux.Handle("POST /api/v1/events/{id}/check", local(http.HandlerFunc(s.handleCheckEvent)))
-		mux.HandleFunc("GET /", s.handleFrontend)
+		s.mountUserRoutes(mux, s.singleUser)
+		mux.HandleFunc("GET /{$}", s.handleFrontend)
 	} else {
+		mux.HandleFunc("GET /api/v1/auth/providers", s.handleAuthProviders)
 		mux.HandleFunc("GET /api/v1/auth/{provider}/start", s.handleAuthStart)
 		mux.HandleFunc("GET /api/v1/auth/{provider}/callback", s.handleAuthCallback)
 		mux.HandleFunc("POST /api/v1/auth/{provider}/callback", s.handleAuthCallback)
@@ -103,12 +100,30 @@ func (s *Server) Handler() http.Handler {
 		mux.Handle("POST /api/v1/auth/logout", s.requireAuth(http.HandlerFunc(s.handleLogout)))
 		mux.Handle("GET /api/v1/auth/csrf", s.requireAuth(http.HandlerFunc(s.handleCSRF)))
 
-		mux.Handle("GET /api/v1/me", s.requireAuth(http.HandlerFunc(s.handleMe)))
+		s.mountUserRoutes(mux, s.requireAuth)
 		mux.Handle("GET /api/v1/me/sessions", s.requireAuth(http.HandlerFunc(s.handleListSessions)))
 		mux.Handle("DELETE /api/v1/me/sessions/{id}", s.requireAuth(http.HandlerFunc(s.handleRevokeSession)))
+		if len(s.frontend) > 0 {
+			mux.HandleFunc("GET /{$}", s.handleFrontend)
+		}
 	}
 
 	return s.requestID(s.accessLog(s.recoverer(s.securityHeaders(s.cors(mux)))))
+}
+
+// mountUserRoutes attaches the account and watch routes behind the mode's
+// authentication boundary: local loopback checks or a real session.
+func (s *Server) mountUserRoutes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
+	mount := func(pattern string, handler http.HandlerFunc) {
+		mux.Handle(pattern, wrap(handler))
+	}
+	mount("GET /api/v1/me", s.handleMe)
+	mount("GET /api/v1/events", s.handleListEvents)
+	mount("POST /api/v1/events", s.handleCreateEvent)
+	mount("GET /api/v1/events/{id}", s.handleGetEvent)
+	mount("PUT /api/v1/events/{id}", s.handleUpdateEvent)
+	mount("DELETE /api/v1/events/{id}", s.handleDeleteEvent)
+	mount("POST /api/v1/events/{id}/check", s.handleCheckEvent)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
