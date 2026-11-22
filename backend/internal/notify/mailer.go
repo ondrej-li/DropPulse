@@ -88,7 +88,8 @@ func (m *Mailer) SendEventOn(ctx context.Context, event domain.Event, uiURL stri
 
 func (m *Mailer) buildMessage(event domain.Event, uiURL string) []byte {
 	now := m.now().UTC()
-	subject := "DropPulse: " + headerSafe(event.Name) + " is on"
+	name := headerSafe(event.Name)
+	subject := "DropPulse: " + name + " is on"
 	status := "no HTTP response"
 	if event.LastStatusCode != nil {
 		status = fmt.Sprintf("HTTP %d", *event.LastStatusCode)
@@ -101,7 +102,7 @@ Checked: %s
 Open DropPulse: %s
 
 You will get another email for this event after it goes off and then on again.
-`, event.Name, event.URL, status, now.Format(time.RFC3339), strings.TrimRight(uiURL, "/")+"/")
+`, name, event.URL, status, now.Format(time.RFC3339), strings.TrimRight(uiURL, "/")+"/")
 	body = strings.ReplaceAll(body, "\n", "\r\n")
 
 	headers := []string{
@@ -140,13 +141,11 @@ func validateAddress(raw string) error {
 	return nil
 }
 
-// headerSafe removes characters that could end a header line. Event names are
-// already validated without controls; this is the second line of defence.
+// headerSafe flattens characters that could end a line. Event names are
+// already validated without controls; this is the second line of defence, and
+// it also keeps a crafted name from faking extra lines in the message body.
 func headerSafe(value string) string {
 	return strings.Map(func(r rune) rune {
-		if r == '\r' || r == '\n' {
-			return -1
-		}
 		if r < 0x20 || r == 0x7f {
 			return ' '
 		}
