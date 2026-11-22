@@ -14,7 +14,7 @@ HTML file; the Go backend stays on loopback and is not part of this domain.
 | TLS | `/etc/letsencrypt/live/dp.ondralinek.cz/` |
 | renewal | `certbot.timer`; the HTTP vhost keeps the ACME path open |
 | logs | `/var/log/nginx/dp.access.log`, `dp.error.log` |
-| auto-deploy | none; run `deploy/deploy.sh` after a change |
+| auto-deploy | none; run `~/DropPulse/deploy/deploy.sh` after a change |
 
 DNS already points here:
 
