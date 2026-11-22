@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"os"
@@ -16,7 +17,6 @@ import (
 const (
 	defaultPort              = "8080"
 	defaultBindAddr          = "127.0.0.1"
-	defaultPublicAPIURL      = "http://localhost:8080"
 	defaultWebAppURL         = "http://localhost:8000"
 	defaultSessionIdle       = 30 * 24 * time.Hour
 	defaultSessionAbsolute   = 90 * 24 * time.Hour
@@ -25,6 +25,8 @@ const (
 	defaultAuthRatePerMinute = 30
 	defaultAPIRatePerMinute  = 600
 	defaultMaxRequestBytes   = int64(1 << 20)
+	defaultSingleUserName    = "admin"
+	defaultSendmailPath      = "/usr/sbin/sendmail"
 )
 
 // ProviderConfig holds the credentials for one OAuth provider. A provider is
@@ -60,6 +62,20 @@ type Config struct {
 
 	RunMigrations bool
 	LogLevel      slog.Level
+
+	// SingleUserMode serves the local frontend and events API without a login.
+	// It is only valid on a loopback listener; every request additionally has
+	// to pass Host and Origin checks (see httpapi.singleUser).
+	SingleUserMode bool
+	SingleUserName string
+	FrontendFile   string
+
+	// Notifications are optional and, for now, only valid in single-user mode.
+	// Mail is injected through the local MTA's sendmail command, which is the
+	// privileged local submission path; the SMTP listener may reject relay.
+	NotificationEmail string
+	SendmailPath      string
+	SMTPFrom          string
 
 	AdminEmails map[string]struct{}
 	Providers   map[string]ProviderConfig
@@ -112,16 +128,36 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	if err := validatePort(cfg.Port); err != nil {
 		return Config{}, err
 	}
-	if _, err := netip.ParseAddr(cfg.BindAddr); err != nil {
+	bindIP, err := netip.ParseAddr(cfg.BindAddr)
+	if err != nil {
 		return Config{}, errors.New("BIND_ADDR must be an IP address such as 127.0.0.1")
 	}
-
-	var err error
-	cfg.PublicAPIURL, err = parseServiceURL(getDefault("PUBLIC_API_URL", defaultPublicAPIURL), "PUBLIC_API_URL")
+	if value := get("SINGLE_USER_MODE"); value != "" {
+		cfg.SingleUserMode, err = strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, errors.New("SINGLE_USER_MODE must be true or false")
+		}
+	}
+	if cfg.SingleUserMode && !bindIP.IsLoopback() {
+		return Config{}, errors.New("SINGLE_USER_MODE requires BIND_ADDR to be a loopback address")
+	}
+	cfg.SingleUserName, err = parseUsername(getDefault("SINGLE_USER_NAME", defaultSingleUserName))
 	if err != nil {
 		return Config{}, err
 	}
-	cfg.WebAppURL, err = parseServiceURL(getDefault("WEB_APP_URL", defaultWebAppURL), "WEB_APP_URL")
+	cfg.FrontendFile = get("FRONTEND_FILE")
+
+	cfg.PublicAPIURL, err = parseServiceURL(getDefault("PUBLIC_API_URL", "http://localhost:"+cfg.Port), "PUBLIC_API_URL")
+	if err != nil {
+		return Config{}, err
+	}
+	webDefault := defaultWebAppURL
+	if cfg.SingleUserMode {
+		// The frontend is served by the API, so the browser's origin is the
+		// API origin unless an operator explicitly says otherwise.
+		webDefault = cfg.PublicAPIURL.String()
+	}
+	cfg.WebAppURL, err = parseServiceURL(getDefault("WEB_APP_URL", webDefault), "WEB_APP_URL")
 	if err != nil {
 		return Config{}, err
 	}
@@ -144,6 +180,20 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		for _, origin := range cfg.AllowedOrigins {
 			if !strings.HasPrefix(origin, "https://") {
 				return Config{}, fmt.Errorf("ALLOWED_ORIGINS must use https when PUBLIC_API_URL does (got %q)", origin)
+			}
+		}
+	}
+	if cfg.SingleUserMode && cfg.PublicAPIURL.Scheme == "http" {
+		// The local UI may be opened as localhost, 127.0.0.1 or ::1 through the
+		// same tunnel. All three are loopback; none of them is a remote origin.
+		port := cfg.PublicAPIURL.Port()
+		if port == "" {
+			port = "80"
+		}
+		for _, host := range []string{"localhost", "127.0.0.1", "[::1]"} {
+			origin := "http://" + host + ":" + port
+			if !contains(cfg.AllowedOrigins, origin) {
+				cfg.AllowedOrigins = append(cfg.AllowedOrigins, origin)
 			}
 		}
 	}
@@ -230,6 +280,29 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 			return Config{}, fmt.Errorf("ADMIN_EMAILS contains an invalid address %q", email)
 		}
 		cfg.AdminEmails[email] = struct{}{}
+	}
+
+	cfg.SendmailPath = getDefault("SENDMAIL_PATH", defaultSendmailPath)
+	if err := validateSendmailPath(cfg.SendmailPath); err != nil {
+		return Config{}, err
+	}
+	if raw := get("NOTIFICATION_EMAIL"); raw != "" {
+		if !cfg.SingleUserMode {
+			return Config{}, errors.New("NOTIFICATION_EMAIL is only supported with SINGLE_USER_MODE")
+		}
+		cfg.NotificationEmail, err = parseMailbox(raw, "NOTIFICATION_EMAIL")
+		if err != nil {
+			return Config{}, err
+		}
+	}
+	if raw := get("SMTP_FROM"); raw != "" {
+		cfg.SMTPFrom, err = parseMailbox(raw, "SMTP_FROM")
+		if err != nil {
+			return Config{}, err
+		}
+	}
+	if cfg.NotificationEmail != "" && cfg.SMTPFrom == "" {
+		return Config{}, errors.New("SMTP_FROM is required when NOTIFICATION_EMAIL is set")
 	}
 
 	if err := loadProviders(&cfg, get, getDefault); err != nil {
@@ -510,4 +583,43 @@ func contains(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func parseUsername(raw string) (string, error) {
+	username := strings.ToLower(strings.TrimSpace(raw))
+	if len(username) == 0 || len(username) > 32 {
+		return "", errors.New("SINGLE_USER_NAME must be 1 to 32 characters")
+	}
+	for i, r := range username {
+		allowed := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_'
+		if !allowed || (i == 0 && (r == '-' || r == '_')) {
+			return "", errors.New("SINGLE_USER_NAME must start with a letter or digit and contain only a-z, 0-9, '-' and '_'")
+		}
+	}
+	return username, nil
+}
+
+func parseMailbox(raw, name string) (string, error) {
+	list, err := mail.ParseAddressList(raw)
+	if err != nil || len(list) != 1 || list[0].Name != "" {
+		return "", fmt.Errorf("%s must be one bare email address", name)
+	}
+	address := strings.ToLower(strings.TrimSpace(list[0].Address))
+	if !strings.Contains(address, "@") || strings.ContainsAny(address, " \t\r\n") {
+		return "", fmt.Errorf("%s must be one bare email address", name)
+	}
+	return address, nil
+}
+
+// validateSendmailPath keeps notification mail on the local MTA. The command
+// must be an absolute path; the mailer additionally checks that it exists and
+// is executable before sending anything.
+func validateSendmailPath(raw string) error {
+	if !strings.HasPrefix(raw, "/") {
+		return errors.New("SENDMAIL_PATH must be an absolute path")
+	}
+	if strings.ContainsAny(raw, " \t\r\n") {
+		return errors.New("SENDMAIL_PATH must not contain whitespace")
+	}
+	return nil
 }

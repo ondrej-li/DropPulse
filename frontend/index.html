@@ -4,13 +4,770 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DropPulse</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f5f7;
+        --panel: #ffffff;
+        --text: #171920;
+        --muted: #69707d;
+        --line: #dfe3e8;
+        --accent: #1f6feb;
+        --accent-text: #ffffff;
+        --on-bg: #d8f3df;
+        --on-text: #116329;
+        --off-bg: #eceef1;
+        --off-text: #59606b;
+        --new-bg: #fff0cc;
+        --new-text: #7a5200;
+        --danger: #b42318;
+        --danger-bg: #fde8e6;
+        --ok-bg: #e7f6ea;
+        --ok-text: #116329;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101216;
+          --panel: #181b21;
+          --text: #eef1f5;
+          --muted: #9aa3b0;
+          --line: #2a2f38;
+          --accent: #4c8dff;
+          --accent-text: #07101f;
+          --on-bg: #143a22;
+          --on-text: #79d995;
+          --off-bg: #23272f;
+          --off-text: #aab2be;
+          --new-bg: #3a2d0b;
+          --new-text: #f0c766;
+          --danger: #ff8a80;
+          --danger-bg: #3a1614;
+          --ok-bg: #143a22;
+          --ok-text: #79d995;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.45;
+      }
+
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 36px 20px 72px;
+      }
+
+      header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.65rem;
+        letter-spacing: -0.03em;
+      }
+
+      .sub {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .badge {
+        flex: none;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--muted);
+        border-radius: 999px;
+        padding: 5px 11px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .notice {
+        margin: 0 0 16px;
+        border-radius: 10px;
+        padding: 11px 14px;
+        font-size: 0.9rem;
+        border: 1px solid transparent;
+      }
+
+      .notice.ok {
+        background: var(--ok-bg);
+        color: var(--ok-text);
+        border-color: color-mix(in srgb, var(--ok-text) 22%, transparent);
+      }
+
+      .notice.error {
+        background: var(--danger-bg);
+        color: var(--danger);
+        border-color: color-mix(in srgb, var(--danger) 24%, transparent);
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 18px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1.02rem;
+        letter-spacing: -0.01em;
+      }
+
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(150px, 1.1fr) minmax(220px, 2fr) 130px auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      label.check {
+        flex-direction: row;
+        align-items: center;
+        gap: 7px;
+        padding-bottom: 9px;
+        color: var(--text);
+      }
+
+      input[type="text"],
+      input[type="url"],
+      input[type="number"] {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        padding: 9px 10px;
+        font: inherit;
+        font-size: 0.92rem;
+      }
+
+      input:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      button {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--accent);
+        color: var(--accent-text);
+        padding: 8px 13px;
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--line);
+      }
+
+      button.danger {
+        background: transparent;
+        color: var(--danger);
+        border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+
+      .btn-sm {
+        padding: 5px 9px;
+        font-size: 0.79rem;
+      }
+
+      .muted { color: var(--muted); }
+
+      .form-status {
+        font-size: 0.84rem;
+      }
+
+      .error-text {
+        color: var(--danger);
+        font-size: 0.82rem;
+        overflow-wrap: anywhere;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 820px;
+      }
+
+      th {
+        padding: 0 8px 8px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      td {
+        border-top: 1px solid var(--line);
+        padding: 13px 8px;
+        vertical-align: top;
+        font-size: 0.88rem;
+      }
+
+      td:first-child,
+      th:first-child { padding-left: 0; }
+      td:last-child,
+      th:last-child { padding-right: 0; }
+
+      .name {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+
+      .meta {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .url {
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+      }
+
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+      }
+
+      .pill.on { background: var(--on-bg); color: var(--on-text); }
+      .pill.off { background: var(--off-bg); color: var(--off-text); }
+      .pill.new { background: var(--new-bg); color: var(--new-text); }
+      .pill.paused { margin-left: 5px; background: transparent; border: 1px solid var(--line); color: var(--muted); }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .empty {
+        padding: 34px 8px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        padding-top: 4px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .notify-on { color: var(--ok-text); font-weight: 600; }
+      .notify-off { color: var(--muted); font-weight: 600; }
+
+      @media (max-width: 760px) {
+        .wrap { padding-top: 24px; }
+        .grid { grid-template-columns: 1fr; }
+        label.check { padding-bottom: 0; }
+        header { align-items: center; }
+      }
+    </style>
   </head>
   <body>
-    <main>
-      <h1>DropPulse</h1>
-      <p class="lead">The web frontend for the DropPulse backend.</p>
-      <p class="note">This is a scaffold. Pages will be added here.</p>
-    </main>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>DropPulse</h1>
+          <p class="sub">Ticket availability, single-user proof of concept. HTTP 200 means the event is on.</p>
+        </div>
+        <span class="badge">localhost only</span>
+      </header>
+
+      <p id="notice" class="notice" hidden></p>
+
+      <section class="card" aria-labelledby="add-title">
+        <div class="section-head">
+          <h2 id="add-title">Add an event</h2>
+          <p>Only an HTTPS status page is checked.</p>
+        </div>
+        <form id="event-form" novalidate>
+          <div class="grid">
+            <label>Name
+              <input id="name" name="name" type="text" maxlength="120" required placeholder="Saturday show">
+            </label>
+            <label>HTTPS URL
+              <input id="url" name="url" type="url" required placeholder="https://tickets.example/show">
+            </label>
+            <label>Every (seconds)
+              <input id="interval" name="interval" type="number" min="60" max="86400" step="1" value="300" required>
+            </label>
+            <label class="check">
+              <input id="enabled" name="enabled" type="checkbox" checked> Enabled
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="submit">Add event</button>
+            <button type="button" id="cancel" class="secondary" hidden>Cancel</button>
+            <span id="form-status" class="form-status muted" role="status"></span>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="events-title">
+        <div class="section-head">
+          <h2 id="events-title">Events</h2>
+          <p id="summary"></p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Status</th>
+                <th scope="col">Event</th>
+                <th scope="col">URL</th>
+                <th scope="col">Every</th>
+                <th scope="col">Last check</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="events"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        <span id="notifications">Email notifications unknown</span>
+        <span>Loopback only. Reach this page through the SSH tunnel.</span>
+      </footer>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const els = {
+          notice: document.getElementById("notice"),
+          summary: document.getElementById("summary"),
+          notifications: document.getElementById("notifications"),
+          events: document.getElementById("events"),
+          form: document.getElementById("event-form"),
+          name: document.getElementById("name"),
+          url: document.getElementById("url"),
+          interval: document.getElementById("interval"),
+          enabled: document.getElementById("enabled"),
+          submit: document.getElementById("submit"),
+          cancel: document.getElementById("cancel"),
+          formStatus: document.getElementById("form-status"),
+        };
+
+        const state = { events: [], me: null, editing: null, loading: false };
+        let noticeTimer = null;
+
+        function api(path, options = {}) {
+          const opts = { cache: "no-store", ...options };
+          if (opts.body && !opts.headers) {
+            opts.headers = { "Content-Type": "application/json" };
+          }
+          return fetch(path, opts).then(async (response) => {
+            if (response.status === 204) return null;
+            let data = null;
+            try { data = await response.json(); } catch (_) { /* empty body */ }
+            if (!response.ok) {
+              const message = data && data.error && data.error.message
+                ? data.error.message
+                : "Request failed (HTTP " + response.status + ")";
+              throw new Error(message);
+            }
+            return data;
+          });
+        }
+
+        function showNotice(message, isError = false) {
+          els.notice.textContent = message;
+          els.notice.className = "notice " + (isError ? "error" : "ok");
+          els.notice.hidden = false;
+          clearTimeout(noticeTimer);
+          noticeTimer = setTimeout(() => { els.notice.hidden = true; }, isError ? 9000 : 4000);
+        }
+
+        function setFormStatus(message, isError = false) {
+          els.formStatus.textContent = message;
+          els.formStatus.className = "form-status " + (isError ? "error-text" : "muted");
+        }
+
+        async function load() {
+          if (state.loading) return;
+          state.loading = true;
+          try {
+            const [me, list] = await Promise.all([
+              api("/api/v1/me"),
+              api("/api/v1/events"),
+            ]);
+            state.me = me;
+            state.events = list && Array.isArray(list.events) ? list.events : [];
+            render();
+          } catch (err) {
+            showNotice(err.message, true);
+          } finally {
+            state.loading = false;
+          }
+        }
+
+        function render() {
+          const total = state.events.length;
+          const enabled = state.events.filter((event) => event.enabled).length;
+          els.summary.textContent = total + (total === 1 ? " event" : " events") +
+            " · " + enabled + " enabled";
+          renderNotifications();
+          renderEvents();
+        }
+
+        function renderNotifications() {
+          const on = state.me && state.me.notifications_enabled;
+          els.notifications.textContent = on ? "Email notifications on" : "Email notifications off";
+          els.notifications.className = on ? "notify-on" : "notify-off";
+          els.notifications.title = on
+            ? "The server emails the configured address when an event goes from off to on."
+            : "Set NOTIFICATION_EMAIL and SMTP_FROM in the server environment to enable email.";
+        }
+
+        function renderEvents() {
+          if (!state.events.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 6;
+            cell.className = "empty";
+            cell.textContent = "No events yet. Add one above.";
+            row.append(cell);
+            els.events.replaceChildren(row);
+            return;
+          }
+          els.events.replaceChildren(...state.events.map(eventRow));
+        }
+
+        function eventRow(event) {
+          const row = document.createElement("tr");
+
+          const statusCell = document.createElement("td");
+          const pill = document.createElement("span");
+          const known = Boolean(event.last_checked_at);
+          pill.className = "pill " + (event.is_on ? "on" : known ? "off" : "new");
+          pill.textContent = event.is_on ? "ON" : known ? "OFF" : "NEW";
+          statusCell.append(pill);
+          if (!event.enabled) {
+            const paused = document.createElement("span");
+            paused.className = "pill paused";
+            paused.textContent = "PAUSED";
+            statusCell.append(paused);
+          }
+          row.append(statusCell);
+
+          const nameCell = document.createElement("td");
+          const name = document.createElement("div");
+          name.className = "name";
+          name.textContent = event.name;
+          const added = document.createElement("div");
+          added.className = "meta";
+          added.textContent = "Added " + relative(event.created_at);
+          added.title = absolute(event.created_at);
+          nameCell.append(name, added);
+          row.append(nameCell);
+
+          const urlCell = document.createElement("td");
+          const url = document.createElement("div");
+          url.className = "url";
+          url.textContent = event.url;
+          url.title = event.url;
+          urlCell.append(url);
+          row.append(urlCell);
+
+          const intervalCell = document.createElement("td");
+          intervalCell.textContent = every(event.check_interval_seconds);
+          row.append(intervalCell);
+
+          const checkCell = document.createElement("td");
+          if (event.last_error) {
+            const error = document.createElement("div");
+            error.className = "error-text";
+            error.textContent = event.last_error;
+            checkCell.append(error);
+          } else if (event.last_status_code != null) {
+            const code = document.createElement("div");
+            code.textContent = "HTTP " + event.last_status_code;
+            if (!event.is_on) code.className = "muted";
+            checkCell.append(code);
+          } else {
+            const pending = document.createElement("div");
+            pending.className = "muted";
+            pending.textContent = "Not checked yet";
+            checkCell.append(pending);
+          }
+          if (event.last_checked_at) {
+            const when = document.createElement("div");
+            when.className = "meta";
+            when.textContent = relative(event.last_checked_at);
+            when.title = absolute(event.last_checked_at);
+            checkCell.append(when);
+          }
+          if (event.last_notified_at) {
+            const notified = document.createElement("div");
+            notified.className = "meta";
+            notified.textContent = "Notified " + relative(event.last_notified_at);
+            notified.title = absolute(event.last_notified_at);
+            checkCell.append(notified);
+          }
+          if (event.last_notification_error) {
+            const failure = document.createElement("div");
+            failure.className = "error-text";
+            failure.textContent = "Email failed: " + event.last_notification_error;
+            checkCell.append(failure);
+          }
+          row.append(checkCell);
+
+          const actionsCell = document.createElement("td");
+          const actions = document.createElement("div");
+          actions.className = "actions";
+          actions.append(
+            actionButton("Check now", "check", event.id, "secondary"),
+            actionButton("Edit", "edit", event.id, "secondary"),
+            actionButton("Delete", "delete", event.id, "danger"),
+          );
+          actionsCell.append(actions);
+          row.append(actionsCell);
+
+          return row;
+        }
+
+        function actionButton(label, action, id, style) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn-sm " + style;
+          button.dataset.action = action;
+          button.dataset.id = id;
+          button.textContent = label;
+          return button;
+        }
+
+        function every(seconds) {
+          if (seconds % 3600 === 0) return (seconds / 3600) + " h";
+          if (seconds % 60 === 0) return (seconds / 60) + " min";
+          return seconds + " s";
+        }
+
+        function absolute(iso) {
+          const date = new Date(iso);
+          return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+        }
+
+        function relative(iso) {
+          if (!iso) return "never";
+          const then = new Date(iso).getTime();
+          if (Number.isNaN(then)) return "never";
+          const seconds = Math.round((Date.now() - then) / 1000);
+          const abs = Math.abs(seconds);
+          if (abs < 10) return "just now";
+          let value;
+          let unit;
+          if (abs < 60) { value = abs; unit = "second"; }
+          else if (abs < 3600) { value = Math.round(abs / 60); unit = "minute"; }
+          else if (abs < 86400) { value = Math.round(abs / 3600); unit = "hour"; }
+          else { value = Math.round(abs / 86400); unit = "day"; }
+          return value + " " + unit + (value === 1 ? "" : "s") + (seconds >= 0 ? " ago" : " from now");
+        }
+
+        function resetForm() {
+          state.editing = null;
+          els.form.reset();
+          els.interval.value = "300";
+          els.enabled.checked = true;
+          els.submit.textContent = "Add event";
+          els.cancel.hidden = true;
+          setFormStatus("");
+        }
+
+        function startEdit(event) {
+          state.editing = event.id;
+          els.name.value = event.name;
+          els.url.value = event.url;
+          els.interval.value = String(event.check_interval_seconds);
+          els.enabled.checked = event.enabled;
+          els.submit.textContent = "Save changes";
+          els.cancel.hidden = false;
+          setFormStatus("Editing " + event.name);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          els.name.focus();
+        }
+
+        els.events.addEventListener("click", async (event) => {
+          const button = event.target.closest("button[data-action]");
+          if (!button) return;
+          const id = button.dataset.id;
+          const item = state.events.find((candidate) => candidate.id === id);
+          if (!item) return;
+
+          if (button.dataset.action === "edit") {
+            startEdit(item);
+            return;
+          }
+
+          if (button.dataset.action === "delete") {
+            if (!window.confirm('Delete "' + item.name + '"? This cannot be undone.')) return;
+            button.disabled = true;
+            try {
+              await api("/api/v1/events/" + encodeURIComponent(id), { method: "DELETE" });
+              if (state.editing === id) resetForm();
+              showNotice("Event deleted.");
+              await load();
+            } catch (err) {
+              showNotice(err.message, true);
+              button.disabled = false;
+            }
+            return;
+          }
+
+          if (button.dataset.action === "check") {
+            button.disabled = true;
+            button.textContent = "Checking…";
+            try {
+              await api("/api/v1/events/" + encodeURIComponent(id) + "/check", { method: "POST" });
+              showNotice("Check finished.");
+              await load();
+            } catch (err) {
+              showNotice(err.message, true);
+            } finally {
+              button.disabled = false;
+              button.textContent = "Check now";
+            }
+          }
+        });
+
+        els.cancel.addEventListener("click", resetForm);
+
+        els.form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const payload = {
+            name: els.name.value.trim(),
+            url: els.url.value.trim(),
+            check_interval_seconds: Number(els.interval.value),
+            enabled: els.enabled.checked,
+          };
+          if (!payload.name) {
+            setFormStatus("Name is required.", true);
+            els.name.focus();
+            return;
+          }
+          if (!/^https:\/\//i.test(payload.url)) {
+            setFormStatus("The URL must start with https://.", true);
+            els.url.focus();
+            return;
+          }
+          if (!Number.isInteger(payload.check_interval_seconds) ||
+              payload.check_interval_seconds < 60 ||
+              payload.check_interval_seconds > 86400) {
+            setFormStatus("The interval must be a whole number from 60 to 86400 seconds.", true);
+            els.interval.focus();
+            return;
+          }
+
+          const editing = state.editing;
+          els.submit.disabled = true;
+          setFormStatus(editing ? "Saving…" : "Adding…");
+          try {
+            if (editing) {
+              await api("/api/v1/events/" + encodeURIComponent(editing), {
+                method: "PUT",
+                body: JSON.stringify(payload),
+              });
+            } else {
+              await api("/api/v1/events", {
+                method: "POST",
+                body: JSON.stringify(payload),
+              });
+            }
+            resetForm();
+            showNotice(editing ? "Event saved." : "Event added. Its first check is due now.");
+            await load();
+          } catch (err) {
+            setFormStatus(err.message, true);
+          } finally {
+            els.submit.disabled = false;
+          }
+        });
+
+        load();
+        setInterval(() => {
+          if (!document.hidden) load();
+        }, 15000);
+      })();
+    </script>
   </body>
 </html>

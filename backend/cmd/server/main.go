@@ -16,8 +16,11 @@ import (
 	"github.com/ondrej-li/DropPulse/backend/internal/auth"
 	"github.com/ondrej-li/DropPulse/backend/internal/config"
 	"github.com/ondrej-li/DropPulse/backend/internal/db"
+	"github.com/ondrej-li/DropPulse/backend/internal/events"
 	"github.com/ondrej-li/DropPulse/backend/internal/httpapi"
+	"github.com/ondrej-li/DropPulse/backend/internal/notify"
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
+	"github.com/ondrej-li/DropPulse/backend/internal/watch"
 )
 
 func main() {
@@ -63,7 +66,43 @@ func run() error {
 		logger.Warn("no OAuth providers configured; all sign-in attempts will fail")
 	}
 	authService := auth.NewService(cfg, st, providers)
-	api := httpapi.New(cfg, st, authService, logger)
+
+	var eventsSvc *events.Service
+	if cfg.SingleUserMode {
+		if len(providers) > 0 {
+			logger.Warn("OAuth providers are configured but ignored in single-user mode")
+		}
+		admin, err := st.EnsureLocalAdmin(ctx, cfg.SingleUserName)
+		if err != nil {
+			return fmt.Errorf("ensure local admin: %w", err)
+		}
+		var mailer events.Mailer
+		if cfg.NotificationEmail != "" {
+			mailer, err = notify.New(cfg.SendmailPath, cfg.SMTPFrom, cfg.NotificationEmail, 10*time.Second)
+			if err != nil {
+				return fmt.Errorf("configure notifications: %w", err)
+			}
+		} else {
+			logger.Warn("email notifications are disabled; set NOTIFICATION_EMAIL and SMTP_FROM to enable them")
+		}
+		eventsSvc = events.NewService(
+			st,
+			watch.NewChecker(10*time.Second),
+			mailer,
+			logger,
+			admin,
+			cfg.PublicAPIURL.String(),
+		)
+		logger.Info("single-user mode enabled",
+			"username", admin.Username,
+			"notifications", cfg.NotificationEmail != "",
+		)
+	}
+
+	api, err := httpapi.New(cfg, st, authService, eventsSvc, logger)
+	if err != nil {
+		return err
+	}
 
 	srv := &http.Server{
 		Addr:              net.JoinHostPort(cfg.BindAddr, cfg.Port),
@@ -77,6 +116,9 @@ func run() error {
 	}
 
 	go purgeExpiredFlows(ctx, st, logger)
+	if eventsSvc != nil {
+		go eventsSvc.Run(ctx)
+	}
 	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("DropPulse backend listening", "addr", srv.Addr, "providers", cfg.ProviderNames())

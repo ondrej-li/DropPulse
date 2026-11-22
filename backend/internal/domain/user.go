@@ -28,6 +28,7 @@ const (
 // identifiers live in UserIdentity, never here.
 type User struct {
 	ID            string     `json:"id"`
+	Username      string     `json:"username,omitempty"`
 	Email         string     `json:"email,omitempty"`
 	EmailVerified bool       `json:"email_verified"`
 	DisplayName   string     `json:"display_name,omitempty"`
