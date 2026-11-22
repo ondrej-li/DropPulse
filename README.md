@@ -123,6 +123,15 @@ weaken a security control. Locally submitted mail still passes through
 Postfix's `non_smtpd_milters`, so rspamd signs it. The backend never connects
 to a remote SMTP server and has no SMTP credentials.
 
+## Public preview
+
+`frontend/public/index.html` is a static holding page for
+`https://dp.ondralinek.cz`. nginx serves it from `/var/www/dp` with a strict
+per-IP limit (1 request/second, burst 5, 3 concurrent streams) and never
+proxies the Go backend; `/api/` and `/healthz` return `404` on that domain. The
+single-user UI at `frontend/index.html` is not published. Deployment is
+documented in [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+
 ## SSH tunnel
 
 The default loopback bind keeps a development instance unreachable from
