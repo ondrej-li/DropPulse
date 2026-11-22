@@ -65,18 +65,26 @@ unsupported — and that is a valid product answer.
 | `users` | Minimal owner record | `id`, `email`; auth added later |
 | `sites` | An integration instance | `kind` names the plugin; `config` holds connection defaults |
 | `venues` | Site-scoped venue | `external_id` is the site's identifier; venue is optional for events |
-| `events` | Site-scoped event | `(site_id, external_id)` natural key; shared by all users |
-| `monitors` | A user watching an event | Per-event config overrides, interval, next run, failures |
-| `checks` | Append-only history | One row per check; availability summary + offers JSONB |
+| `events` | Site-scoped event and check target | `(site_id, external_id)` natural key; holds connection overrides, interval and schedule state; shared by all users |
+| `monitors` | A user's subscription to an event | Filters and notification preferences only; many users share one event check |
+| `checks` | Append-only per-event history | One row per check; availability summary + offers JSONB |
 
 Design choices:
 
 - **External identity is `(site_id, external_id)`.** Events discovered again
   from a URL or search are upserted, not duplicated. Internal IDs are UUIDs so
   they can be exposed by the API without leaking volume.
-- **Config is layered**: plugin defaults < `sites.config` < `monitors.config`.
-  Only overrides are stored, so changing a site default affects every monitor
-  that did not override it. The effective config is validated before use.
+- **One check per event, not per user.** Connection/plugin config and the check
+  interval live on `events`; `monitors` only hold user-specific filters and
+  notification preferences. Two users watching the same event must not double
+  the requests to the site. The event is scheduled while at least one enabled
+  monitor exists (`next_check_at` is set on the first subscription); the last
+  unsubscribe stops the schedule but keeps history.
+- **Config is layered**: plugin defaults < `sites.config` <
+  `events.check_config`. Only overrides are stored, so changing a site default
+  affects every event that did not override it. The effective config is
+  validated before use. Monitor filters are not connection config and never
+  change what is fetched.
 - **Checks are append-only history.** The current state is the latest check;
   alerts are computed from transitions, not stored as a mutable "available"
   flag. Raw HTML/JSON is not stored by default — it is large and sensitive. If
@@ -117,18 +125,26 @@ create table venues (
 );
 
 create table events (
-    id          uuid primary key default gen_random_uuid(),
-    site_id     uuid not null references sites (id) on delete cascade,
-    venue_id    uuid references venues (id) on delete set null,
-    external_id text not null,
-    name        text not null,
-    starts_at   timestamptz,
-    ends_at     timestamptz,
-    url         text,
-    status      text,                              -- site-reported: onsale, cancelled…
-    metadata    jsonb not null default '{}',
-    created_at  timestamptz not null default now(),
-    updated_at  timestamptz not null default now(),
+    id                   uuid primary key default gen_random_uuid(),
+    site_id              uuid not null references sites (id) on delete cascade,
+    venue_id             uuid references venues (id) on delete set null,
+    external_id          text not null,
+    name                 text not null,
+    starts_at            timestamptz,
+    ends_at              timestamptz,
+    url                  text,
+    status               text,                     -- site-reported: onsale, cancelled…
+    metadata             jsonb not null default '{}',
+    check_config         jsonb not null default '{}', -- event-level connection overrides
+    interval_seconds     integer not null default 300 check (interval_seconds >= 60),
+    next_check_at        timestamptz,              -- null until the first subscriber
+    paused               boolean not null default false,
+    lease_until          timestamptz,
+    lease_owner          text,
+    last_checked_at      timestamptz,
+    consecutive_failures integer not null default 0,
+    created_at           timestamptz not null default now(),
+    updated_at           timestamptz not null default now(),
     unique (site_id, external_id)
 );
 
@@ -140,67 +156,64 @@ create table users (
 );
 
 create table monitors (
-    id                   uuid primary key default gen_random_uuid(),
-    user_id              uuid references users (id) on delete cascade,
-    event_id             uuid not null references events (id) on delete cascade,
-    config               jsonb not null default '{}',
-    interval_seconds     integer not null default 300 check (interval_seconds >= 60),
-    next_check_at        timestamptz not null default now(),
-    paused               boolean not null default false,
-    lease_until          timestamptz,
-    lease_owner          text,
-    last_checked_at      timestamptz,
-    consecutive_failures integer not null default 0,
-    created_at           timestamptz not null default now(),
-    updated_at           timestamptz not null default now()
+    id            uuid primary key default gen_random_uuid(),
+    user_id       uuid references users (id) on delete cascade,
+    event_id      uuid not null references events (id) on delete cascade,
+    filters       jsonb not null default '{}',   -- max price, quantity, sections
+    notifications jsonb not null default '{}',
+    enabled       boolean not null default true,
+    created_at    timestamptz not null default now(),
+    updated_at    timestamptz not null default now()
 );
 
 -- NULL user_id rows are anonymous and therefore distinct under a plain UNIQUE
--- constraint; the partial index enforces one monitor per owner per event.
+-- constraint; the partial index enforces one subscription per owner per event.
 create unique index monitors_owner_event_idx
     on monitors (user_id, event_id)
     where user_id is not null;
 
-create index monitors_due_idx
-    on monitors (next_check_at)
-    where not paused;
+create index monitors_event_idx
+    on monitors (event_id)
+    where enabled;
+
+create index events_due_idx
+    on events (next_check_at)
+    where not paused and next_check_at is not null;
 
 create table checks (
-    id            bigint generated always as identity primary key,
-    monitor_id    uuid not null references monitors (id) on delete cascade,
-    event_id      uuid not null references events (id) on delete cascade,
-    checked_at    timestamptz not null default now(),
-    outcome       text not null,         -- ok | error | blocked
-    availability  text,                  -- available | few_left | sold_out | not_on_sale | unknown
-    min_price     numeric(12, 2),
-    max_price     numeric(12, 2),
-    currency      char(3),
-    offers        jsonb not null default '[]',
-    error_class   text,                  -- retryable | permanent | blocked | misconfigured
-    error         text,
-    duration_ms   integer,
-    plugin        text not null,
+    id             bigint generated always as identity primary key,
+    event_id       uuid not null references events (id) on delete cascade,
+    checked_at     timestamptz not null default now(),
+    outcome        text not null,         -- ok | error | blocked
+    availability   text,                  -- available | few_left | sold_out | not_on_sale | unknown
+    min_price      numeric(12, 2),
+    max_price      numeric(12, 2),
+    currency       char(3),
+    offers         jsonb not null default '[]',
+    error_class    text,                  -- retryable | permanent | blocked | misconfigured
+    error          text,
+    duration_ms    integer,
+    plugin         text not null,
     plugin_version text,
-    unique (monitor_id, checked_at)
+    unique (event_id, checked_at)
 );
 
-create index checks_monitor_time_idx
-    on checks (monitor_id, checked_at desc);
+create index checks_event_time_idx
+    on checks (event_id, checked_at desc);
 ```
 
-`unique (monitor_id, checked_at)` is a cheap idempotency guard if a check is
+`unique (event_id, checked_at)` is a cheap idempotency guard if a check is
 accidentally retried within the same instant; it is not a substitute for
 idempotent writes. Checks are otherwise insert-only, so retries are safe.
 
 ### Configuration shape
 
-A monitor's config is a merge of plugin defaults, site config and monitor
+An event's check config is a merge of plugin defaults, site config and event
 overrides:
 
 ```json
 {
   "interval_seconds": 300,
-  "filters": { "quantity": 2, "max_price": 150, "currency": "GBP" },
   "http": {
     "headers": { "Accept-Language": "en-GB" },
     "timeout_seconds": 15
@@ -212,12 +225,25 @@ overrides:
 }
 ```
 
+A monitor adds only user-specific filters, applied to the shared result:
+
+```json
+{
+  "max_price": 150,
+  "quantity": 2,
+  "currency": "GBP",
+  "notify": { "on": ["available", "price_drop"] }
+}
+```
+
 Site config holds connection-level defaults: base URL, auth reference,
-rate limits, minimum interval, default headers. Monitor config holds event-level
-choices: filters, price ceiling, extra selectors. Each plugin publishes a JSON
-Schema for both levels; the API rejects invalid config at write time and the
-scheduler re-validates the effective config before every check (protects
-against old rows after a plugin upgrade).
+rate limits, minimum interval, default headers. Event check config holds
+event-level choices: interval (clamped to the site floor), selectors, resale
+inclusion, endpoint parameters. Each plugin publishes JSON Schemas for site and
+event config; monitor filters have their own schema. The API rejects invalid
+config at write time and the scheduler re-validates the effective config before
+every check (protects against old rows after a plugin upgrade). Filters never
+trigger a fetch on their own.
 
 Secrets are **not** stored in `config`. Site config references environment
 variable names (for example `"api_key_env": "TICKETMASTER_API_KEY"`) and the
@@ -234,23 +260,23 @@ JSONB.
 type Plugin interface {
     Kind() string
     Version() string
-    Schemas() Schemas // JSON Schemas for site config and monitor config
+    Schemas() Schemas // JSON Schemas for site config and event check config
 
     // Resolve turns a URL, an external ID or a search query into candidates.
     // Plugins that cannot search return ErrUnsupported for search inputs.
     Resolve(ctx context.Context, in ResolveInput, cfg Config) ([]Candidate, error)
 
-    // Check returns the current availability for one event.
+    // Check returns the current availability for one event. ErrBlocked
+    // (carrying a retry delay) means the site refused automated access; the
+    // scheduler backs off and never circumvents it.
     Check(ctx context.Context, ev Event, cfg Config) (Availability, error)
 }
 
 type Availability struct {
-    Status   Status   // available, few_left, sold_out, not_on_sale, unknown
+    Status   Status // available, few_left, sold_out, not_on_sale, unknown
     MinPrice *Money
     MaxPrice *Money
     Offers   []Offer
-    Blocked  bool
-    RetryAfter time.Duration
 }
 ```
 
@@ -364,6 +390,10 @@ function check(event, config, h) {
 }
 ```
 
+The adapter maps `{ blocked: true, retryAfterSeconds }` to the Go-side
+`ErrBlocked`; a normal return is validated against the result schema before it
+is persisted.
+
 Host functions (all Go-side, all capped):
 
 | Function | Behaviour |
@@ -386,28 +416,34 @@ transient tasks. Postgres can be the queue:
 
 ```sql
 with due as (
-    select id
-    from monitors
-    where not paused
-      and next_check_at <= now()
-      and (lease_until is null or lease_until < now())
-    order by next_check_at
+    select e.id
+    from events e
+    where e.next_check_at is not null
+      and e.next_check_at <= now()
+      and not e.paused
+      and (e.lease_until is null or e.lease_until < now())
+      and exists (
+          select 1
+          from monitors m
+          where m.event_id = e.id and m.enabled
+      )
+    order by e.next_check_at
     limit $1
-    for update skip locked
+    for update of e skip locked
 )
-update monitors m
+update events e
 set lease_until = now() + interval '2 minutes',
     lease_owner = $2
 from due
-where m.id = due.id
-returning m.*;
+where e.id = due.id
+returning e.*;
 ```
 
 - The scheduler tick (every 10–15 s) claims a small batch and hands it to a
   bounded worker pool.
 - A lease recovers in-flight rows after a crash; `SKIP LOCKED` lets more than
   one scheduler instance claim safely.
-- On completion, the worker writes the `checks` row and updates
+- On completion, the worker writes the `checks` row for the event and updates
   `next_check_at`, clears the lease and resets/increments
   `consecutive_failures` in one transaction.
 - This is roughly a few hundred lines and no new operational component.
@@ -425,9 +461,9 @@ this project does not otherwise need; Temporal is overkill.
   a semaphore for `max_concurrency`. One slow or throttled site must not starve
   the others.
 - Site config sets floor values: `min_check_interval_seconds`,
-  `requests_per_second`, `burst`, `max_concurrency`. A monitor may be slower
-  than the floor but never faster; the scheduler clamps.
-- Add jitter (±10%) so monitors registered together do not synchronise.
+  `requests_per_second`, `burst`, `max_concurrency`. An event's interval may be
+  slower than the floor but never faster; the scheduler clamps.
+- Add jitter (±10%) so events registered together do not synchronise.
 - **Backoff**: success → normal interval. Retryable error (timeout, 5xx,
   connection reset) → exponential `min(base × 2^failures, max_backoff)`.
   429/`blocked` → `Retry-After` when present, minimum 15 minutes. Permanent
@@ -440,14 +476,16 @@ this project does not otherwise need; Temporal is overkill.
 
 ### Per-check flow
 
-1. Scheduler claims a due monitor and records the lease.
-2. Worker loads event + venue + effective config; validates the config.
+1. Scheduler claims a due event that has at least one enabled monitor, and
+   records the lease.
+2. Worker loads event + venue + effective check config; validates the config.
 3. Resolves the plugin by `sites.kind`; acquires the site limiter.
 4. `plugin.Check(ctx, event, config)` with a whole-check timeout (30 s).
-5. Normalizes the result, writes `checks`, updates monitor state and the next
-   run.
-6. Compares with the previous check and marks transitions (sold out → available,
-   price drop) for the future notification layer.
+5. Normalizes the result, writes the event's `checks` row, updates the event's
+   schedule state.
+6. Compares with the previous check; each enabled monitor's filters decide
+   whether a transition (sold out → available, price drop) is relevant for the
+   future notification layer.
 
 ## 6. HTTP fetching and parsing
 
@@ -485,11 +523,12 @@ Minimal v1, no auth yet; `user_id` is nullable so it can become required later.
 | POST | `/api/v1/events/resolve` | Site + URL/ID/query → candidate events |
 | POST | `/api/v1/events` | Register a resolved event |
 | GET | `/api/v1/events` | List/filter events |
-| POST | `/api/v1/monitors` | Create a monitor for an event |
-| GET | `/api/v1/monitors` | List a user's monitors |
-| PATCH | `/api/v1/monitors/{id}` | Pause, change interval/config |
-| DELETE | `/api/v1/monitors/{id}` | Stop monitoring |
-| GET | `/api/v1/monitors/{id}/checks` | Availability history |
+| PATCH | `/api/v1/events/{id}` | Edit event check config and interval |
+| POST | `/api/v1/monitors` | Subscribe to an event |
+| GET | `/api/v1/monitors` | List subscriptions |
+| PATCH | `/api/v1/monitors/{id}` | Enable/pause, edit filters and notification prefs |
+| DELETE | `/api/v1/monitors/{id}` | Unsubscribe |
+| GET | `/api/v1/events/{id}/checks` | Shared availability history |
 
 Auth, rate limiting and CORS for the public API come with the user work; do not
 open CORS broadly in the meantime.
