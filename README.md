@@ -129,8 +129,9 @@ to a remote SMTP server and has no SMTP credentials.
 `https://dp.ondralinek.cz`. nginx serves it from `/var/www/dp` with a strict
 per-IP limit (1 request/second, burst 5, 3 concurrent streams) and never
 proxies the Go backend; `/api/` and `/healthz` return `404` on that domain. The
-single-user UI at `frontend/index.html` is not published. Deployment is
-documented in [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+single-user UI at `frontend/index.html` is not published. Deployment is one
+command, `~/DropPulse/deploy/deploy.sh`; see
+[`deploy/DEPLOY.md`](deploy/DEPLOY.md).
 
 ## SSH tunnel
 

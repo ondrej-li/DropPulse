@@ -31,34 +31,47 @@ DNS already points here:
   loopback API and says so. `frontend/public/index.html` is the public page.
 - No auto-deploy timer yet. The content is one file and changes rarely.
 
-## First deploy
+## One command
 
-On the VPS, as `deploy`:
+On the VPS, as `deploy`, the first deployment is one line:
 
 ```bash
-git clone https://github.com/ondrej-li/DropPulse.git ~/DropPulse
-cd ~/DropPulse
-git switch feat/dp-preview       # until the preview branch is merged to main
-./deploy/deploy.sh               # HTTP vhost + static files
-./deploy/enable-tls.sh           # certificate + HTTPS vhost
+git clone -b feat/dp-preview https://github.com/ondrej-li/DropPulse.git ~/DropPulse && ~/DropPulse/deploy/deploy.sh
 ```
 
-`deploy.sh` is safe to re-run. It pulls the branch, rsyncs the static source
-into `/var/www/dp`, preserves `.well-known/`, installs the HTTP or HTTPS vhost
-depending on whether the certificate exists, and reloads nginx only after
-`nginx -t` passes.
+After the preview branch is merged, clone `main` instead:
+
+```bash
+git clone https://github.com/ondrej-li/DropPulse.git ~/DropPulse && ~/DropPulse/deploy/deploy.sh
+```
+
+After that, every deployment is one command:
+
+```bash
+~/DropPulse/deploy/deploy.sh
+```
+
+The script is safe to re-run. It pulls the checkout, rsyncs `frontend/public/`
+into `/var/www/dp`, preserves `.well-known/`, and installs the correct vhost.
+On the first run it also checks DNS, installs the HTTP vhost so Let's Encrypt
+can validate, requests the certificate, switches to the HTTPS vhost and
+verifies that HTTPS answers `200` and that `/api/v1/events` is still `404`.
+Later runs skip the certificate step. nginx is reloaded only after `nginx -t`
+passes.
+
+If certificate issuance fails, the HTTP preview stays live, the command exits
+non-zero, and re-running it retries the certificate.
 
 ## Updates
 
-After the preview branch is merged, the deploy checkout should be on `main`:
+There is no timer, so a merge is not a publish. After the branch is merged,
+switch the deploy checkout to `main` once:
 
 ```bash
-cd ~/DropPulse
-git switch main
-./deploy/deploy.sh
+git -C ~/DropPulse switch main
 ```
 
-There is no timer, so a merge is not a publish. If this becomes more than a
+Then deploy with `~/DropPulse/deploy/deploy.sh`. If this becomes more than a
 placeholder, add a systemd timer following the other static sites.
 
 ## Request policy
