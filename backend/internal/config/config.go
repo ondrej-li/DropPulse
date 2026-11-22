@@ -70,9 +70,11 @@ type Config struct {
 	SingleUserName string
 	FrontendFile   string
 
-	// Notifications are optional and, for now, only valid in single-user mode.
-	// Mail is injected through the local MTA's sendmail command, which is the
-	// privileged local submission path; the SMTP listener may reject relay.
+	// Notifications are optional. A fixed NotificationEmail is a single-user
+	// convenience; in multi-user mode mail goes to the verified address on the
+	// event owner's account. Mail is injected through the local MTA's sendmail
+	// command, the privileged local submission path; the SMTP listener may
+	// reject relay.
 	NotificationEmail string
 	SendmailPath      string
 	SMTPFrom          string
@@ -152,7 +154,7 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	webDefault := defaultWebAppURL
-	if cfg.SingleUserMode {
+	if cfg.SingleUserMode || cfg.FrontendFile != "" {
 		// The frontend is served by the API, so the browser's origin is the
 		// API origin unless an operator explicitly says otherwise.
 		webDefault = cfg.PublicAPIURL.String()

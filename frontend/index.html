@@ -67,6 +67,10 @@
 
       * { box-sizing: border-box; }
 
+      /* Author display rules (for example .account's flex) would otherwise
+         override the hidden attribute's user-agent display: none. */
+      [hidden] { display: none !important; }
+
       body {
         margin: 0;
         background: var(--bg);
@@ -146,6 +150,62 @@
         font-weight: 600;
         letter-spacing: 0.04em;
         text-transform: uppercase;
+      }
+
+      .account {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .account-email {
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .card.landing {
+        max-width: 600px;
+        padding: 30px;
+      }
+
+      .landing h2 {
+        margin-top: 6px;
+        font-size: 1.45rem;
+        letter-spacing: -0.02em;
+      }
+
+      .landing .lede {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .landing .auth-status {
+        margin-top: 14px;
+      }
+
+      .auth-providers {
+        display: grid;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      button.auth-button {
+        width: 100%;
+        border-color: var(--line);
+        background: var(--panel);
+        color: var(--text);
+        padding: 12px 14px;
+        font-size: 0.95rem;
+      }
+
+      button.auth-button:hover {
+        border-color: var(--accent);
       }
 
       .notice {
@@ -637,6 +697,8 @@
         .wrap { padding-top: 24px; }
         header { flex-direction: column; }
         .header-tools { justify-content: space-between; width: 100%; }
+        .account { flex-wrap: wrap; }
+        .card.landing { padding: 22px; }
         .steps { flex-direction: column; }
         .dialog-head,
         .dialog-actions { padding-left: 16px; padding-right: 16px; }
@@ -651,7 +713,7 @@
       <header>
         <div>
           <h1>DropPulse</h1>
-          <p class="sub">Ticket availability, single-user proof of concept. HTTP 200 means the event is on.</p>
+          <p class="sub" id="subtitle">Ticket availability, without the refresh. HTTP 200 means the event is on.</p>
         </div>
         <div class="header-tools">
           <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -659,13 +721,25 @@
             <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">Light</button>
             <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">Dark</button>
           </div>
-          <span class="badge">localhost only</span>
+          <div id="account" class="account" hidden>
+            <span id="account-email" class="account-email"></span>
+            <button type="button" id="sign-out" class="secondary btn-sm">Sign out</button>
+          </div>
+          <span id="mode-badge" class="badge" hidden></span>
         </div>
       </header>
 
       <p id="notice" class="notice" hidden></p>
 
-      <section class="card" aria-labelledby="events-title">
+      <section id="landing" class="card landing" aria-labelledby="landing-title" hidden>
+        <p class="step-label">DropPulse account</p>
+        <h2 id="landing-title">Sign in to save a watch.</h2>
+        <p class="lede">The landing page is public. Creating a watch needs an account, and the events you add stay with you. Your verified email identifies the account.</p>
+        <div id="auth-providers" class="auth-providers"></div>
+        <p id="auth-status" class="form-status auth-status muted" role="status"></p>
+      </section>
+
+      <section id="events-panel" class="card" aria-labelledby="events-title" hidden>
         <div class="section-head">
           <div>
             <h2 id="events-title">Events</h2>
@@ -693,7 +767,7 @@
 
       <footer>
         <span id="notifications">Email notifications unknown</span>
-        <span>Loopback only. Reach this page through the SSH tunnel.</span>
+        <span id="access-note">Checking access…</span>
       </footer>
     </div>
 
@@ -824,14 +898,34 @@
           2: "Review the template",
           3: "Choose how to be notified",
         };
+        const AUTH_PROVIDERS = Object.freeze({
+          google: Object.freeze({ label: "Continue with Google" }),
+          apple: Object.freeze({ label: "Continue with Apple" }),
+        });
+        const AUTH_PROVIDER_ORDER = Object.freeze(["google", "apple"]);
+        const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
         const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
         let themePreference = "auto";
         let noticeTimer = null;
+        let authErrorMessage = "";
+        let landingMessage = "";
+        let landingMessageIsError = false;
+        let providersRequest = 0;
 
         const els = {
           notice: document.getElementById("notice"),
+          subtitle: document.getElementById("subtitle"),
+          account: document.getElementById("account"),
+          accountEmail: document.getElementById("account-email"),
+          signOut: document.getElementById("sign-out"),
+          modeBadge: document.getElementById("mode-badge"),
+          landing: document.getElementById("landing"),
+          authProviders: document.getElementById("auth-providers"),
+          authStatus: document.getElementById("auth-status"),
+          eventsPanel: document.getElementById("events-panel"),
           summary: document.getElementById("summary"),
           notifications: document.getElementById("notifications"),
+          accessNote: document.getElementById("access-note"),
           events: document.getElementById("events"),
           emptyState: document.getElementById("empty-state"),
           tableWrap: document.getElementById("table-wrap"),
@@ -870,6 +964,7 @@
         const state = {
           events: [],
           me: null,
+          authenticated: false,
           editing: null,
           loading: false,
           wizard: {
@@ -921,11 +1016,35 @@
           }
         }
 
-        function api(path, options = {}) {
-          const opts = { cache: "no-store", ...options };
-          if (opts.body && !opts.headers) {
-            opts.headers = { "Content-Type": "application/json" };
+        function readCookie(name) {
+          const prefix = name + "=";
+          for (const part of document.cookie.split(";")) {
+            const value = part.trim();
+            if (value.startsWith(prefix)) {
+              return decodeURIComponent(value.slice(prefix.length));
+            }
           }
+          return "";
+        }
+
+        // The CSRF cookie is readable by this origin only. The session cookie
+        // stays HttpOnly; the header and cookie must both match the session.
+        function csrfToken() {
+          return readCookie("__Host-dp_csrf") || readCookie("dp_csrf");
+        }
+
+        function api(path, options = {}) {
+          const method = (options.method || "GET").toUpperCase();
+          const opts = { cache: "no-store", credentials: "same-origin", ...options, method };
+          const headers = new Headers(opts.headers || {});
+          if (opts.body && !headers.has("Content-Type")) {
+            headers.set("Content-Type", "application/json");
+          }
+          if (!SAFE_METHODS.has(method)) {
+            const token = csrfToken();
+            if (token) headers.set("X-CSRF-Token", token);
+          }
+          opts.headers = headers;
           return fetch(path, opts).then(async (response) => {
             if (response.status === 204) return null;
             let data = null;
@@ -934,7 +1053,10 @@
               const message = data && data.error && data.error.message
                 ? data.error.message
                 : "Request failed (HTTP " + response.status + ")";
-              throw new Error(message);
+              const error = new Error(message);
+              error.status = response.status;
+              error.code = data && data.error ? data.error.code : "";
+              throw error;
             }
             return data;
           });
@@ -953,22 +1075,181 @@
           element.className = "form-status " + (isError ? "error-text" : "muted");
         }
 
+        // Google sign-in is not offered on iOS or macOS. This is a UI policy,
+        // not a security boundary: the server still accepts any configured
+        // provider for a client that asks for it.
+        function isApplePlatform() {
+          const ua = navigator.userAgent || "";
+          const platform = navigator.platform || "";
+          if (/iPhone|iPad|iPod/i.test(ua)) return true;
+          return /Macintosh|Mac OS X/i.test(ua) || /^Mac/i.test(platform);
+        }
+
+        function readAuthError() {
+          const params = new URLSearchParams(window.location.search);
+          if (!params.get("auth_error")) return;
+          authErrorMessage = "Sign-in did not complete. Please try again.";
+          params.delete("auth_error");
+          const query = params.toString();
+          history.replaceState(null, "",
+            window.location.pathname + (query ? "?" + query : "") + window.location.hash);
+        }
+
+        function showLanding(message = "", isError = false) {
+          landingMessage = message || "";
+          landingMessageIsError = Boolean(message) && isError;
+          state.authenticated = false;
+          state.me = null;
+          state.events = [];
+          state.editing = null;
+          if (els.editDialog.open) els.editDialog.close();
+          if (els.wizard.open) els.wizard.close();
+
+          els.landing.hidden = false;
+          els.eventsPanel.hidden = true;
+          els.account.hidden = true;
+          els.modeBadge.hidden = false;
+          els.modeBadge.textContent = "private preview";
+          els.subtitle.textContent =
+            "Ticket availability, without the refresh. HTTP 200 means the event is on.";
+          els.notifications.textContent = "Sign in to see notification status.";
+          els.notifications.className = "";
+          els.notifications.title = "";
+          els.accessNote.textContent = "Sign in to create and keep watches.";
+          els.authProviders.replaceChildren();
+          if (landingMessage) {
+            setStatus(els.authStatus, landingMessage, landingMessageIsError);
+          } else {
+            setStatus(els.authStatus, "Loading sign-in options…");
+          }
+          loadProviders();
+        }
+
+        async function loadProviders() {
+          const request = ++providersRequest;
+          let providers = [];
+          try {
+            const data = await api("/api/v1/auth/providers");
+            providers = data && Array.isArray(data.providers) ? data.providers : [];
+          } catch (_) {
+            if (request !== providersRequest) return;
+            setStatus(els.authStatus, "Sign-in options could not be loaded. Refresh to try again.", true);
+            return;
+          }
+          if (request !== providersRequest) return;
+
+          const appleOnly = isApplePlatform();
+          const configured = new Set(providers);
+          const available = AUTH_PROVIDER_ORDER.filter((name) =>
+            configured.has(name) && (name !== "google" || !appleOnly));
+          els.authProviders.replaceChildren();
+          if (!available.length) {
+            const message = appleOnly && configured.has("google")
+              ? "Apple sign-in is not configured on this server. Google sign-in is hidden on Apple devices."
+              : "No sign-in provider is configured on this server yet.";
+            setStatus(els.authStatus, message, true);
+            return;
+          }
+          for (const name of available) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "auth-button";
+            button.textContent = AUTH_PROVIDERS[name].label;
+            button.addEventListener("click", () => startSignIn(name));
+            els.authProviders.append(button);
+          }
+          if (landingMessage) {
+            setStatus(els.authStatus, landingMessage, landingMessageIsError);
+          } else {
+            setStatus(els.authStatus, "", false);
+          }
+        }
+
+        function startSignIn(provider) {
+          for (const button of els.authProviders.querySelectorAll("button")) {
+            button.disabled = true;
+          }
+          setStatus(els.authStatus, "Redirecting to " + AUTH_PROVIDERS[provider].label.replace("Continue with ", "") + "…");
+          const target = "/api/v1/auth/" + encodeURIComponent(provider) +
+            "/start?return_to=" + encodeURIComponent("/");
+          window.location.assign(target);
+        }
+
+        function authExpired(err) {
+          if (!err || err.status !== 401) return false;
+          showLanding("Your session expired. Sign in again.", true);
+          return true;
+        }
+
+        async function signOut() {
+          els.signOut.disabled = true;
+          try {
+            await api("/api/v1/auth/logout", { method: "POST" });
+            showNotice("Signed out.");
+            showLanding();
+          } catch (err) {
+            if (!authExpired(err)) showNotice(err.message, true);
+          } finally {
+            els.signOut.disabled = false;
+          }
+        }
+
         async function load() {
           if (state.loading) return;
           state.loading = true;
           try {
-            const [me, list] = await Promise.all([
-              api("/api/v1/me"),
-              api("/api/v1/events"),
-            ]);
+            const me = await api("/api/v1/me");
             state.me = me;
+            state.authenticated = true;
+            showDashboard();
+            const list = await api("/api/v1/events");
             state.events = list && Array.isArray(list.events) ? list.events : [];
             render();
           } catch (err) {
-            showNotice(err.message, true);
+            if (err.status === 401) {
+              const isError = Boolean(authErrorMessage);
+              const message = authErrorMessage || "Sign in to create and keep watches.";
+              authErrorMessage = "";
+              showLanding(message, isError);
+            } else if (!state.authenticated) {
+              showLanding("The server could not be reached. Refresh to try again.", true);
+            } else {
+              showNotice(err.message, true);
+            }
           } finally {
             state.loading = false;
           }
+        }
+
+        async function boot() {
+          await load();
+          if (state.authenticated && authErrorMessage) {
+            showNotice(authErrorMessage, true);
+            authErrorMessage = "";
+          }
+        }
+
+        function showDashboard() {
+          const me = state.me;
+          if (!me) return;
+          const local = Boolean(me.single_user);
+          els.landing.hidden = true;
+          els.eventsPanel.hidden = false;
+          els.modeBadge.hidden = false;
+          els.modeBadge.textContent = local ? "localhost only" : "signed in";
+          els.subtitle.textContent = local
+            ? "Ticket availability, single-user proof of concept. HTTP 200 means the event is on."
+            : "Ticket availability, without the refresh. HTTP 200 means the event is on.";
+          els.accessNote.textContent = local
+            ? "Loopback only. Reach this page through the SSH tunnel."
+            : "Your watches are private to your account.";
+          els.account.hidden = local;
+          if (!local && me.user) {
+            const label = me.user.email || me.user.display_name || me.user.username || "Signed in";
+            els.accountEmail.textContent = label;
+            els.accountEmail.title = "Signed in as " + label;
+          }
+          renderEmailChannelNote();
         }
 
         function render() {
@@ -981,12 +1262,36 @@
         }
 
         function renderNotifications() {
-          const on = state.me && state.me.notifications_enabled;
+          const local = Boolean(state.me && state.me.single_user);
+          const on = Boolean(state.me && state.me.notifications_enabled);
           els.notifications.textContent = on ? "Email notifications on" : "Email notifications off";
           els.notifications.className = on ? "notify-on" : "notify-off";
-          els.notifications.title = on
-            ? "The server emails the configured address when an event goes from off to on."
-            : "Set NOTIFICATION_EMAIL and SMTP_FROM in the server environment to enable email.";
+          if (on) {
+            els.notifications.title = local
+              ? "The server emails the configured address when an event goes from off to on."
+              : "The server emails your verified account address when an event goes from off to on.";
+          } else {
+            els.notifications.title = local
+              ? "Set NOTIFICATION_EMAIL and SMTP_FROM in the server environment to enable email."
+              : "Set SMTP_FROM in the server environment to email verified account addresses.";
+          }
+        }
+
+        function renderEmailChannelNote() {
+          if (!state.me) return;
+          if (state.me.single_user) {
+            els.emailChannelNote.textContent = "One message when the event goes from off to on.";
+            return;
+          }
+          if (!state.me.notifications_enabled) {
+            els.emailChannelNote.textContent =
+              "Email notifications are not configured on this server. The watch is still saved.";
+            return;
+          }
+          const email = state.me.user && state.me.user.email;
+          els.emailChannelNote.textContent = email
+            ? "One message to " + email + " when the event goes from off to on."
+            : "One message to your verified account email when the event goes from off to on.";
         }
 
         function renderEvents() {
@@ -1460,6 +1765,10 @@
         }
 
         function openWizard() {
+          if (!state.authenticated) {
+            showLanding("Sign in before adding a watch.");
+            return;
+          }
           resetWizard();
           els.wizard.showModal();
           renderTemplateOptions();
@@ -1545,6 +1854,7 @@
             }
             await load();
           } catch (err) {
+            if (authExpired(err)) return;
             state.wizard.creating = false;
             setStatus(els.wizardStatus, err.message, true);
             els.wizardNext.disabled = false;
@@ -1572,6 +1882,7 @@
               showNotice("Event deleted.");
               await load();
             } catch (err) {
+              if (authExpired(err)) return;
               showNotice(err.message, true);
               button.disabled = false;
             }
@@ -1586,7 +1897,7 @@
               showNotice("Check finished.");
               await load();
             } catch (err) {
-              showNotice(err.message, true);
+              if (!authExpired(err)) showNotice(err.message, true);
             } finally {
               button.disabled = false;
               button.textContent = "Check now";
@@ -1697,16 +2008,20 @@
             showNotice("Event saved.");
             await load();
           } catch (err) {
+            if (authExpired(err)) return;
             setStatus(els.editStatus, err.message, true);
             els.editSubmit.disabled = false;
             els.editSubmit.textContent = "Save changes";
           }
         });
 
+        els.signOut.addEventListener("click", signOut);
+
+        readAuthError();
         initTheme();
-        load();
+        boot();
         setInterval(() => {
-          if (!document.hidden) load();
+          if (!document.hidden && state.authenticated) load();
         }, 15000);
       })();
     </script>

@@ -16,6 +16,7 @@ import (
 	"github.com/ondrej-li/DropPulse/backend/internal/auth"
 	"github.com/ondrej-li/DropPulse/backend/internal/config"
 	"github.com/ondrej-li/DropPulse/backend/internal/db"
+	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 	"github.com/ondrej-li/DropPulse/backend/internal/events"
 	"github.com/ondrej-li/DropPulse/backend/internal/httpapi"
 	"github.com/ondrej-li/DropPulse/backend/internal/notify"
@@ -62,41 +63,57 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("configure OAuth providers: %w", err)
 	}
-	if len(providers) == 0 {
+	if len(providers) == 0 && !cfg.SingleUserMode {
 		logger.Warn("no OAuth providers configured; all sign-in attempts will fail")
 	}
 	authService := auth.NewService(cfg, st, providers)
 
-	var eventsSvc *events.Service
+	var admin domain.User
 	if cfg.SingleUserMode {
 		if len(providers) > 0 {
 			logger.Warn("OAuth providers are configured but ignored in single-user mode")
 		}
-		admin, err := st.EnsureLocalAdmin(ctx, cfg.SingleUserName)
+		admin, err = st.EnsureLocalAdmin(ctx, cfg.SingleUserName)
 		if err != nil {
 			return fmt.Errorf("ensure local admin: %w", err)
 		}
-		var mailer events.Mailer
-		if cfg.NotificationEmail != "" {
-			mailer, err = notify.New(cfg.SendmailPath, cfg.SMTPFrom, cfg.NotificationEmail, 10*time.Second)
-			if err != nil {
-				return fmt.Errorf("configure notifications: %w", err)
-			}
-		} else {
-			logger.Warn("email notifications are disabled; set NOTIFICATION_EMAIL and SMTP_FROM to enable them")
+	}
+
+	// A fixed recipient is a single-user convenience. Multi-user notices go to
+	// the verified address on the account that owns the event.
+	var mailer events.Mailer
+	switch {
+	case cfg.SingleUserMode && cfg.NotificationEmail != "":
+		mailer, err = notify.New(cfg.SendmailPath, cfg.SMTPFrom, cfg.NotificationEmail, 10*time.Second)
+		if err != nil {
+			return fmt.Errorf("configure notifications: %w", err)
 		}
-		eventsSvc = events.NewService(
-			st,
-			watch.NewChecker(10*time.Second),
-			mailer,
-			logger,
-			admin,
-			cfg.PublicAPIURL.String(),
-		)
+	case !cfg.SingleUserMode && cfg.SMTPFrom != "":
+		mailer, err = notify.New(cfg.SendmailPath, cfg.SMTPFrom, "", 10*time.Second)
+		if err != nil {
+			return fmt.Errorf("configure notifications: %w", err)
+		}
+	case cfg.SingleUserMode:
+		logger.Warn("email notifications are disabled; set NOTIFICATION_EMAIL and SMTP_FROM to enable them")
+	default:
+		logger.Warn("email notifications are disabled; set SMTP_FROM to email verified account addresses")
+	}
+
+	eventsSvc := events.NewService(
+		st,
+		watch.NewChecker(10*time.Second),
+		mailer,
+		logger,
+		admin,
+		cfg.WebAppURL.String(),
+	)
+	if cfg.SingleUserMode {
 		logger.Info("single-user mode enabled",
 			"username", admin.Username,
-			"notifications", cfg.NotificationEmail != "",
+			"notifications", mailer != nil,
 		)
+	} else {
+		logger.Info("multi-user mode enabled", "notifications", mailer != nil)
 	}
 
 	api, err := httpapi.New(cfg, st, authService, eventsSvc, logger)
@@ -116,9 +133,7 @@ func run() error {
 	}
 
 	go purgeExpiredFlows(ctx, st, logger)
-	if eventsSvc != nil {
-		go eventsSvc.Run(ctx)
-	}
+	go eventsSvc.Run(ctx)
 	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("DropPulse backend listening", "addr", srv.Addr, "providers", cfg.ProviderNames())

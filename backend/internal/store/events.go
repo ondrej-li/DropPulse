@@ -26,7 +26,12 @@ const eventColumns = `
 	e.last_notified_at,
 	e.last_notification_error,
 	e.created_at,
-	e.updated_at`
+	e.updated_at,
+	coalesce((select u.email
+	          from users u
+	          where u.id = e.user_id
+	            and u.email_verified
+	            and u.deleted_at is null), '')`
 
 func scanEvent(row rowScanner) (domain.Event, error) {
 	var (
@@ -51,6 +56,7 @@ func scanEvent(row rowScanner) (domain.Event, error) {
 		&event.LastNotificationErr,
 		&event.CreatedAt,
 		&event.UpdatedAt,
+		&event.UserEmail,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Event{}, ErrNotFound
@@ -237,8 +243,8 @@ func (s *Store) DeleteEvent(ctx context.Context, userID, id string) (bool, error
 	return tag.RowsAffected() > 0, nil
 }
 
-// DueEvents returns enabled events whose interval has elapsed, oldest check
-// first. The limit bounds one scheduler tick.
+// DueEvents returns enabled events for active accounts whose interval has
+// elapsed, oldest check first. The limit bounds one scheduler tick.
 func (s *Store) DueEvents(ctx context.Context, limit int) ([]domain.Event, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 50
@@ -246,7 +252,10 @@ func (s *Store) DueEvents(ctx context.Context, limit int) ([]domain.Event, error
 	rows, err := s.pool.Query(ctx, `
 		select `+eventColumns+`
 		from events e
+		join users u on u.id = e.user_id
 		where e.enabled
+		  and u.status = 'active'
+		  and u.deleted_at is null
 		  and (e.last_checked_at is null
 		       or e.last_checked_at <= now() - (e.check_interval_seconds * interval '1 second'))
 		order by e.last_checked_at nulls first, e.created_at

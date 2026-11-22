@@ -1,5 +1,6 @@
-// Package events owns the single-user event lifecycle: validated CRUD, the
-// due-check scheduler, and the off->on notification edge.
+// Package events owns the event lifecycle: validated CRUD, the due-check
+// scheduler, and the off->on notification edge. Every operation is scoped to a
+// user; single-user mode simply supplies one fixed local principal.
 package events
 
 import (
@@ -59,7 +60,8 @@ type Service struct {
 	locks map[string]*sync.Mutex
 }
 
-// NewService builds the event service for the single-user account.
+// NewService builds the event service. admin is the fixed single-user account
+// and may be zero in multi-user mode; uiURL is the frontend link used in email.
 func NewService(repo Repository, checker Checker, mailer Mailer, logger *slog.Logger, admin domain.User, uiURL string) *Service {
 	if logger == nil {
 		logger = slog.Default()
