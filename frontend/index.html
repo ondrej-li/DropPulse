@@ -673,7 +673,8 @@
           </div>
           <button type="button" id="add-event">Add event</button>
         </div>
-        <div class="table-wrap">
+        <p id="empty-state" class="empty" hidden></p>
+        <div id="table-wrap" class="table-wrap">
           <table>
             <thead>
               <tr>
@@ -832,6 +833,8 @@
           summary: document.getElementById("summary"),
           notifications: document.getElementById("notifications"),
           events: document.getElementById("events"),
+          emptyState: document.getElementById("empty-state"),
+          tableWrap: document.getElementById("table-wrap"),
           addEvent: document.getElementById("add-event"),
 
           editDialog: document.getElementById("edit-dialog"),
@@ -988,15 +991,14 @@
 
         function renderEvents() {
           if (!state.events.length) {
-            const row = document.createElement("tr");
-            const cell = document.createElement("td");
-            cell.colSpan = 6;
-            cell.className = "empty";
-            cell.textContent = "No events yet. Use Add event to create one from a provider template.";
-            row.append(cell);
-            els.events.replaceChildren(row);
+            els.tableWrap.hidden = true;
+            els.emptyState.hidden = false;
+            els.emptyState.textContent = "No events yet. Use Add event to create one from a provider template.";
+            els.events.replaceChildren();
             return;
           }
+          els.tableWrap.hidden = false;
+          els.emptyState.hidden = true;
           els.events.replaceChildren(...state.events.map(eventRow));
         }
 
@@ -1531,12 +1533,16 @@
             });
             const emailConfigured = Boolean(state.me && state.me.notifications_enabled);
             els.wizard.close();
-            showNotice(
-              emailConfigured
-                ? "Watch created. Its first check is due now."
-                : "Watch created, but email is not configured on the server; no notification will be sent.",
-              !emailConfigured,
-            );
+            if (!draft.enabled) {
+              showNotice("Watch created, but it is paused.");
+            } else {
+              showNotice(
+                emailConfigured
+                  ? "Watch created. Its first check is due now."
+                  : "Watch created, but email is not configured on the server; no notification will be sent.",
+                !emailConfigured,
+              );
+            }
             await load();
           } catch (err) {
             state.wizard.creating = false;
