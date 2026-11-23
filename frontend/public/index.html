@@ -1,12 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="cs">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <meta name="color-scheme" content="light dark">
-    <title>DropPulse — coming soon</title>
+    <meta name="description" content="DropPulse sleduje stránku se vstupenkami a dá vám vědět, jakmile se něco uvolní.">
+    <title>DropPulse — soukromá ukázka</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="alternate" hreflang="cs" href="https://dp.ondralinek.cz/">
+    <link rel="alternate" hreflang="en" href="https://dp.ondralinek.cz/en/">
+    <link rel="alternate" hreflang="de" href="https://dp.ondralinek.cz/de/">
+    <link rel="alternate" hreflang="fr" href="https://dp.ondralinek.cz/fr/">
+    <link rel="alternate" hreflang="es" href="https://dp.ondralinek.cz/es/">
+    <link rel="alternate" hreflang="it" href="https://dp.ondralinek.cz/it/">
+    <link rel="alternate" hreflang="pt" href="https://dp.ondralinek.cz/pt/">
+    <link rel="alternate" hreflang="ja" href="https://dp.ondralinek.cz/ja/">
+    <link rel="alternate" hreflang="ko" href="https://dp.ondralinek.cz/ko/">
+    <link rel="alternate" hreflang="ru" href="https://dp.ondralinek.cz/ru/">
+    <link rel="alternate" hreflang="x-default" href="https://dp.ondralinek.cz/">
     <style>
       :root {
         color-scheme: light dark;
@@ -17,6 +29,7 @@
         --line: rgba(23, 32, 29, 0.12);
         --accent: #0f766e;
         --accent-soft: rgba(15, 118, 110, 0.12);
+        --on-accent: #ffffff;
         --shadow: 0 24px 80px rgba(23, 32, 29, 0.10);
       }
 
@@ -29,6 +42,7 @@
           --line: rgba(237, 244, 240, 0.12);
           --accent: #5eead4;
           --accent-soft: rgba(94, 234, 212, 0.10);
+          --on-accent: #06201c;
           --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
         }
       }
@@ -96,7 +110,7 @@
       }
 
       .lede {
-        max-width: 22ch;
+        max-width: 26ch;
         margin: 22px 0 0;
         color: var(--accent);
         font-size: clamp(1.25rem, 3.8vw, 1.85rem);
@@ -122,6 +136,30 @@
 
       .note strong { color: var(--text); }
 
+      .actions { margin: 22px 0 0; }
+
+      .action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 11px 20px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: transform 140ms ease, filter 140ms ease;
+      }
+
+      .action:hover { filter: brightness(1.06); transform: translateY(-1px); }
+      .action:active { transform: translateY(0); }
+
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
       footer {
         display: flex;
         flex-wrap: wrap;
@@ -130,6 +168,26 @@
         margin-top: 42px;
         color: var(--muted);
         font-size: 0.8rem;
+      }
+
+      footer a { color: var(--muted); text-underline-offset: 2px; }
+      footer a:hover { color: var(--text); }
+
+      .langs {
+        flex: 1 0 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin-top: 10px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      .langs a { text-decoration: none; }
+      .langs a:hover { text-decoration: underline; }
+      .langs a[aria-current="page"] {
+        color: var(--text);
+        font-weight: 650;
       }
 
       code {
@@ -144,31 +202,40 @@
 
       @media (prefers-reduced-motion: reduce) {
         .dot { animation: none; }
+        .action { transition: none; }
       }
 
       @media (max-width: 520px) {
         body { padding: 12px; }
         .shell { padding: 30px 22px; border-radius: 22px; }
         .eyebrow { margin-bottom: 22px; }
+        .lede { max-width: none; }
       }
     </style>
   </head>
   <body>
     <main class="shell">
-      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Private preview</p>
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Soukromá ukázka</p>
       <h1>DropPulse</h1>
-      <p class="lede">Ticket availability, without the refresh.</p>
-      <p class="body">
-        DropPulse watches a ticket page and tells you the moment something becomes
-        available, so you do not have to keep reloading it.
-      </p>
-      <p class="note">
-        <strong>The public app is not open yet.</strong> This is a static preview;
-        the API is not exposed here.
-      </p>
+      <p class="lede">Dostupnost vstupenek bez neustálého obnovování.</p>
+      <p class="body">DropPulse sleduje stránku se vstupenkami a dá vám vědět ve chvíli, kdy se něco uvolní, abyste ji nemuseli pořád načítat znovu.</p>
+      <p class="note"><strong>Přístup je zatím na pozvání.</strong> Přihlásit se mohou pouze pozvané účty; registrace není otevřená.</p>
+      <p class="actions"><a class="action" href="/app/">Přihlásit se</a></p>
       <footer>
         <span><code>dp.ondralinek.cz</code></span>
-        <span>Static preview &middot; 2026</span>
+        <span><a href="/privacy/" hreflang="cs">Ochrana osobních údajů</a> &middot; 2026</span>
+        <nav class="langs" aria-label="Jazyk">
+          <a href="/" lang="cs" hreflang="cs" aria-current="page">Čeština</a>
+          <a href="/en/" lang="en" hreflang="en">English</a>
+          <a href="/de/" lang="de" hreflang="de">Deutsch</a>
+          <a href="/fr/" lang="fr" hreflang="fr">Français</a>
+          <a href="/es/" lang="es" hreflang="es">Español</a>
+          <a href="/it/" lang="it" hreflang="it">Italiano</a>
+          <a href="/pt/" lang="pt" hreflang="pt">Português</a>
+          <a href="/ja/" lang="ja" hreflang="ja">日本語</a>
+          <a href="/ko/" lang="ko" hreflang="ko">한국어</a>
+          <a href="/ru/" lang="ru" hreflang="ru">Русский</a>
+        </nav>
       </footer>
     </main>
   </body>

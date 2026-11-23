@@ -46,6 +46,7 @@ cd backend
 DATABASE_URL='postgres://localhost/droppulse?sslmode=disable' \
   FRONTEND_FILE=../frontend/index.html \
   PUBLIC_API_URL=http://localhost:8080 \
+  ALLOWED_EMAILS='you@example.com' \
   GOOGLE_CLIENT_ID='...' GOOGLE_CLIENT_SECRET='...' \
   go run ./cmd/server
 ```
@@ -57,6 +58,7 @@ Configuration is read from the environment and validated at start-up:
 
 | Variable | Purpose |
 |---|---|
+| `APP_ENV` | Deployment environment (default `development`); `production` turns on the required invite list |
 | `DATABASE_URL` | Required Postgres connection string |
 | `BIND_ADDR` | Address to bind (default `127.0.0.1`) |
 | `PUBLIC_API_URL` | Public origin of this API (default `http://localhost:8080`); its `/api/v1/auth/<provider>/callback` paths are the OAuth redirect URIs |
@@ -65,13 +67,14 @@ Configuration is read from the environment and validated at start-up:
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Enable Google sign-in |
 | `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` or `APPLE_PRIVATE_KEY_FILE` | Enable Apple sign-in |
 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`, `FACEBOOK_GRAPH_VERSION` | Enable Facebook sign-in |
+| `ALLOWED_EMAILS` | Comma-separated verified addresses allowed to sign in. Empty is open only outside production; `APP_ENV=production` with multi-user mode requires a non-empty list |
 | `ADMIN_EMAILS` | Comma-separated verified addresses that receive the admin role on first sign-in |
 | `SESSION_IDLE_TTL`, `SESSION_ABSOLUTE_TTL`, `OAUTH_FLOW_TTL` | Session and login-flow lifetimes |
 | `TRUSTED_PROXY_CIDRS` | Proxies whose `X-Real-IP` / `X-Forwarded-For` are trusted (default loopback) |
 | `AUTH_RATE_LIMIT_PER_MINUTE`, `API_RATE_LIMIT_PER_MINUTE` | In-process rate limits |
 | `SINGLE_USER_MODE` | Serve the frontend and events API without a login; requires a loopback `BIND_ADDR` |
 | `SINGLE_USER_NAME` | Username of the fixed local account (default `admin`) |
-| `FRONTEND_FILE` | Path to the single HTML app served at `/`; required in single-user mode |
+| `FRONTEND_FILE` | Path to the single HTML app served at `/` (and `/app/` in multi-user mode); required in single-user mode |
 | `NOTIFICATION_EMAIL` | Fixed recipient for availability email; requires single-user mode and `SMTP_FROM` |
 | `SMTP_FROM` | Envelope/From address for notifications. In multi-user mode it enables mail to each account's verified address |
 | `SENDMAIL_PATH` | Local MTA submission command (default `/usr/sbin/sendmail`; must be absolute and executable) |
@@ -108,6 +111,14 @@ The interface offers Apple only on iOS and macOS and both providers elsewhere,
 as requested. That is a UI policy, not an authorization rule: the backend
 accepts any configured provider from any client, because the user agent is
 trivially spoofable and a policy enforced on it would be false assurance.
+
+Sign-in is invite-only when `ALLOWED_EMAILS` is set. After the provider
+exchange, an address that is not on the list — or that the provider did not mark
+verified — is refused before any account row is created. There is no
+registration form; adding an address to the list is the invitation. In
+production the list is required, so a forgotten setting fails closed at
+start-up rather than opening sign-up to everyone. An empty list remains the
+development default and is open, which is why the local example sets one.
 
 Accounts are identified by verified email. After the ID token is verified
 (signature, issuer, audience, nonce and expiry), the account lookup is:
@@ -170,8 +181,8 @@ A create or replace body looks like:
 
 Intervals are 60 to 86400 seconds (default 300). The scheduler runs every 15
 seconds and checks whatever is due; events of suspended or deleted accounts are
-skipped. The UI is served at `/` when `FRONTEND_FILE` is set and refreshes every
-15 seconds.
+skipped. The UI is served at `/` (and `/app/` in multi-user mode) when
+`FRONTEND_FILE` is set and refreshes every 15 seconds.
 
 The UI creates events through a three-step wizard: choose a provider template,
 fill in template-specific details and watch settings, then choose a notification
@@ -202,18 +213,37 @@ to a remote SMTP server and has no SMTP credentials.
 
 ## Public preview
 
-`frontend/public/index.html` is a static holding page for
-`https://dp.ondralinek.cz`. nginx serves it from `/var/www/dp` with a strict
-per-IP limit (1 request/second, burst 5, 3 concurrent streams) and never
-proxies the Go backend; `/api/` and `/healthz` return `404` on that domain. The
-application UI at `frontend/index.html` is not published there, and the backend
-still listens on loopback only. Deployment of the holding page is one command,
+`frontend/public/` is the static public site for `https://dp.ondralinek.cz`:
+the landing page in ten languages and the privacy notice in Czech and English.
+Czech is the default and there is no JavaScript on these pages; the language
+switcher is plain links.
+
+| Path | Language | Source |
+|---|---|---|
+| `/` | Czech (default) | `frontend/public/index.html` |
+| `/en/`, `/de/`, `/fr/`, `/es/`, `/it/`, `/pt/`, `/ja/`, `/ko/`, `/ru/` | English, German, French, Spanish, Italian, Portuguese, Japanese, Korean, Russian | `frontend/public/<code>/index.html` |
+| `/privacy/` | Czech (authoritative) | `frontend/public/privacy/index.html` |
+| `/privacy/en/` | English (translation) | `frontend/public/privacy/en/index.html` |
+
+The landing pages are generated by `frontend/landing/build.py`; edit the script,
+run it, and commit the generated files. `python3 frontend/landing/build.py
+--check` verifies that the committed pages are current. Every landing page links
+to `/app/` to sign in and to the privacy notice.
+
+`/app/` is the application UI (`frontend/index.html`), which the backend serves
+when `FRONTEND_FILE` is set. The public vhost stays static: nginx serves
+`/var/www/dp` with a strict per-IP limit (1 request/second, burst 5, 3
+concurrent streams) and never proxies the Go backend; `/api/` and `/healthz`
+return `404` on that domain. Until the backend and OAuth clients are deployed,
+`/app/` also returns `404`; the link is the intended entry point, not a working
+login. Deployment of the public site is one command,
 `~/DropPulse/deploy/deploy.sh`; see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
 
 Serving the application itself needs the backend reachable by the browser and
 OAuth credentials registered for that origin. Nothing in this repository
 deploys that, and no provider secret belongs in the tree or in the static
-preview.
+preview. [`backend/docs/privacy.md`](backend/docs/privacy.md) has the provider
+registration checklist, the Article 30 record and the required environment.
 
 ## SSH tunnel
 

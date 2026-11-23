@@ -53,7 +53,7 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := parseForm(w, r, s.cfg.MaxRequestBytes); err != nil {
 		s.clearStateCookie(w)
-		s.redirectAuthError(w, r)
+		s.redirectAuthError(w, r, "auth_failed")
 		return
 	}
 	browserToken := cookieValue(r, s.cookieName(stateCookieBase))
@@ -65,10 +65,14 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if !errors.Is(err, auth.ErrInvalidRequest) && !errors.Is(err, auth.ErrInvalidState) &&
 			!errors.Is(err, auth.ErrExchangeFailed) && !errors.Is(err, auth.ErrAccountInactive) &&
-			!errors.Is(err, auth.ErrProviderNotFound) {
+			!errors.Is(err, auth.ErrAccountNotAllowed) && !errors.Is(err, auth.ErrProviderNotFound) {
 			s.logger.Error("finish OAuth flow", "provider", provider, "err", err, "request_id", requestIDFrom(r.Context()))
 		}
-		s.redirectAuthError(w, r)
+		code := "auth_failed"
+		if errors.Is(err, auth.ErrAccountNotAllowed) {
+			code = "not_invited"
+		}
+		s.redirectAuthError(w, r, code)
 		return
 	}
 	s.setSessionCookies(w, result.SessionToken, result.CSRFToken, s.cfg.SessionIdleTTL)
@@ -139,10 +143,19 @@ func (s *Server) handleCSRF(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"csrf_token": token})
 }
 
-func (s *Server) redirectAuthError(w http.ResponseWriter, r *http.Request) {
+func (s *Server) redirectAuthError(w http.ResponseWriter, r *http.Request, code string) {
+	if code == "" {
+		code = "auth_failed"
+	}
 	values := url.Values{}
-	values.Set("auth_error", "auth_failed")
-	target := s.webRedirect("/?" + values.Encode())
+	values.Set("auth_error", code)
+	// The backend serves the app at /app/ when it has the frontend file. An
+	// externally served frontend keeps its old root path.
+	path := "/"
+	if s.cfg.FrontendFile != "" {
+		path = "/app/"
+	}
+	target := s.webRedirect(path + "?" + values.Encode())
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 

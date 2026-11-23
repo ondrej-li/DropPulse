@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="DropPulse следит за страницей билетов и сообщает, как только что-то появляется.">
+    <title>DropPulse — закрытое превью</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="alternate" hreflang="cs" href="https://dp.ondralinek.cz/">
+    <link rel="alternate" hreflang="en" href="https://dp.ondralinek.cz/en/">
+    <link rel="alternate" hreflang="de" href="https://dp.ondralinek.cz/de/">
+    <link rel="alternate" hreflang="fr" href="https://dp.ondralinek.cz/fr/">
+    <link rel="alternate" hreflang="es" href="https://dp.ondralinek.cz/es/">
+    <link rel="alternate" hreflang="it" href="https://dp.ondralinek.cz/it/">
+    <link rel="alternate" hreflang="pt" href="https://dp.ondralinek.cz/pt/">
+    <link rel="alternate" hreflang="ja" href="https://dp.ondralinek.cz/ja/">
+    <link rel="alternate" hreflang="ko" href="https://dp.ondralinek.cz/ko/">
+    <link rel="alternate" hreflang="ru" href="https://dp.ondralinek.cz/ru/">
+    <link rel="alternate" hreflang="x-default" href="https://dp.ondralinek.cz/">
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f5;
+        --surface: rgba(255, 255, 255, 0.78);
+        --text: #17201d;
+        --muted: #5e6b66;
+        --line: rgba(23, 32, 29, 0.12);
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.12);
+        --on-accent: #ffffff;
+        --shadow: 0 24px 80px rgba(23, 32, 29, 0.10);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1210;
+          --surface: rgba(22, 30, 27, 0.82);
+          --text: #edf4f0;
+          --muted: #9aaba4;
+          --line: rgba(237, 244, 240, 0.12);
+          --accent: #5eead4;
+          --accent-soft: rgba(94, 234, 212, 0.10);
+          --on-accent: #06201c;
+          --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      html { min-height: 100%; }
+
+      body {
+        min-height: 100svh;
+        margin: 0;
+        padding: clamp(20px, 5vw, 56px);
+        display: grid;
+        place-items: center;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 15% 10%, var(--accent-soft), transparent 38%),
+          radial-gradient(circle at 88% 92%, var(--accent-soft), transparent 34%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      .shell {
+        width: min(760px, 100%);
+        padding: clamp(28px, 7vw, 68px);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0 0 28px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+        animation: breathe 2.8s ease-in-out infinite;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 12.8vw, 7.5rem);
+        font-weight: 760;
+        letter-spacing: -0.065em;
+        line-height: 0.88;
+      }
+
+      .lede {
+        max-width: 26ch;
+        margin: 22px 0 0;
+        color: var(--accent);
+        font-size: clamp(1.25rem, 3.8vw, 1.85rem);
+        font-weight: 620;
+        letter-spacing: -0.025em;
+        line-height: 1.2;
+      }
+
+      .body {
+        max-width: 52ch;
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: clamp(1rem, 2.4vw, 1.08rem);
+      }
+
+      .note {
+        margin: 36px 0 0;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .note strong { color: var(--text); }
+
+      .actions { margin: 22px 0 0; }
+
+      .action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 11px 20px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: transform 140ms ease, filter 140ms ease;
+      }
+
+      .action:hover { filter: brightness(1.06); transform: translateY(-1px); }
+      .action:active { transform: translateY(0); }
+
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px 24px;
+        margin-top: 42px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      footer a { color: var(--muted); text-underline-offset: 2px; }
+      footer a:hover { color: var(--text); }
+
+      .langs {
+        flex: 1 0 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin-top: 10px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      .langs a { text-decoration: none; }
+      .langs a:hover { text-decoration: underline; }
+      .langs a[aria-current="page"] {
+        color: var(--text);
+        font-weight: 650;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.95em;
+      }
+
+      @keyframes breathe {
+        0%, 100% { box-shadow: 0 0 0 4px var(--accent-soft); }
+        50% { box-shadow: 0 0 0 8px transparent; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .dot { animation: none; }
+        .action { transition: none; }
+      }
+
+      @media (max-width: 520px) {
+        body { padding: 12px; }
+        .shell { padding: 30px 22px; border-radius: 22px; }
+        .eyebrow { margin-bottom: 22px; }
+        .lede { max-width: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Закрытое превью</p>
+      <h1>DropPulse</h1>
+      <p class="lede">Наличие билетов — без постоянного обновления.</p>
+      <p class="body">DropPulse следит за страницей билетов и сообщает, как только что-то появляется, чтобы вам не приходилось перезагружать её снова и снова.</p>
+      <p class="note"><strong>Пока доступ только по приглашению.</strong> Войти могут только приглашённые аккаунты; регистрация закрыта.</p>
+      <p class="actions"><a class="action" href="/app/">Войти</a></p>
+      <footer>
+        <span><code>dp.ondralinek.cz</code></span>
+        <span><a href="/privacy/en/" hreflang="en">Конфиденциальность</a> &middot; 2026</span>
+        <nav class="langs" aria-label="Язык">
+          <a href="/" lang="cs" hreflang="cs">Čeština</a>
+          <a href="/en/" lang="en" hreflang="en">English</a>
+          <a href="/de/" lang="de" hreflang="de">Deutsch</a>
+          <a href="/fr/" lang="fr" hreflang="fr">Français</a>
+          <a href="/es/" lang="es" hreflang="es">Español</a>
+          <a href="/it/" lang="it" hreflang="it">Italiano</a>
+          <a href="/pt/" lang="pt" hreflang="pt">Português</a>
+          <a href="/ja/" lang="ja" hreflang="ja">日本語</a>
+          <a href="/ko/" lang="ko" hreflang="ko">한국어</a>
+          <a href="/ru/" lang="ru" hreflang="ru" aria-current="page">Русский</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>

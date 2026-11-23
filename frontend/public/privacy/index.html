@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Jak DropPulse zpracovává osobní údaje v uzavřeném preview na pozvání.">
+    <title>Zásady ochrany osobních údajů — DropPulse</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="alternate" hreflang="cs" href="https://dp.ondralinek.cz/privacy/">
+    <link rel="alternate" hreflang="en" href="https://dp.ondralinek.cz/privacy/en/">
+    <link rel="alternate" hreflang="x-default" href="https://dp.ondralinek.cz/privacy/">
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f5;
+        --surface: rgba(255, 255, 255, 0.82);
+        --text: #17201d;
+        --muted: #5e6b66;
+        --line: rgba(23, 32, 29, 0.12);
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.10);
+        --shadow: 0 24px 80px rgba(23, 32, 29, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1210;
+          --surface: rgba(22, 30, 27, 0.86);
+          --text: #edf4f0;
+          --muted: #9aaba4;
+          --line: rgba(237, 244, 240, 0.12);
+          --accent: #5eead4;
+          --accent-soft: rgba(94, 234, 212, 0.08);
+          --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100svh;
+        margin: 0;
+        padding: clamp(18px, 4vw, 48px);
+        background:
+          radial-gradient(circle at 8% 4%, var(--accent-soft), transparent 30%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      .shell {
+        width: min(820px, 100%);
+        margin: 0 auto;
+        padding: clamp(26px, 6vw, 60px);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 20px;
+        margin-bottom: 34px;
+      }
+
+      .brand {
+        color: var(--text);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        text-transform: uppercase;
+      }
+
+      .top nav { display: flex; gap: 14px; font-size: 0.82rem; }
+      .top nav a { color: var(--muted); }
+      .top nav a[aria-current="page"] { color: var(--text); font-weight: 650; text-decoration: none; }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 6.5vw, 3.2rem);
+        letter-spacing: -0.045em;
+        line-height: 1.05;
+      }
+
+      .meta { margin: 12px 0 0; color: var(--muted); font-size: 0.86rem; }
+
+      .callout {
+        margin: 28px 0 0;
+        padding: 14px 18px;
+        border-left: 3px solid var(--accent);
+        border-radius: 0 10px 10px 0;
+        background: var(--accent-soft);
+        color: var(--text);
+        font-size: 0.94rem;
+      }
+
+      h2 {
+        margin: 2.4rem 0 0.6rem;
+        font-size: 1.18rem;
+        letter-spacing: -0.015em;
+      }
+
+      p { margin: 0.7rem 0 0; }
+      p, li { color: var(--muted); }
+      strong { color: var(--text); }
+      ul { margin: 0.6rem 0 0; padding-left: 1.25rem; }
+      li { margin: 0.35rem 0; }
+
+      a { color: var(--accent); text-underline-offset: 2px; }
+      a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+      code {
+        padding: 0.1em 0.35em;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.86em;
+        color: var(--text);
+      }
+
+      footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px 24px;
+        margin-top: 48px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      footer a { color: var(--muted); }
+      footer .langs { display: flex; gap: 14px; }
+      footer .langs a { text-decoration: none; }
+      footer .langs a[aria-current="page"] { color: var(--text); font-weight: 650; }
+
+      @media (max-width: 520px) {
+        body { padding: 10px; }
+        .shell { padding: 28px 20px; border-radius: 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="top">
+        <a class="brand" href="/">DropPulse</a>
+        <nav aria-label="Jazyk">
+          <a href="/privacy/" lang="cs" hreflang="cs" aria-current="page">Čeština</a>
+          <a href="/privacy/en/" lang="en" hreflang="en">English</a>
+        </nav>
+      </div>
+
+      <article>
+        <h1>Zásady ochrany osobních údajů</h1>
+        <p class="meta">Naposledy aktualizováno 23. listopadu 2026 &middot; verze 1.0</p>
+
+        <p class="callout">
+          <strong>Toto je uzavřené preview na pozvání.</strong> Přihlásit se mohou
+          pouze účty na seznamu provozovatele; veřejná registrace neexistuje.
+        </p>
+
+        <p>
+          DropPulse sleduje stránku se vstupenkami a oznámí vám, když se něco
+          uvolní. Tyto zásady vysvětlují, jaké osobní údaje zpracováváme, proč je
+          zpracováváme, komu je předáváme a jaká máte práva. Platí pro
+          <code>dp.ondralinek.cz</code>, aplikaci DropPulse a e-maily s oznámeními,
+          které posíláme.
+        </p>
+        <p>
+          Tyto zásady jsou k dispozici v češtině a angličtině. Rozhodující je česká
+          verze; anglický překlad je pouze orientační.
+        </p>
+
+        <h2>1. Kdo je správcem</h2>
+        <p>
+          Správcem osobních údajů uvedených v těchto zásadách je
+          <strong>Ondřej Linek</strong>, fyzická osoba v České republice. Kontakt:
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.
+        </p>
+        <p>
+          Služba běží na serveru poskytovatele Hetzner Online GmbH v německém
+          Falkensteinu (EU). Oznámení o dostupnosti odesíláme přes poštovní server
+          na stejném hostiteli; nepoužíváme službu třetí strany pro doručování
+          e-mailů.
+        </p>
+
+        <h2>2. Přístup pouze na pozvání</h2>
+        <p>
+          Přístup je na pozvání. Přihlásit se mohou pouze e-mailové adresy na
+          seznamu, který vede provozovatel. Veřejná registrace neexistuje. Pokud
+          vaše adresa na seznamu není, přihlášení odmítneme a účet nevytvoříme.
+          Seznam v současnosti obsahuje pouze adresu provozovatele.
+        </p>
+        <p>
+          Ověřujeme e-mailovou adresu a stav jejího ověření, který vrátí poskytovatel
+          přihlášení. Seznam nepoužíváme k reklamě ani k profilování.
+        </p>
+
+        <h2>3. Jaké údaje zpracováváme</h2>
+        <p><strong>Údaje o účtu a přihlášení</strong></p>
+        <ul>
+          <li>e-mailovou adresu a informaci, zda ji poskytovatel označil za ověřenou;</li>
+          <li>zobrazované jméno, pokud je poskytovatel poskytne. Google jméno poskytuje. Apple je posílá pouze při prvním přihlášení a současná verze služby je neukládá;</li>
+          <li>adresu profilového obrázku, pokud ji Google poskytne;</li>
+          <li>název poskytovatele a stabilní identifikátor účtu u poskytovatele (nikoli heslo);</li>
+          <li>časové údaje o účtu: vytvoření, aktualizace a poslední přihlášení.</li>
+        </ul>
+        <p>
+          Heslo ke Google, Apple ani jinému poskytovateli nikdy nedostaneme ani
+          neukládáme. Pokud používáte Apple <em>Hide My Email</em>, dostaneme
+          přeposílací (relay) adresu Apple, nikoli vaši osobní adresu; oznámení
+          chodí na tuto adresu.
+        </p>
+
+        <p><strong>Údaje o hlídání</strong></p>
+        <ul>
+          <li>název, adresu URL, interval kontroly a stav zapnutí každého hlídání;</li>
+          <li>čas poslední kontroly, HTTP stav, text chyby, stav dostupnosti, stav oznámení a čas posledního oznámení nebo chyby.</li>
+        </ul>
+
+        <p><strong>Údaje o relaci a zabezpečení</strong></p>
+        <ul>
+          <li>neprůhledný identifikátor relace (ukládáme hash, nikoli token), user agent prohlížeče, IP adresu, časy relace a stav odvolání;</li>
+          <li>hash CSRF tokenu;</li>
+          <li>údaje o OAuth toku: hashovaný state a vazbu na prohlížeč, nonce, PKCE verifier, redirect URI, návratovou cestu a expiraci;</li>
+          <li>serverové logy: IP adresu, cestu požadavku, stav, dobu zpracování a ID požadavku.</li>
+        </ul>
+
+        <p><strong>E-mail</strong></p>
+        <p>
+          Oznámení o dostupnosti posíláme na ověřenou adresu vašeho účtu. Poštovní
+          server zprávu zpracuje a vede logy doručení podle vlastního rotačního
+          nastavení.
+        </p>
+
+        <p>
+          Neshromažďujeme hesla, údaje o platebních kartách (účtování není aktivní),
+          zvláštní kategorie osobních údajů, přesnou polohu, kontakty ani reklamní
+          identifikátory. Nepoužíváme analytiku ani sledovací pixely.
+        </p>
+
+        <h2>4. Proč údaje zpracováváme a na jakém právním základě</h2>
+        <ul>
+          <li><strong>Vytvoření účtu, přihlášení a poskytování služby včetně oznámení:</strong> plnění smlouvy s vámi (čl. 6 odst. 1 písm. b) GDPR).</li>
+          <li><strong>Omezení přístupu na pozvané účty a prevence zneužití:</strong> náš oprávněný zájem na provozu uzavřeného preview a ochraně služby (čl. 6 odst. 1 písm. f) GDPR).</li>
+          <li><strong>Zabezpečení služby, vyšetřování chyb a útoků a vedení logů:</strong> náš oprávněný zájem na bezpečnosti (čl. 6 odst. 1 písm. f) GDPR).</li>
+          <li><strong>Plnění právních povinností, například reakce na zákonné žádosti:</strong> právní povinnost (čl. 6 odst. 1 písm. c) GDPR).</li>
+          <li><strong>Volitelné jméno a profilový obrázek:</strong> sami volíte, co poskytovatel sdílí; zpracováváme je pro zobrazení účtu (plnění smlouvy, případně váš souhlas vyjádřený u poskytovatele).</li>
+        </ul>
+        <p>
+          Neprovádíme automatizované rozhodování s právními nebo obdobně závažnými
+          účinky a nevytváříme reklamní profily. Posíláme pouze oznámení o
+          dostupnosti, která si nastavíte; neposíláme marketingové e-maily.
+        </p>
+
+        <h2>5. Soubory cookie a místní úložiště</h2>
+        <p>Nezbytně nutné cookies a úložiště:</p>
+        <ul>
+          <li><code>__Host-dp_session</code> udržuje přihlášení. Je HttpOnly, Secure a SameSite=Lax, platí až 30 dní; serverová relace končí po 30 dnech nečinnosti nebo 90 dní po přihlášení.</li>
+          <li><code>__Host-dp_csrf</code> chrání před CSRF. Není HttpOnly, aby jej aplikace mohla přečíst a poslat v hlavičce. Je Secure, SameSite=Lax a má stejnou platnost jako relace.</li>
+          <li><code>__Host-dp_oauth</code> váže přihlašovací tok na váš prohlížeč. Je HttpOnly, Secure a SameSite=None (Apple posílá odpověď cross-site) a platí přibližně 10 minut.</li>
+          <li><code>localStorage</code> s klíčem <code>droppulse-theme</code> si pamatuje volbu světlého nebo tmavého režimu. Zůstává do vymazání a na server se neposílá.</li>
+        </ul>
+        <p>
+          Nepoužíváme žádné reklamní, analytické ani cross-site sledovací cookies.
+          Veřejné stránky a stránky těchto zásad nenastavují žádné cookies.
+        </p>
+        <p>
+          Cookies můžete v prohlížeči zablokovat nebo smazat. Bez session cookie se
+          ale nepřihlásíte.
+        </p>
+
+        <h2>6. Komu údaje předáváme</h2>
+        <ul>
+          <li><strong>Google</strong> (Google Ireland Limited) a <strong>Apple</strong> (Apple Distribution International Ltd.), pokud se rozhodnete přihlásit přes tyto poskytovatele. Ověřují vaši totožnost a vracejí nám výše uvedené údaje. Platí jejich vlastní zásady ochrany osobních údajů: <a href="https://policies.google.com/privacy" rel="noopener noreferrer">Google</a>, <a href="https://www.apple.com/legal/privacy/" rel="noopener noreferrer">Apple</a>.</li>
+          <li><strong>Hetzner Online GmbH</strong>, náš poskytovatel hostingu v Německu (EU), který ukládá databázi a provozuje server.</li>
+          <li><strong>Poštovní server na stejném hostiteli</strong> pro doručení oznámení.</li>
+          <li><strong>Orgány veřejné moci nebo soudy</strong>, pokud to vyžaduje zákon.</li>
+        </ul>
+        <p>
+          Osobní údaje neprodáváme, nepronajímáme ani nepředáváme pro reklamu.
+          Nepoužíváme analytiku, reklamní sítě ani zprostředkovatele dat.
+        </p>
+        <p>
+          Pokud přidáme funkce s umělou inteligencí, aktualizujeme tyto zásady a
+          před odesláním obsahu stránky poskytovateli AI vás informujeme. Dnes
+          žádné takové funkce nejsou aktivní.
+        </p>
+
+        <h2>7. Předávání do třetích zemí</h2>
+        <p>
+          Služba a databáze jsou umístěny v EU (Německo). Google a Apple mohou
+          zpracovávat údaje mimo EU/EHP na základě vlastních záruk, například
+          rozhodnutí o odpovídající ochraně nebo standardních smluvních doložek;
+          podrobnosti popisují jejich zásady. Jinam údaje z vlastního podnětu
+          nepředáváme.
+        </p>
+
+        <h2>8. Jak dlouho údaje uchováváme</h2>
+        <ul>
+          <li><strong>Údaje o účtu:</strong> po dobu existence účtu. Po smazání záznamy účtu smažeme nebo anonymizujeme, kromě údajů, které musíme uchovat ze zákona.</li>
+          <li><strong>Relace:</strong> 30 dní nečinnosti a nejpozději 90 dní po přihlášení; expirované záznamy se mažou.</li>
+          <li><strong>OAuth toky:</strong> přibližně 10 minut, poté se mažou.</li>
+          <li><strong>Hlídání a jejich poslední stav kontroly a oznámení:</strong> dokud je nesmažete vy nebo dokud nesmažete účet.</li>
+          <li><strong>Serverové a poštovní logy:</strong> po omezenou dobu potřebnou k bezpečnosti a řešení problémů; logy se rotují a neuchováváme je bez omezení.</li>
+          <li><strong>Údaje potřebné k uplatnění, výkonu nebo obhajobě právních nároků:</strong> po dobu promlčecí lhůty.</li>
+        </ul>
+
+        <h2>9. Vaše práva</h2>
+        <p>
+          Máte právo na přístup ke svým osobním údajům, na jejich opravu nebo
+          výmaz, na omezení zpracování nebo námitku proti němu, na přenositelnost
+          údajů a na odvolání souhlasu, pokud je zpracování založeno na souhlasu.
+          Práva můžete uplatnit e-mailem na
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>. Odpovíme do
+          jednoho měsíce; u složitých žádostí můžeme lhůtu prodloužit o dva měsíce
+          a dáme vám vědět.
+        </p>
+        <p>
+          Můžete si také stěžovat u Úřadu pro ochranu osobních údajů (ÚOOÚ),
+          Pplk. Sochora 27, 170 00 Praha 7,
+          <a href="https://www.uoou.cz" rel="noopener noreferrer">www.uoou.cz</a>,
+          nebo u dozorového úřadu v zemi EU, kde žijete nebo pracujete.
+        </p>
+        <p>
+          Chcete-li účet smazat, napište nám z adresy účtu. Odvoláme vaše relace a
+          smažeme účet i jeho hlídání. Některé údaje můžeme uchovat, pokud to
+          vyžaduje zákon.
+        </p>
+
+        <h2>10. Zabezpečení</h2>
+        <p>
+          Veškerý provoz používá TLS a HSTS. Relace jsou serverové a jejich tokeny
+          ukládáme hashované. Cookies jsou podle potřeby HttpOnly, Secure a
+          SameSite. Služba používá ochranu proti CSRF, limity požadavků, řízení
+          přístupu a účet služby s minimálními oprávněními a neukládá hesla. Žádný
+          systém není dokonale bezpečný; pokud najdete problém, napište na
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>. Pokud dojde k
+          porušení zabezpečení osobních údajů, budeme informovat dozorový úřad a
+          dotčené uživatele, jak ukládá zákon.
+        </p>
+
+        <h2>11. Děti</h2>
+        <p>
+          Služba není určena dětem mladším 15 let. Vědomě jejich osobní údaje
+          neshromažďujeme. Pokud zjistíme, že jsme je získali, smažeme je. Pokud se
+          domníváte, že se přihlásilo dítě, kontaktujte nás.
+        </p>
+
+        <h2>12. Změny těchto zásad</h2>
+        <p>
+          Tyto zásady můžeme aktualizovat. Změníme verzi a datum a u podstatných
+          změn vás upozorníme na stránce nebo e-mailem, pokud to bude vhodné.
+          Aktuální verze je vždy dostupná na této adrese.
+        </p>
+
+        <h2>13. Kontakt</h2>
+        <p>
+          Ondřej Linek, Česká republika &mdash;
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.
+        </p>
+      </article>
+
+      <footer>
+        <span><a href="/">DropPulse</a> &middot; <code>dp.ondralinek.cz</code></span>
+        <nav class="langs" aria-label="Jazyk">
+          <a href="/privacy/" lang="cs" hreflang="cs" aria-current="page">Čeština</a>
+          <a href="/privacy/en/" lang="en" hreflang="en">English</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# One-command deploy for the dp.ondralinek.cz static preview.
+# One-command deploy for the dp.ondralinek.cz static public site.
 #
 #   ~/DropPulse/deploy/deploy.sh
 #
-# Run as the deploy user on the VPS. It pulls, publishes frontend/public/,
-# installs the static-only vhost, obtains the TLS certificate on the first run,
-# switches to HTTPS and verifies the result. The Go backend is not involved and
-# is never proxied here.
+# Run as the deploy user on the VPS. It pulls, publishes frontend/public/ (the
+# ten landing pages and both privacy notices), installs the static-only vhost,
+# obtains the TLS certificate on the first run, switches to HTTPS and verifies
+# the result. The Go backend is not involved and is never proxied here.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -134,11 +134,35 @@ fi
 redirect="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' --resolve "$DOMAIN:80:127.0.0.1" "http://$DOMAIN/")"
 echo "    http://$DOMAIN/ -> $redirect"
 
+# The vhost allows one request per second per IP. Space the page checks so a
+# successful deploy does not trip its own limiter.
+for path in /privacy/ /en/ /privacy/en/; do
+    sleep 1
+    page_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN$path" || true)"
+    echo "    https://$DOMAIN$path -> ${page_code:-no response}"
+    if [ "$page_code" != "200" ]; then
+        echo "ERROR: $path did not return 200; the public site is incomplete." >&2
+        exit 1
+    fi
+done
+
+sleep 1
 api_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/v1/events")"
 if [ "$api_code" != "404" ]; then
     echo "ERROR: /api/v1/events returned $api_code; the Go backend must not be reachable here." >&2
     exit 1
 fi
 echo "    /api/v1/events -> 404 (the Go backend stays loopback-only)"
+
+# /app/ is the sign-in link on every landing page. It becomes live only when the
+# backend is proxied and has OAuth credentials; until then it must not silently
+# serve something else. Update this check with that deployment.
+sleep 1
+app_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/app/")"
+if [ "$app_code" != "404" ]; then
+    echo "ERROR: /app/ returned $app_code; the application is not deployed yet." >&2
+    exit 1
+fi
+echo "    /app/ -> 404 (the application backend is not deployed yet)"
 
 echo "==> done: https://$DOMAIN/"

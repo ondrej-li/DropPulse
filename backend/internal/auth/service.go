@@ -14,11 +14,12 @@ import (
 )
 
 var (
-	ErrInvalidRequest   = errors.New("invalid authentication request")
-	ErrInvalidState     = errors.New("invalid OAuth state")
-	ErrExchangeFailed   = errors.New("OAuth exchange failed")
-	ErrAccountInactive  = errors.New("account is not active")
-	ErrUnsupportedGrant = errors.New("unsupported grant")
+	ErrInvalidRequest    = errors.New("invalid authentication request")
+	ErrInvalidState      = errors.New("invalid OAuth state")
+	ErrExchangeFailed    = errors.New("OAuth exchange failed")
+	ErrAccountInactive   = errors.New("account is not active")
+	ErrAccountNotAllowed = errors.New("account is not on the invitation list")
+	ErrUnsupportedGrant  = errors.New("unsupported grant")
 )
 
 // Service owns OAuth transaction creation and session issuance.
@@ -165,7 +166,10 @@ func (s *Service) FinishWeb(ctx context.Context, providerName string, params url
 	if external.Subject == "" {
 		return FinishResult{}, fmt.Errorf("%w: provider returned no subject", ErrExchangeFailed)
 	}
-	_, admin := s.cfg.AdminEmails[external.Email]
+	if !s.cfg.EmailAllowed(external.Email, external.EmailVerified) {
+		return FinishResult{}, ErrAccountNotAllowed
+	}
+	_, admin := s.cfg.AdminEmails[strings.ToLower(strings.TrimSpace(external.Email))]
 	user, err := s.store.UpsertOAuthUser(ctx, external, admin && external.EmailVerified)
 	if err != nil {
 		return FinishResult{}, err

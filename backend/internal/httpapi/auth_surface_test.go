@@ -49,19 +49,21 @@ func multiUserTestServer(t *testing.T) *Server {
 	}
 }
 
-func TestLandingPageIsPublic(t *testing.T) {
+func TestLandingAndAppPagesArePublic(t *testing.T) {
 	server := multiUserTestServer(t)
-	recorder := httptest.NewRecorder()
-	server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "http://localhost:8080/", nil))
+	for _, path := range []string{"/", "/app/"} {
+		recorder := httptest.NewRecorder()
+		server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "http://localhost:8080"+path, nil))
 
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("GET / = %d, want 200", recorder.Code)
-	}
-	if !strings.Contains(recorder.Body.String(), "landing") {
-		t.Fatalf("landing page body = %q", recorder.Body.String())
-	}
-	if got := recorder.Header().Get("Content-Security-Policy"); !strings.Contains(got, "frame-ancestors 'none'") {
-		t.Fatalf("CSP = %q", got)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, recorder.Code)
+		}
+		if !strings.Contains(recorder.Body.String(), "landing") {
+			t.Fatalf("GET %s body = %q", path, recorder.Body.String())
+		}
+		if got := recorder.Header().Get("Content-Security-Policy"); !strings.Contains(got, "frame-ancestors 'none'") {
+			t.Fatalf("GET %s CSP = %q", path, got)
+		}
 	}
 }
 

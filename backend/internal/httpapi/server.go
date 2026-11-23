@@ -105,6 +105,7 @@ func (s *Server) Handler() http.Handler {
 		mux.Handle("DELETE /api/v1/me/sessions/{id}", s.requireAuth(http.HandlerFunc(s.handleRevokeSession)))
 		if len(s.frontend) > 0 {
 			mux.HandleFunc("GET /{$}", s.handleFrontend)
+			mux.HandleFunc("GET /app/{$}", s.handleFrontend)
 		}
 	}
 

@@ -127,6 +127,67 @@ func TestLoadRejectsMalformedAdminEmail(t *testing.T) {
 	}
 }
 
+func TestLoadAllowedEmails(t *testing.T) {
+	env := baseEnv()
+	env["ALLOWED_EMAILS"] = " First@Example.com , second@example.com ,, "
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedEmails) != 2 {
+		t.Fatalf("AllowedEmails = %v", cfg.AllowedEmails)
+	}
+	if !cfg.EmailAllowed("first@example.com", true) {
+		t.Fatal("allowlisted verified address was refused")
+	}
+	if cfg.EmailAllowed("first@example.com", false) {
+		t.Fatal("unverified address must not pass a non-empty allowlist")
+	}
+	if cfg.EmailAllowed("third@example.com", true) {
+		t.Fatal("address outside the allowlist was admitted")
+	}
+}
+
+func TestEmailAllowedEmptyListIsOpen(t *testing.T) {
+	cfg := Config{}
+	if !cfg.EmailAllowed("anyone@example.com", false) {
+		t.Fatal("an empty allowlist must keep the development default open")
+	}
+}
+
+func TestLoadRejectsMalformedAllowedEmail(t *testing.T) {
+	env := baseEnv()
+	env["ALLOWED_EMAILS"] = "Name <person@example.com>"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("a display name in ALLOWED_EMAILS must be rejected")
+	}
+}
+
+func TestLoadProductionRequiresAllowedEmails(t *testing.T) {
+	env := baseEnv()
+	env["APP_ENV"] = "production"
+	env["PUBLIC_API_URL"] = "https://dp.example.com"
+	env["WEB_APP_URL"] = "https://dp.example.com"
+	if _, err := LoadFrom(envLookup(env)); err == nil {
+		t.Fatal("production multi-user mode must refuse an empty allowlist")
+	}
+}
+
+func TestLoadProductionAcceptsAllowedEmails(t *testing.T) {
+	env := baseEnv()
+	env["APP_ENV"] = "Production"
+	env["PUBLIC_API_URL"] = "https://dp.example.com"
+	env["WEB_APP_URL"] = "https://dp.example.com"
+	env["ALLOWED_EMAILS"] = "owner@example.com"
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.EmailAllowed("owner@example.com", true) {
+		t.Fatal("allowlisted address was refused")
+	}
+}
+
 func TestLoadSingleUserDefaults(t *testing.T) {
 	env := baseEnv()
 	env["SINGLE_USER_MODE"] = "true"
