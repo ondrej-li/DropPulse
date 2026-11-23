@@ -238,6 +238,12 @@ ready, but no credentials are in the repository or on the VPS.
    - return URL:
      `https://dp.ondralinek.cz/api/v1/auth/apple/callback`;
    - scopes: name and email.
+
+   Apple checks
+   `https://dp.ondralinek.cz/.well-known/apple-developer-domain-association.txt`.
+   `vps-site publish` excludes `.well-known/` (certbot owns it), so the file
+   has to be placed directly in `/var/www/dp/.well-known/` by the owner/root.
+   It is public and survives later static publishes.
 4. Create a Sign in with Apple private key (`.p8`); record the key ID and team
    ID.
 5. Put `APPLE_CLIENT_ID` (the Services ID), `APPLE_TEAM_ID`, `APPLE_KEY_ID` and

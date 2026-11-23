@@ -158,6 +158,21 @@ The short version:
    and a `.p8` key. Add `APPLE_CLIENT_ID` (the Services ID), `APPLE_TEAM_ID`,
    `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY_FILE` (a mode-0600 file in
    `~/.config/droppulse/`) to the env file.
+
+   Apple's domain-association file has to be served at
+   `https://dp.ondralinek.cz/.well-known/apple-developer-domain-association.txt`.
+   `vps-site publish` excludes `.well-known/` because certbot owns that
+   directory, so the file cannot be published from `frontend/public/`. Place it
+   directly in the web root as root:
+
+   ```bash
+   sudo install -d -o root -g www-data -m 0755 /var/www/dp/.well-known
+   sudo install -o root -g www-data -m 0644 <downloaded-file> \
+       /var/www/dp/.well-known/apple-developer-domain-association.txt
+   ```
+
+   The file is public and survives later static publishes. The `agent` account
+   cannot write there; this is an owner/root step.
 3. Restart and verify:
 
    ```bash
