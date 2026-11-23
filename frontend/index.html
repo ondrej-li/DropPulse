@@ -713,7 +713,7 @@
       <header>
         <div>
           <h1>DropPulse</h1>
-          <p class="sub" id="subtitle">Ticket availability, without the refresh. HTTP 200 means the event is on.</p>
+          <p class="sub" id="subtitle">Ticket availability, without the refresh.</p>
         </div>
         <div class="header-tools">
           <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -881,6 +881,15 @@
         // UI-side catalogue for now. When templates become manageable (and tier
         // aware), this should move behind an API and be fetched here instead.
         const TEMPLATES = Object.freeze([
+          Object.freeze({
+            id: "cinemacity-flora-dune",
+            provider: "cinemacity.cz",
+            title: "Cinema City Flora — Dune: Part Three IMAX",
+            description: "Checks Cinema City's public programme for IMAX seats at Flora. Turns on when at least one seat is available.",
+            url: "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
+            defaultInterval: 300,
+            fields: Object.freeze([]),
+          }),
           Object.freeze({
             id: "example-com",
             provider: "Example.com",
@@ -1111,7 +1120,7 @@
           els.modeBadge.hidden = false;
           els.modeBadge.textContent = "private preview";
           els.subtitle.textContent =
-            "Ticket availability, without the refresh. HTTP 200 means the event is on.";
+            "Ticket availability, without the refresh.";
           els.notifications.textContent = "Sign in to see notification status.";
           els.notifications.className = "";
           els.notifications.title = "";
@@ -1238,8 +1247,8 @@
           els.modeBadge.hidden = false;
           els.modeBadge.textContent = local ? "localhost only" : "signed in";
           els.subtitle.textContent = local
-            ? "Ticket availability, single-user proof of concept. HTTP 200 means the event is on."
-            : "Ticket availability, without the refresh. HTTP 200 means the event is on.";
+            ? "Ticket availability, single-user proof of concept."
+            : "Ticket availability, without the refresh.";
           els.accessNote.textContent = local
             ? "Loopback only. Reach this page through the SSH tunnel."
             : "Your watches are private to your account.";
@@ -1307,6 +1316,15 @@
           els.events.replaceChildren(...state.events.map(eventRow));
         }
 
+        function isCinemaCityWatch(raw) {
+          try {
+            const host = new URL(raw).hostname.toLowerCase();
+            return host === "www.cinemacity.cz" || host === "cinemacity.cz";
+          } catch (_) {
+            return false;
+          }
+        }
+
         function eventRow(event) {
           const row = document.createElement("tr");
 
@@ -1353,6 +1371,11 @@
             error.className = "error-text";
             error.textContent = event.last_error;
             checkCell.append(error);
+          } else if (isCinemaCityWatch(event.url) && event.last_checked_at) {
+            const seats = document.createElement("div");
+            seats.textContent = event.is_on ? "Seats available" : "No seats available";
+            if (!event.is_on) seats.className = "muted";
+            checkCell.append(seats);
           } else if (event.last_status_code != null) {
             const code = document.createElement("div");
             code.textContent = "HTTP " + event.last_status_code;

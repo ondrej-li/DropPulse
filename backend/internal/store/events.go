@@ -282,8 +282,9 @@ func (s *Store) DueEvents(ctx context.Context, limit int) ([]domain.Event, error
 
 // RecordCheck stores one result and computes the notification edge under a row
 // lock. notified_on stays true only while the event has been continuously on
-// since the last email, so every off->on transition re-arms it.
-func (s *Store) RecordCheck(ctx context.Context, eventID string, statusCode *int, errText string) (domain.Event, error) {
+// since the last email, so every off->on transition re-arms it. available is
+// non-nil for a provider check and overrides the HTTP-status interpretation.
+func (s *Store) RecordCheck(ctx context.Context, eventID string, statusCode *int, available *bool, errText string) (domain.Event, error) {
 	if !domain.ValidUUID(eventID) {
 		return domain.Event{}, ErrNotFound
 	}
@@ -301,6 +302,9 @@ func (s *Store) RecordCheck(ctx context.Context, eventID string, statusCode *int
 		return domain.Event{}, err
 	}
 	isOn := statusCode != nil && *statusCode == httpStatusOK
+	if available != nil {
+		isOn = *available
+	}
 	notifiedOn := isOn && current.IsOn && current.NotifiedOn
 	var status any
 	if statusCode != nil {
