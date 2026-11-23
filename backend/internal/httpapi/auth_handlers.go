@@ -71,6 +71,9 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		code := "auth_failed"
 		if errors.Is(err, auth.ErrAccountNotAllowed) {
 			code = "not_invited"
+			// No address here: the refusal is expected, and the log must not
+			// become a list of who tried to sign in.
+			s.logger.Info("sign-in refused: address not invited", "provider", provider, "request_id", requestIDFrom(r.Context()))
 		}
 		s.redirectAuthError(w, r, code)
 		return
