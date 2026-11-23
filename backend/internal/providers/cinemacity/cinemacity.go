@@ -276,8 +276,26 @@ func hasAvailable(events []event, target Target, now time.Time) bool {
 }
 
 func auditoriumMatches(show event, wanted string) bool {
-	return strings.EqualFold(show.AuditoriumTinyName, wanted) ||
-		strings.EqualFold(show.Auditorium, wanted)
+	return nameMatches(show.AuditoriumTinyName, wanted) ||
+		nameMatches(show.Auditorium, wanted)
+}
+
+// nameMatches accepts the exact room name and a short name that prefixes a
+// longer one at a word boundary, so "IMAX" also selects "IMAX VOLVO".
+func nameMatches(name, wanted string) bool {
+	name = strings.TrimSpace(name)
+	if strings.EqualFold(name, wanted) {
+		return true
+	}
+	if len(name) <= len(wanted) || !strings.EqualFold(name[:len(wanted)], wanted) {
+		return false
+	}
+	switch name[len(wanted)] {
+	case ' ', '-', '/':
+		return true
+	default:
+		return false
+	}
 }
 
 func started(raw string, now time.Time) bool {

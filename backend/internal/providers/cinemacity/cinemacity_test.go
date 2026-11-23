@@ -165,6 +165,18 @@ func TestHasAvailable(t *testing.T) {
 			want:   true,
 		},
 		{
+			name:   "full name target",
+			target: Target{FilmID: "8105s2r", CinemaID: "1052", Auditorium: "IMAX VOLVO"},
+			events: []event{{FilmID: "8105s2r", CinemaID: "1052", Auditorium: "IMAX VOLVO", AvailabilityRatio: 0.5}},
+			want:   true,
+		},
+		{
+			name:   "short name needs a word boundary",
+			target: imax,
+			events: []event{{FilmID: "8105s2r", CinemaID: "1052", AuditoriumTinyName: "IMAX2", AvailabilityRatio: 0.5}},
+			want:   false,
+		},
+		{
 			name:   "sold out",
 			target: imax,
 			events: []event{{FilmID: "8105s2r", CinemaID: "1052", AuditoriumTinyName: "IMAX", SoldOut: true, AvailabilityRatio: 0.5}},
