@@ -177,8 +177,11 @@ safeguards. The controller makes no other transfers on its own initiative.
 - Verified-email-only account linking; an unverified address never becomes the
   account address.
 - Per-IP authentication and API rate limits; in-process request limits.
-- Allowlisted nginx vhost; read-only method policy and strict rate limits on the
-  static preview; no API proxy while the backend is not deployed.
+- Allowlisted nginx vhost. Static pages keep a read-only method policy, a
+  1 request/second per-IP limit and `script-src 'none'`; only the exact `/app/`
+  location and the `/api/` prefix are proxied, to `127.0.0.1:8090`, with a
+  separate 10 r/s zone. The backend enforces methods, sessions, CSRF and Origin
+  checks. `/healthz` is not public.
 - Backend runs as the unprivileged `agent` account; secrets are read from the
   environment, never from the repository.
 - No passwords stored; no payment data processed (billing is not active).
@@ -246,23 +249,29 @@ ready, but no credentials are in the repository or on the VPS.
    current backend does not retain it.
 
 The callback URLs must match exactly, including the path and scheme. The
-current static preview does not proxy `/api/`, so registration alone does not
-make sign-in work; the backend must be deployed behind the same origin first.
+backend is deployed behind the same origin and `/api/` is proxied, so
+registration plus the environment entries above is the remaining step; no
+application or vhost change is needed to turn a configured provider on.
 
-## Deployment prerequisites for sign-in
+## Deployment status
 
-The public landing pages link to `/app/` and the backend serves the app there
-and the API under `/api/`. That deployment is not live yet:
+The backend and the public pages are deployed at `https://dp.ondralinek.cz`:
 
-- the VPS has no Go 1.27 toolchain and this repository's CI only builds/tests,
-  so a Linux binary must come from CI or another build pipeline, not from this
-  box;
-- the static vhost currently answers `/api/` and `/app/` with 404 and has no
-  `proxy_pass`;
-- no OAuth client credentials are configured;
-- the database and service unit for the backend are not installed.
+| Piece | State |
+|---|---|
+| Backend | `droppulse.service`, user `agent`, `127.0.0.1:8090` |
+| Database | PostgreSQL `droppulse`, owned by `agent`, migrations applied on start |
+| Environment | `/home/agent/.config/droppulse/backend.env`, mode `0600`, outside the repository |
+| Binary | linux/arm64 build from the GitHub Actions artifact; the VPS has no Go 1.27 toolchain |
+| Vhost | static pages from `/var/www/dp`; exactly `/app/` and `/api/` proxied; `/healthz` 404 |
+| OAuth credentials | none configured; `/api/v1/auth/providers` returns `{"providers":[]}` |
 
-Required environment for the preview once those pieces exist:
+The app loads without providers and reports that none is configured. Sign-in
+becomes available when Google and/or Apple credentials are added to the
+environment file and the service is restarted; no code, database or vhost
+change is needed.
+
+The environment contains:
 
 ```sh
 APP_ENV=production
@@ -271,19 +280,24 @@ WEB_APP_URL=https://dp.ondralinek.cz
 ALLOWED_EMAILS='invited@example.com'
 ADMIN_EMAILS='owner@example.com'
 DATABASE_URL=...
-SMTP_FROM=agent@ondralinek.cz
 ```
+
+Email notifications are currently disabled in the deployed environment because
+the service sandbox (`NoNewPrivileges=yes`, `ProtectSystem=strict`) blocks
+Postfix's setgid `sendmail` helper. No notification mail is processed until a
+sandbox-compatible submission path is chosen; this record will be updated when
+that changes.
 
 Set `ALLOWED_EMAILS` to the controller's address for the first preview and add
 addresses only as invitations are made. Do not commit the actual address to the
 repository; it belongs in the mode-0600 environment file read by the service.
 
 The backend listens on loopback; nginx proxies `/api/` and `/app/` to it. The
-backend now serves the app at both `/` and `/app/`; the public pages link to
-`/app/`. Keep the static landing and privacy pages served from `/var/www/dp`,
-and give the app its own CSP rather than the static page's `script-src 'none'`
-policy. A refused sign-in redirects to `/app/?auth_error=not_invited`; the app
-shows a generic invitation message and does not echo the address.
+public pages stay served from `/var/www/dp`, and the app has its own CSP rather
+than the static page's `script-src 'none'` policy. A refused sign-in redirects
+to `/app/?auth_error=not_invited`; the app shows a generic invitation message
+and does not echo the address. Server-log retention, the controller identity
+and legal review remain open (below).
 
 ## Open items
 

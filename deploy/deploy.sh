@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# One-command deploy for the dp.ondralinek.cz static public site.
+# One-command deploy for the dp.ondralinek.cz public pages.
 #
 #   ~/DropPulse/deploy/deploy.sh
 #
 # Run as the deploy user on the VPS. It pulls, publishes frontend/public/ (the
-# ten landing pages and both privacy notices), installs the static-only vhost,
-# obtains the TLS certificate on the first run, switches to HTTPS and verifies
-# the result. The Go backend is not involved and is never proxied here.
+# ten landing pages and both privacy notices), installs the vhost, obtains the
+# TLS certificate on the first run, switches to HTTPS and verifies the result.
+# The same vhost proxies /app/ and /api/ to the backend on 127.0.0.1:8090; the
+# binary and service are deployed separately with vps-site (see DEPLOY.md).
+# The agent account also manages this site through vps-site; both paths install
+# the same files from this repository, so keep them in sync.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -148,21 +151,29 @@ done
 
 sleep 1
 api_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/v1/events")"
-if [ "$api_code" != "404" ]; then
-    echo "ERROR: /api/v1/events returned $api_code; the Go backend must not be reachable here." >&2
+if [ "$api_code" != "401" ]; then
+    echo "ERROR: /api/v1/events returned $api_code; expected 401 from the backend." >&2
     exit 1
 fi
-echo "    /api/v1/events -> 404 (the Go backend stays loopback-only)"
+echo "    /api/v1/events -> 401 (the backend is proxied and requires a session)"
 
-# /app/ is the sign-in link on every landing page. It becomes live only when the
-# backend is proxied and has OAuth credentials; until then it must not silently
-# serve something else. Update this check with that deployment.
+# /app/ is the sign-in link on every landing page. It is served by the backend
+# and must answer even before any OAuth provider is configured; the app itself
+# then explains that no provider is available.
 sleep 1
 app_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/app/")"
-if [ "$app_code" != "404" ]; then
-    echo "ERROR: /app/ returned $app_code; the application is not deployed yet." >&2
+if [ "$app_code" != "200" ]; then
+    echo "ERROR: /app/ returned $app_code; the application is not reachable." >&2
     exit 1
 fi
-echo "    /app/ -> 404 (the application backend is not deployed yet)"
+echo "    /app/ -> 200 (served by the backend)"
+
+sleep 1
+health_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/healthz")"
+if [ "$health_code" != "404" ]; then
+    echo "ERROR: /healthz returned $health_code; it must stay private." >&2
+    exit 1
+fi
+echo "    /healthz -> 404 (health stays loopback-only)"
 
 echo "==> done: https://$DOMAIN/"

@@ -211,6 +211,13 @@ weaken a security control. Locally submitted mail still passes through
 Postfix's `non_smtpd_milters`, so rspamd signs it. The backend never connects
 to a remote SMTP server and has no SMTP credentials.
 
+The deployed `droppulse.service` runs with `NoNewPrivileges=yes` and
+`ProtectSystem=strict`, which blocks the setgid `postdrop` helper that
+`sendmail` needs. `SMTP_FROM` is therefore not set in the deployed environment
+and the app reports notifications as unavailable; sign-in and the API are
+unaffected. Enabling notifications needs a submission path compatible with
+that sandbox, not a loosened sandbox or SMTP policy.
+
 ## Public preview
 
 `frontend/public/` is the static public site for `https://dp.ondralinek.cz`:
@@ -231,19 +238,28 @@ run it, and commit the generated files. `python3 frontend/landing/build.py
 to `/app/` to sign in and to the privacy notice.
 
 `/app/` is the application UI (`frontend/index.html`), which the backend serves
-when `FRONTEND_FILE` is set. The public vhost stays static: nginx serves
-`/var/www/dp` with a strict per-IP limit (1 request/second, burst 5, 3
-concurrent streams) and never proxies the Go backend; `/api/` and `/healthz`
-return `404` on that domain. Until the backend and OAuth clients are deployed,
-`/app/` also returns `404`; the link is the intended entry point, not a working
-login. Deployment of the public site is one command,
-`~/DropPulse/deploy/deploy.sh`; see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+when `FRONTEND_FILE` is set. The vhost proxies exactly `/app/` and `/api/` to
+the backend on `127.0.0.1:8090` and has no generic proxy. The static pages keep
+their 1 request/second limit, read-only method policy and `script-src 'none'`
+CSP; `/app/` and `/api/` use a separate 10 r/s zone, and the backend enforces
+its own methods, sessions, CSRF and Origin checks. `/healthz` stays `404`.
 
-Serving the application itself needs the backend reachable by the browser and
-OAuth credentials registered for that origin. Nothing in this repository
-deploys that, and no provider secret belongs in the tree or in the static
-preview. [`backend/docs/privacy.md`](backend/docs/privacy.md) has the provider
-registration checklist, the Article 30 record and the required environment.
+The backend is deployed as `droppulse.service` (user `agent`, loopback only),
+with PostgreSQL `droppulse` and an environment file at
+`~/.config/droppulse/backend.env` (mode `0600`, outside the repository). The
+binary is built by CI for linux/arm64; the VPS has no Go 1.27 toolchain. No
+OAuth credentials are configured yet, so `/app/` loads and reports that no
+sign-in provider is available; `/api/v1/auth/providers` returns
+`{"providers":[]}`. Registering Google and Apple clients and adding their
+credentials to that environment file is the remaining sign-in step:
+[`backend/docs/privacy.md`](backend/docs/privacy.md#provider-registration-checklist)
+has the exact callback URLs, and [`deploy/DEPLOY.md`](deploy/DEPLOY.md) has the
+deployment, verification and rollback commands.
+
+The public pages are published with `sudo vps-site publish dp frontend/public`
+from the `agent` account; `deploy/deploy.sh` remains a fallback that installs
+the same vhost and files. No provider secret belongs in the tree, the static
+pages or the repository.
 
 ## SSH tunnel
 
@@ -269,5 +285,6 @@ The mobile apps are placeholders; see [`mobile/ios/`](mobile/ios/) and
 
 ## CI
 
-`.github/workflows/ci.yml` builds, vets and tests the backend on every pull
-request. Nothing is built on the VPS.
+`.github/workflows/ci.yml` builds, vets, tests and uploads a linux/arm64 server
+binary on every pull request and push to `main` (artifact retained 7 days).
+Nothing is built on the VPS; deployment downloads that artifact.
