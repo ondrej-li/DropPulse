@@ -100,7 +100,7 @@ The ticket model in `research.md` is preserved, with these ownership rules:
 
 | Table | Change |
 |---|---|
-| `users` | A real account record, not a placeholder: email, status, role, terms acceptance. |
+| `users` | A real account record, not a placeholder: email, status, role, terms acceptance. The role is the account type: `user`, `admin`, `vendor`, `agent` or `ai`. |
 | `user_identities` | One row per provider identity; `(provider, subject)` is unique. |
 | `sessions` / `session_tokens` | Server-side sessions, hashed opaque tokens, rotating refresh tokens. |
 | `plans` | Tier definitions; limits are JSONB validated by a schema. |
@@ -162,7 +162,7 @@ create table users (
     display_name      text,
     avatar_url        text,
     role              text not null default 'user'
-                      check (role in ('user', 'admin')),
+                      check (role in ('user', 'admin', 'vendor', 'agent', 'ai')),
     status            text not null default 'active'
                       check (status in ('active', 'suspended', 'deleted')),
     terms_version     text,
@@ -507,7 +507,8 @@ refreshes do not look like an attack.
   event's config is editable only by its creator or an administrator.
 - Admin access is a `role` check plus a separate audit log entry. Admin
   endpoints are not part of the public API in v1; plan assignment and account
-  support can start as SQL/CLI operations.
+  support can start as SQL/CLI operations. The other roles (`vendor`, `agent`,
+  `ai`) are account types, not privilege levels, and do not grant admin access.
 - Authentication failures are deliberately vague (`401` with a code such as
   `not_authenticated`) and do not reveal whether an email or identity exists.
 - Rate-limit the auth start/callback/native/refresh endpoints by IP and by

@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="DropPulse beobachtet eine Ticketseite und meldet sich, sobald etwas verfügbar wird.">
+    <title>DropPulse — private Vorschau</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" sizes="120x120" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="alternate" hreflang="cs" href="https://dp.ondralinek.cz/">
+    <link rel="alternate" hreflang="en" href="https://dp.ondralinek.cz/en/">
+    <link rel="alternate" hreflang="de" href="https://dp.ondralinek.cz/de/">
+    <link rel="alternate" hreflang="fr" href="https://dp.ondralinek.cz/fr/">
+    <link rel="alternate" hreflang="es" href="https://dp.ondralinek.cz/es/">
+    <link rel="alternate" hreflang="it" href="https://dp.ondralinek.cz/it/">
+    <link rel="alternate" hreflang="pt" href="https://dp.ondralinek.cz/pt/">
+    <link rel="alternate" hreflang="ja" href="https://dp.ondralinek.cz/ja/">
+    <link rel="alternate" hreflang="ko" href="https://dp.ondralinek.cz/ko/">
+    <link rel="alternate" hreflang="ru" href="https://dp.ondralinek.cz/ru/">
+    <link rel="alternate" hreflang="x-default" href="https://dp.ondralinek.cz/">
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f5;
+        --surface: rgba(255, 255, 255, 0.78);
+        --text: #17201d;
+        --muted: #5e6b66;
+        --line: rgba(23, 32, 29, 0.12);
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.12);
+        --on-accent: #ffffff;
+        --shadow: 0 24px 80px rgba(23, 32, 29, 0.10);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1210;
+          --surface: rgba(22, 30, 27, 0.82);
+          --text: #edf4f0;
+          --muted: #9aaba4;
+          --line: rgba(237, 244, 240, 0.12);
+          --accent: #5eead4;
+          --accent-soft: rgba(94, 234, 212, 0.10);
+          --on-accent: #06201c;
+          --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      html { min-height: 100%; }
+
+      body {
+        min-height: 100svh;
+        margin: 0;
+        padding: clamp(20px, 5vw, 56px);
+        display: grid;
+        place-items: center;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 15% 10%, var(--accent-soft), transparent 38%),
+          radial-gradient(circle at 88% 92%, var(--accent-soft), transparent 34%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      .shell {
+        width: min(840px, 100%);
+        padding: clamp(28px, 6vw, 60px);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0 0 24px;
+        padding: 7px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+        animation: breathe 2.8s ease-in-out infinite;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 11vw, 6.5rem);
+        font-weight: 760;
+        letter-spacing: -0.065em;
+        line-height: 0.88;
+      }
+
+      .lede {
+        max-width: 32ch;
+        margin: 22px 0 0;
+        color: var(--accent);
+        font-size: clamp(1.25rem, 3.8vw, 1.85rem);
+        font-weight: 620;
+        letter-spacing: -0.025em;
+        line-height: 1.2;
+      }
+
+      .body {
+        max-width: 58ch;
+        margin: 20px 0 0;
+        color: var(--muted);
+        font-size: clamp(1rem, 2.4vw, 1.08rem);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin: 26px 0 0;
+      }
+
+      .action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 10px 20px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: transform 140ms ease, filter 140ms ease;
+      }
+
+      .action:hover { filter: brightness(1.06); transform: translateY(-1px); }
+      .action:active { transform: translateY(0); }
+
+      .action.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .action.secondary:hover {
+        background: var(--accent-soft);
+        filter: none;
+      }
+
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .section-title {
+        margin: 38px 0 14px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        color: var(--text);
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+
+      .feature-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--accent-soft);
+      }
+
+      .feature-card h3 {
+        margin: 0 0 6px;
+        font-size: 0.94rem;
+        font-weight: 650;
+        color: var(--text);
+      }
+
+      .feature-card p {
+        margin: 0;
+        font-size: 0.86rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .compliance-box {
+        margin-top: 24px;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 16px;
+        background: var(--surface);
+      }
+
+      .compliance-box h3 {
+        margin: 0 0 8px;
+        font-size: 0.96rem;
+        font-weight: 680;
+        color: var(--text);
+      }
+
+      .compliance-box p {
+        margin: 0 0 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .compliance-box p:last-child {
+        margin-bottom: 0;
+      }
+
+      .compliance-box strong { color: var(--text); }
+      .compliance-box a { color: var(--accent); text-underline-offset: 2px; }
+      .compliance-box code {
+        padding: 0.1em 0.35em;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.88em;
+      }
+
+      .note {
+        margin: 32px 0 0;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .note strong { color: var(--text); }
+
+      footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px 24px;
+        margin-top: 36px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      footer a { color: var(--muted); text-underline-offset: 2px; }
+      footer a:hover { color: var(--text); }
+
+      .langs {
+        flex: 1 0 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin-top: 10px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      .langs a { text-decoration: none; }
+      .langs a:hover { text-decoration: underline; }
+      .langs a[aria-current="page"] {
+        color: var(--text);
+        font-weight: 650;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.95em;
+      }
+
+      @keyframes breathe {
+        0%, 100% { box-shadow: 0 0 0 4px var(--accent-soft); }
+        50% { box-shadow: 0 0 0 8px transparent; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .dot { animation: none; }
+        .action { transition: none; }
+      }
+
+      @media (max-width: 520px) {
+        body { padding: 12px; }
+        .shell { padding: 26px 18px; border-radius: 20px; }
+        .eyebrow { margin-bottom: 18px; }
+        .lede { max-width: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Private Vorschau</p>
+      <h1>DropPulse</h1>
+      <p class="lede">Ticketverfügbarkeit – ohne ständiges Neuladen.</p>
+      <p class="body">DropPulse beobachtet eine Ticketseite und meldet sich, sobald etwas verfügbar wird – du musst die Seite nicht immer wieder neu laden.</p>
+
+      <div class="actions">
+        <a class="action" href="/app/">Anmelden</a>
+        <a class="action secondary" href="/privacy/en/" hreflang="en">Datenschutz</a>
+        <a class="action secondary" href="/terms/en/" hreflang="en">Nutzungsbedingungen</a>
+      </div>
+
+      <h2 class="section-title">Funktionen & Funktionsweise von DropPulse</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Automatische Verfügbarkeitsprüfung</h3>
+          <p>DropPulse überwacht öffentlich zugängliche Ticket- und Veranstaltungsseiten im Hintergrund auf freigegebene Plätze.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Sofortige E-Mail-Benachrichtigungen</h3>
+          <p>Sobald Tickets verfügbar werden, sendet DropPulse eine Benachrichtigung an Ihre verifizierte E-Mail-Adresse.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Ethisches Monitoring ohne Umgehung</h3>
+          <p>Keine automatisierte CAPTCHA-Lösung oder Umgehung von Schutzmaßnahmen. Bei Abfragen pausiert die Prüfung zur manuellen Überprüfung.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Datenschutz & minimale Daten</h3>
+          <p>Die Anmeldung dient ausschließlich der Kontoverwaltung und dem Benachrichtigungsversand. Keine Tracker, kein Datenverkauf.</p>
+        </div>
+      </div>
+
+      <div class="compliance-box">
+        <h3>Anwendungszweck & Einhaltung der Google-API-Richtlinien</h3>
+        <p>Die Anwendung <strong>DropPulse</strong> dient ausschließlich der automatisierten Überwachung von Ticketverfügbarkeiten und dem Versand von Benachrichtigungen. Die Google-Anmeldung erfordert minimale Berechtigungen (<code>openid</code>, <code>email</code>, <code>profile</code>) zur Nutzerauthentifizierung.</p>
+        <p>Die Nutzung von Google-API-Daten durch DropPulse entspricht den <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a> einschließlich der Limited Use-Anforderungen.</p>
+        <p><strong>Verbot von AI NCII:</strong> In voller Übereinstimmung mit den Google-API-Nutzungsbedingungen nutzt DropPulse keine Google-APIs oder KI-Systeme zur Erstellung oder Verbreitung nicht-einvernehmlicher intimer Bilder (AI NCII) oder schädlicher Inhalte.</p>
+      </div>
+
+      <p class="note"><strong>Der Zugang ist vorerst nur auf Einladung möglich.</strong> Nur eingeladene Konten können sich anmelden; die Registrierung ist geschlossen.</p>
+      <footer>
+        <span><code>dp.ondralinek.cz</code></span>
+        <span><a href="/terms/en/" hreflang="en">Nutzungsbedingungen</a> &middot; <a href="/privacy/en/" hreflang="en">Datenschutz</a> &middot; 2026</span>
+        <nav class="langs" aria-label="Sprache">
+          <a href="/" lang="cs" hreflang="cs">Čeština</a>
+          <a href="/en/" lang="en" hreflang="en">English</a>
+          <a href="/de/" lang="de" hreflang="de" aria-current="page">Deutsch</a>
+          <a href="/fr/" lang="fr" hreflang="fr">Français</a>
+          <a href="/es/" lang="es" hreflang="es">Español</a>
+          <a href="/it/" lang="it" hreflang="it">Italiano</a>
+          <a href="/pt/" lang="pt" hreflang="pt">Português</a>
+          <a href="/ja/" lang="ja" hreflang="ja">日本語</a>
+          <a href="/ko/" lang="ko" hreflang="ko">한국어</a>
+          <a href="/ru/" lang="ru" hreflang="ru">Русский</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>

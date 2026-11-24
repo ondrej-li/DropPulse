@@ -36,16 +36,20 @@ publish an unauthenticated API.
 
 Without `SINGLE_USER_MODE`, `/` serves `FRONTEND_FILE` if it is set, and the
 landing page is public. The page asks the public provider endpoint which
-sign-in methods exist; Google and Apple are supported. On iOS and macOS the
-interface offers Apple only, as requested; on other platforms it offers both
-when both are configured. `/api/v1/events` and every other watch route require
-a session, so storing a watch always needs a signed-in user. A local example:
+sign-in methods exist; Google and Apple are supported. A provider the server
+does not have configured is shown as a disabled button. On iOS and macOS Apple
+is preferred: once Apple is configured, Google is not offered there; until
+then, Google stays available so the page is usable. On other platforms both
+are offered when configured. `/api/v1/events` and every other watch route
+require a session, so storing a watch always needs a signed-in user. A local
+example:
 
 ```sh
 cd backend
 DATABASE_URL='postgres://localhost/droppulse?sslmode=disable' \
   FRONTEND_FILE=../frontend/index.html \
   PUBLIC_API_URL=http://localhost:8080 \
+  ALLOWED_EMAILS='you@example.com' \
   GOOGLE_CLIENT_ID='...' GOOGLE_CLIENT_SECRET='...' \
   go run ./cmd/server
 ```
@@ -57,6 +61,7 @@ Configuration is read from the environment and validated at start-up:
 
 | Variable | Purpose |
 |---|---|
+| `APP_ENV` | Deployment environment (default `development`); `production` turns on the required invite list |
 | `DATABASE_URL` | Required Postgres connection string |
 | `BIND_ADDR` | Address to bind (default `127.0.0.1`) |
 | `PUBLIC_API_URL` | Public origin of this API (default `http://localhost:8080`); its `/api/v1/auth/<provider>/callback` paths are the OAuth redirect URIs |
@@ -65,13 +70,14 @@ Configuration is read from the environment and validated at start-up:
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Enable Google sign-in |
 | `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` or `APPLE_PRIVATE_KEY_FILE` | Enable Apple sign-in |
 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`, `FACEBOOK_GRAPH_VERSION` | Enable Facebook sign-in |
+| `ALLOWED_EMAILS` | Comma-separated verified addresses allowed to sign in. Empty is open only outside production; `APP_ENV=production` with multi-user mode requires a non-empty list |
 | `ADMIN_EMAILS` | Comma-separated verified addresses that receive the admin role on first sign-in |
 | `SESSION_IDLE_TTL`, `SESSION_ABSOLUTE_TTL`, `OAUTH_FLOW_TTL` | Session and login-flow lifetimes |
 | `TRUSTED_PROXY_CIDRS` | Proxies whose `X-Real-IP` / `X-Forwarded-For` are trusted (default loopback) |
 | `AUTH_RATE_LIMIT_PER_MINUTE`, `API_RATE_LIMIT_PER_MINUTE` | In-process rate limits |
 | `SINGLE_USER_MODE` | Serve the frontend and events API without a login; requires a loopback `BIND_ADDR` |
 | `SINGLE_USER_NAME` | Username of the fixed local account (default `admin`) |
-| `FRONTEND_FILE` | Path to the single HTML app served at `/`; required in single-user mode |
+| `FRONTEND_FILE` | Path to the single HTML app served at `/` (and `/app/` in multi-user mode); required in single-user mode |
 | `NOTIFICATION_EMAIL` | Fixed recipient for availability email; requires single-user mode and `SMTP_FROM` |
 | `SMTP_FROM` | Envelope/From address for notifications. In multi-user mode it enables mail to each account's verified address |
 | `SENDMAIL_PATH` | Local MTA submission command (default `/usr/sbin/sendmail`; must be absolute and executable) |
@@ -104,10 +110,21 @@ secret is signed by the backend with the ES256 key, not stored. The sign-in
 flow is web-only: sessions are cookies, not bearer tokens, so a native app needs
 the same browser flow, and a future mobile client has no token endpoint yet.
 
-The interface offers Apple only on iOS and macOS and both providers elsewhere,
-as requested. That is a UI policy, not an authorization rule: the backend
-accepts any configured provider from any client, because the user agent is
-trivially spoofable and a policy enforced on it would be false assurance.
+The interface prefers Apple on iOS and macOS and offers both providers
+elsewhere when configured. An unconfigured provider renders as a disabled
+button rather than disappearing. On Apple devices Google is hidden only once
+Apple is configured; while Apple is not, Google remains offered there. That is
+a UI policy, not an authorization rule: the backend accepts any configured
+provider from any client, because the user agent is trivially spoofable and a
+policy enforced on it would be false assurance.
+
+Sign-in is invite-only when `ALLOWED_EMAILS` is set. After the provider
+exchange, an address that is not on the list — or that the provider did not mark
+verified — is refused before any account row is created. There is no
+registration form; adding an address to the list is the invitation. In
+production the list is required, so a forgotten setting fails closed at
+start-up rather than opening sign-up to everyone. An empty list remains the
+development default and is open, which is why the local example sets one.
 
 Accounts are identified by verified email. After the ID token is verified
 (signature, issuer, audience, nonce and expiry), the account lookup is:
@@ -124,6 +141,23 @@ Apple's "Hide My Email" relay address is verified but differs from the address
 Google would assert, so a person who uses it will not be auto-linked across
 providers. Signing in with the same provider again still finds the same
 account.
+
+### Account types
+
+Every account has exactly one type, stored in the `users.role` column and
+returned as `user.role` by `/api/v1/me`. The database enforces the set:
+
+| Role | Meaning |
+|---|---|
+| `user` | A normal customer account; the default for a new sign-in. |
+| `admin` | A platform administrator. `ADMIN_EMAILS` grants it on first sign-in, and the single-user account is always an admin. |
+| `vendor` | A vendor account. |
+| `agent` | A human agent account. |
+| `ai` | An AI-operated account. |
+
+Only `admin` carries administrative access. `vendor`, `agent` and `ai` are
+account types for now; they are assigned administratively, and no sign-in flow
+creates them.
 
 Sessions are opaque tokens whose SHA-256 is stored server-side. The cookie is
 `__Host-dp_session` on HTTPS (`__Host-` requires a secure, host-only cookie),
@@ -182,8 +216,8 @@ A create or replace body looks like:
 
 Intervals are 60 to 86400 seconds (default 300). The scheduler runs every 15
 seconds and checks whatever is due; events of suspended or deleted accounts are
-skipped. The UI is served at `/` when `FRONTEND_FILE` is set and refreshes every
-15 seconds.
+skipped. The UI is served at `/` (and `/app/` in multi-user mode) when
+`FRONTEND_FILE` is set and refreshes every 15 seconds.
 
 The UI creates events through a three-step wizard: choose a provider template,
 fill in template-specific details and watch settings, then choose a notification
@@ -213,20 +247,57 @@ weaken a security control. Locally submitted mail still passes through
 Postfix's `non_smtpd_milters`, so rspamd signs it. The backend never connects
 to a remote SMTP server and has no SMTP credentials.
 
+The deployed `droppulse.service` runs with `NoNewPrivileges=yes` and
+`ProtectSystem=strict`, which blocks the setgid `postdrop` helper that
+`sendmail` needs. `SMTP_FROM` is therefore not set in the deployed environment
+and the app reports notifications as unavailable; sign-in and the API are
+unaffected. Enabling notifications needs a submission path compatible with
+that sandbox, not a loosened sandbox or SMTP policy.
+
 ## Public preview
 
-`frontend/public/index.html` is a static holding page for
-`https://dp.ondralinek.cz`. nginx serves it from `/var/www/dp` with a strict
-per-IP limit (1 request/second, burst 5, 3 concurrent streams) and never
-proxies the Go backend; `/api/` and `/healthz` return `404` on that domain. The
-application UI at `frontend/index.html` is not published there, and the backend
-still listens on loopback only. Deployment of the holding page is one command,
-`~/DropPulse/deploy/deploy.sh`; see [`deploy/DEPLOY.md`](deploy/DEPLOY.md).
+`frontend/public/` is the static public site for `https://dp.ondralinek.cz`:
+the landing page in ten languages and the privacy notice in Czech and English.
+Czech is the default and there is no JavaScript on these pages; the language
+switcher is plain links.
 
-Serving the application itself needs the backend reachable by the browser and
-OAuth credentials registered for that origin. Nothing in this repository
-deploys that, and no provider secret belongs in the tree or in the static
-preview.
+| Path | Language | Source |
+|---|---|---|
+| `/` | Czech (default) | `frontend/public/index.html` |
+| `/en/`, `/de/`, `/fr/`, `/es/`, `/it/`, `/pt/`, `/ja/`, `/ko/`, `/ru/` | English, German, French, Spanish, Italian, Portuguese, Japanese, Korean, Russian | `frontend/public/<code>/index.html` |
+| `/privacy/` | Czech (authoritative) | `frontend/public/privacy/index.html` |
+| `/privacy/en/` | English (translation) | `frontend/public/privacy/en/index.html` |
+| `/terms/` | Czech (authoritative) | `frontend/public/terms/index.html` |
+| `/terms/en/` | English (translation) | `frontend/public/terms/en/index.html` |
+
+The landing pages are generated by `frontend/landing/build.py`; edit the script,
+run it, and commit the generated files. `python3 frontend/landing/build.py
+--check` verifies that the committed pages are current. Every landing page links
+to `/app/` to sign in and to the privacy notice.
+
+`/app/` is the application UI (`frontend/index.html`), which the backend serves
+when `FRONTEND_FILE` is set. The vhost proxies exactly `/app/` and `/api/` to
+the backend on `127.0.0.1:8090` and has no generic proxy. The static pages keep
+their 1 request/second limit, read-only method policy and `script-src 'none'`
+CSP; `/app/` and `/api/` use a separate 10 r/s zone, and the backend enforces
+its own methods, sessions, CSRF and Origin checks. `/healthz` stays `404`.
+
+The backend is deployed as `droppulse.service` (user `agent`, loopback only),
+with PostgreSQL `droppulse` and an environment file at
+`~/.config/droppulse/backend.env` (mode `0600`, outside the repository). The
+binary is built by CI for linux/arm64; the VPS has no Go 1.27 toolchain. No
+OAuth credentials are configured yet, so `/app/` loads and reports that no
+sign-in provider is available; `/api/v1/auth/providers` returns
+`{"providers":[]}`. Registering Google and Apple clients and adding their
+credentials to that environment file is the remaining sign-in step:
+[`backend/docs/privacy.md`](backend/docs/privacy.md#provider-registration-checklist)
+has the exact callback URLs, and [`deploy/DEPLOY.md`](deploy/DEPLOY.md) has the
+deployment, verification and rollback commands.
+
+The public pages are published with `sudo vps-site publish dp frontend/public`
+from the `agent` account; `deploy/deploy.sh` remains a fallback that installs
+the same vhost and files. No provider secret belongs in the tree, the static
+pages or the repository.
 
 ## SSH tunnel
 
@@ -252,5 +323,6 @@ The mobile apps are placeholders; see [`mobile/ios/`](mobile/ios/) and
 
 ## CI
 
-`.github/workflows/ci.yml` builds, vets and tests the backend on every pull
-request. Nothing is built on the VPS.
+`.github/workflows/ci.yml` builds, vets, tests and uploads a linux/arm64 server
+binary on every pull request and push to `main` (artifact retained 7 days).
+Nothing is built on the VPS; deployment downloads that artifact.
