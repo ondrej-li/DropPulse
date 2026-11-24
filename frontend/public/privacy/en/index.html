@@ -70,12 +70,35 @@
       }
 
       .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
         color: var(--text);
         font-size: 0.82rem;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-decoration: none;
         text-transform: uppercase;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 7px;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        color: #ffffff;
+        flex: none;
+      }
+
+      .brand-mark svg { display: block; width: 15px; height: 15px; }
+
+      @media (prefers-color-scheme: dark) {
+        .brand-mark {
+          background: linear-gradient(135deg, #5eead4, #2dd4bf);
+          color: #06201c;
+        }
       }
 
       .top nav { display: flex; gap: 14px; font-size: 0.82rem; }
@@ -151,7 +174,7 @@
   <body>
     <main class="shell">
       <div class="top">
-        <a class="brand" href="/en/">DropPulse</a>
+        <a class="brand" href="/en/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M6 17h5l2.6-6.2L18.4 23l2.6-6H26" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>DropPulse</a>
         <nav aria-label="Language">
           <a href="/privacy/" lang="cs" hreflang="cs">Čeština</a>
           <a href="/privacy/en/" lang="en" hreflang="en" aria-current="page">English</a>
