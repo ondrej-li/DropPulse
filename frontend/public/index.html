@@ -8,6 +8,8 @@
     <meta name="description" content="DropPulse sleduje stránku se vstupenkami a dá vám vědět, jakmile se něco uvolní.">
     <title>DropPulse — soukromá ukázka</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" sizes="120x120" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
     <link rel="alternate" hreflang="cs" href="https://dp.ondralinek.cz/">
     <link rel="alternate" hreflang="en" href="https://dp.ondralinek.cz/en/">
     <link rel="alternate" hreflang="de" href="https://dp.ondralinek.cz/de/">
@@ -68,8 +70,8 @@
       }
 
       .shell {
-        width: min(760px, 100%);
-        padding: clamp(28px, 7vw, 68px);
+        width: min(840px, 100%);
+        padding: clamp(28px, 6vw, 60px);
         border: 1px solid var(--line);
         border-radius: 28px;
         background: var(--surface);
@@ -81,8 +83,8 @@
         display: inline-flex;
         align-items: center;
         gap: 9px;
-        margin: 0 0 28px;
-        padding: 7px 12px;
+        margin: 0 0 24px;
+        padding: 7px 14px;
         border: 1px solid var(--line);
         border-radius: 999px;
         color: var(--muted);
@@ -103,14 +105,14 @@
 
       h1 {
         margin: 0;
-        font-size: clamp(2.5rem, 12.8vw, 7.5rem);
+        font-size: clamp(2.5rem, 11vw, 6.5rem);
         font-weight: 760;
         letter-spacing: -0.065em;
         line-height: 0.88;
       }
 
       .lede {
-        max-width: 26ch;
+        max-width: 32ch;
         margin: 22px 0 0;
         color: var(--accent);
         font-size: clamp(1.25rem, 3.8vw, 1.85rem);
@@ -120,30 +122,26 @@
       }
 
       .body {
-        max-width: 52ch;
-        margin: 24px 0 0;
+        max-width: 58ch;
+        margin: 20px 0 0;
         color: var(--muted);
         font-size: clamp(1rem, 2.4vw, 1.08rem);
       }
 
-      .note {
-        margin: 36px 0 0;
-        padding-top: 24px;
-        border-top: 1px solid var(--line);
-        color: var(--muted);
-        font-size: 0.92rem;
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin: 26px 0 0;
       }
-
-      .note strong { color: var(--text); }
-
-      .actions { margin: 22px 0 0; }
 
       .action {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 46px;
-        padding: 11px 20px;
+        min-height: 44px;
+        padding: 10px 20px;
         border-radius: 999px;
         background: var(--accent);
         color: var(--on-accent);
@@ -155,17 +153,110 @@
       .action:hover { filter: brightness(1.06); transform: translateY(-1px); }
       .action:active { transform: translateY(0); }
 
+      .action.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .action.secondary:hover {
+        background: var(--accent-soft);
+        filter: none;
+      }
+
       a:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 3px;
       }
+
+      .section-title {
+        margin: 38px 0 14px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        color: var(--text);
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+
+      .feature-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--accent-soft);
+      }
+
+      .feature-card h3 {
+        margin: 0 0 6px;
+        font-size: 0.94rem;
+        font-weight: 650;
+        color: var(--text);
+      }
+
+      .feature-card p {
+        margin: 0;
+        font-size: 0.86rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .compliance-box {
+        margin-top: 24px;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 16px;
+        background: var(--surface);
+      }
+
+      .compliance-box h3 {
+        margin: 0 0 8px;
+        font-size: 0.96rem;
+        font-weight: 680;
+        color: var(--text);
+      }
+
+      .compliance-box p {
+        margin: 0 0 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .compliance-box p:last-child {
+        margin-bottom: 0;
+      }
+
+      .compliance-box strong { color: var(--text); }
+      .compliance-box a { color: var(--accent); text-underline-offset: 2px; }
+      .compliance-box code {
+        padding: 0.1em 0.35em;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.88em;
+      }
+
+      .note {
+        margin: 32px 0 0;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .note strong { color: var(--text); }
 
       footer {
         display: flex;
         flex-wrap: wrap;
         justify-content: space-between;
         gap: 8px 24px;
-        margin-top: 42px;
+        margin-top: 36px;
         color: var(--muted);
         font-size: 0.8rem;
       }
@@ -207,8 +298,8 @@
 
       @media (max-width: 520px) {
         body { padding: 12px; }
-        .shell { padding: 30px 22px; border-radius: 22px; }
-        .eyebrow { margin-bottom: 22px; }
+        .shell { padding: 26px 18px; border-radius: 20px; }
+        .eyebrow { margin-bottom: 18px; }
         .lede { max-width: none; }
       }
     </style>
@@ -219,11 +310,44 @@
       <h1>DropPulse</h1>
       <p class="lede">Dostupnost vstupenek bez neustálého obnovování.</p>
       <p class="body">DropPulse sleduje stránku se vstupenkami a dá vám vědět ve chvíli, kdy se něco uvolní, abyste ji nemuseli pořád načítat znovu.</p>
+
+      <div class="actions">
+        <a class="action" href="/app/">Přihlásit se</a>
+        <a class="action secondary" href="/privacy/" hreflang="cs">Ochrana osobních údajů</a>
+        <a class="action secondary" href="/terms/" hreflang="cs">Podmínky služby</a>
+      </div>
+
+      <h2 class="section-title">Hlavní funkce a způsob fungování</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Automatizované sledování dostupnosti</h3>
+          <p>DropPulse na pozadí pravidelně ověřuje veřejně přístupné stránky se vstupenkami a zjišťuje, zda se neuvolnila místa či nové termíny.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Okamžitá e-mailová upozornění</h3>
+          <p>Jakmile se vstupenka uvolní, obdržíte zprávu na ověřený e-mail s přímým odkazem na nákup, abyste nemuseli stránku ručně obnovovat.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Férové monitorování bez obcházení</h3>
+          <p>Zásadně neprovádíme automatizované luštění CAPTCHA ani obcházení ochran. Při detekci výzvy kontrolu pozastavíme pro ruční ověření.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Ochrana soukromí a minimální data</h3>
+          <p>Přihlášení slouží výhradně ke správě sledování a doručení e-mailů. Nepoužíváme reklamní trackery a osobní data neprodáváme.</p>
+        </div>
+      </div>
+
+      <div class="compliance-box">
+        <h3>Účel aplikace a soulad s pravidly rozhraní Google API</h3>
+        <p>Aplikace <strong>DropPulse</strong> slouží výhradně k automatizovanému sledování dostupnosti veřejně přístupných stránek se vstupenkami a událostmi a zasílání notifikačních e-mailů. Přihlášení přes Google vyžaduje pouze základní rozsah (<code>openid</code>, <code>email</code>, <code>profile</code>) výhradně pro ověření identity oprávněného uživatele a doručení vyžádaných notifikací.</p>
+        <p>Využití a předávání informací získaných z rozhraní Google API přísně dodržuje pravidla <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a> včetně požadavků na omezené použití (Limited Use).</p>
+        <p><strong>Zákaz generování intimního obsahu (AI NCII):</strong> V plném souladu se smluvními podmínkami rozhraní Google API aplikace DropPulse nevyužívá rozhraní Google API, uživatelská data Google ani technologie AI k vytváření, hostování ani šíření intimního materiálu bez souhlasu (AI NCII), sexuálně explicitního obsahu ani jiného škodlivého materiálu.</p>
+      </div>
+
       <p class="note"><strong>Přístup je zatím na pozvání.</strong> Přihlásit se mohou pouze pozvané účty; registrace není otevřená.</p>
-      <p class="actions"><a class="action" href="/app/">Přihlásit se</a></p>
       <footer>
         <span><code>dp.ondralinek.cz</code></span>
-        <span><a href="/privacy/" hreflang="cs">Ochrana osobních údajů</a> &middot; 2026</span>
+        <span><a href="/terms/" hreflang="cs">Podmínky služby</a> &middot; <a href="/privacy/" hreflang="cs">Ochrana osobních údajů</a> &middot; 2026</span>
         <nav class="langs" aria-label="Jazyk">
           <a href="/" lang="cs" hreflang="cs" aria-current="page">Čeština</a>
           <a href="/en/" lang="en" hreflang="en">English</a>

@@ -6,6 +6,7 @@ The domain serves three things from one vhost:
 |---|---|---|
 | `/`, `/en/`, `/de/`, `/fr/`, `/es/`, `/it/`, `/pt/`, `/ja/`, `/ko/`, `/ru/` | nginx from `/var/www/dp` | Self-contained landing pages; no JavaScript |
 | `/privacy/`, `/privacy/en/` | nginx from `/var/www/dp` | Czech authoritative notice and English translation |
+| `/terms/`, `/terms/en/` | nginx from `/var/www/dp` | Czech authoritative terms and English translation |
 | `/app/` | Go backend through `proxy_pass http://127.0.0.1:8090` | The single-page application |
 | `/api/` | Go backend through the same proxy | JSON API, auth callbacks, CSRF-protected writes |
 | `/healthz` | nginx `return 404` | Health stays loopback-only |
@@ -193,7 +194,7 @@ refuses to start with an empty list.
 ```bash
 curl -sSI https://dp.ondralinek.cz/ | head -20          # HSTS, static CSP
 curl -sS  https://dp.ondralinek.cz/ | grep -o '<title>[^<]*</title>'
-for path in /en/ /de/ /privacy/ /privacy/en/; do
+for path in /en/ /de/ /privacy/ /privacy/en/ /terms/ /terms/en/; do
     sleep 1
     printf '%s ' "$path"
     curl -sS -o /dev/null -w '%{http_code}\n' "https://dp.ondralinek.cz$path"

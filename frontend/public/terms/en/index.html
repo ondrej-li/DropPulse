@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Terms of service for DropPulse in its invitation-only private preview.">
+    <title>Terms of Service — DropPulse</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" sizes="120x120" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="alternate" hreflang="cs" href="https://dp.ondralinek.cz/terms/">
+    <link rel="alternate" hreflang="en" href="https://dp.ondralinek.cz/terms/en/">
+    <link rel="alternate" hreflang="x-default" href="https://dp.ondralinek.cz/terms/">
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f5;
+        --surface: rgba(255, 255, 255, 0.82);
+        --text: #17201d;
+        --muted: #5e6b66;
+        --line: rgba(23, 32, 29, 0.12);
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.10);
+        --shadow: 0 24px 80px rgba(23, 32, 29, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1210;
+          --surface: rgba(22, 30, 27, 0.86);
+          --text: #edf4f0;
+          --muted: #9aaba4;
+          --line: rgba(237, 244, 240, 0.12);
+          --accent: #5eead4;
+          --accent-soft: rgba(94, 234, 212, 0.08);
+          --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100svh;
+        margin: 0;
+        padding: clamp(18px, 4vw, 48px);
+        background:
+          radial-gradient(circle at 8% 4%, var(--accent-soft), transparent 30%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      .shell {
+        width: min(820px, 100%);
+        margin: 0 auto;
+        padding: clamp(26px, 6vw, 60px);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 20px;
+        margin-bottom: 34px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--text);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 7px;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        color: #ffffff;
+        flex: none;
+      }
+
+      .brand-mark svg { display: block; width: 15px; height: 15px; }
+
+      @media (prefers-color-scheme: dark) {
+        .brand-mark {
+          background: linear-gradient(135deg, #5eead4, #2dd4bf);
+          color: #06201c;
+        }
+      }
+
+      .top nav { display: flex; gap: 14px; font-size: 0.82rem; }
+      .top nav a { color: var(--muted); }
+      .top nav a[aria-current="page"] { color: var(--text); font-weight: 650; text-decoration: none; }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 6.5vw, 3.2rem);
+        letter-spacing: -0.045em;
+        line-height: 1.05;
+      }
+
+      .meta { margin: 12px 0 0; color: var(--muted); font-size: 0.86rem; }
+
+      .callout {
+        margin: 28px 0 0;
+        padding: 14px 18px;
+        border-left: 3px solid var(--accent);
+        border-radius: 0 10px 10px 0;
+        background: var(--accent-soft);
+        color: var(--text);
+        font-size: 0.94rem;
+      }
+
+      h2 {
+        margin: 2.4rem 0 0.6rem;
+        font-size: 1.18rem;
+        letter-spacing: -0.015em;
+      }
+
+      p { margin: 0.7rem 0 0; }
+      p, li { color: var(--muted); }
+      strong { color: var(--text); }
+      ul { margin: 0.6rem 0 0; padding-left: 1.25rem; }
+      li { margin: 0.35rem 0; }
+
+      a { color: var(--accent); text-underline-offset: 2px; }
+      a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+      code {
+        padding: 0.1em 0.35em;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.86em;
+        color: var(--text);
+      }
+
+      footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px 24px;
+        margin-top: 48px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      footer a { color: var(--muted); }
+      footer .langs { display: flex; gap: 14px; }
+      footer .langs a { text-decoration: none; }
+      footer .langs a[aria-current="page"] { color: var(--text); font-weight: 650; }
+
+      @media (max-width: 520px) {
+        body { padding: 10px; }
+        .shell { padding: 28px 20px; border-radius: 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="top">
+        <a class="brand" href="/en/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M6 17h5l2.6-6.2L18.4 23l2.6-6H26" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>DropPulse</a>
+        <nav aria-label="Language">
+          <a href="/terms/" lang="cs" hreflang="cs">Čeština</a>
+          <a href="/terms/en/" lang="en" hreflang="en" aria-current="page">English</a>
+        </nav>
+      </div>
+
+      <article>
+        <h1>Terms of Service</h1>
+        <p class="meta">Last updated 24 November 2026 &middot; Version 1.0</p>
+
+        <p class="callout">
+          <strong>This is an invitation-only private preview.</strong> Sign-in is
+          limited to accounts on the operator's allowlist, and there is no public
+          registration.
+        </p>
+
+        <p>
+          DropPulse provides an automated tool for checking the availability of
+          publicly accessible web pages (such as ticket availability) and sending
+          notifications when changes are detected. These Terms of Service ("Terms")
+          govern your access to and use of <code>dp.ondralinek.cz</code>, the
+          DropPulse web application, and related services.
+        </p>
+        <p>
+          These Terms are available in Czech and English. The Czech version is
+          authoritative; the English version is provided for convenience.
+        </p>
+
+        <h2>1. Operator</h2>
+        <p>
+          The service is operated by <strong>Ondřej Linek</strong>, an individual
+          based in the Czech Republic. Contact email:
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.
+        </p>
+
+        <h2>2. Access and User Accounts</h2>
+        <ul>
+          <li><strong>Invitation-Only Access:</strong> The service is operated as a private preview. Sign-in is restricted to verified email addresses on the operator's allowlist. The operator may refuse access or invitations at any time.</li>
+          <li><strong>Third-Party Authentication:</strong> Sign-in is performed exclusively via supported identity providers (e.g., Google, Apple). DropPulse never asks for or stores passwords to your external accounts.</li>
+          <li><strong>Account Security:</strong> You are responsible for securing your third-party account credentials and for all actions that occur under your active session.</li>
+        </ul>
+
+        <h2>3. Acceptable Use Policy</h2>
+        <p>
+          You agree to use DropPulse strictly in compliance with these Terms, applicable
+          laws, and the terms of monitored third-party websites. Specifically:
+        </p>
+        <ul>
+          <li>You may not use the service to overload target servers, conduct Denial of Service (DoS/DDoS) attacks, or set excessively aggressive checking frequencies.</li>
+          <li>You may not attempt to circumvent technical or access barriers on target sites. <strong>Core service principle:</strong> DropPulse does not perform or facilitate automated CAPTCHA solving or anti-bot challenge bypass. When a challenge is encountered, the check is recorded as blocked and paused, allowing the user to inspect the site and solve challenges manually.</li>
+          <li>You may not monitor targets where doing so violates third-party intellectual property or contractual rights.</li>
+          <li>You may not probe, scan, or compromise the integrity, security, or availability of the DropPulse backend and infrastructure.</li>
+        </ul>
+
+        <h2>4. Disclaimer of Warranties and Limitation of Liability</h2>
+        <p>
+          The service is provided on an <strong>"AS IS"</strong> and
+          <strong>"AS AVAILABLE"</strong> basis, without warranties of any kind,
+          either express or implied.
+        </p>
+        <ul>
+          <li>As a developmental preview, we do not warrant that service operation will be uninterrupted, error-free, or that ticket drops and availability transitions will be detected and delivered in time.</li>
+          <li>Availability depends on third-party websites and network conditions. The operator shall not be liable for missed ticket sales, lost opportunities, or any direct or indirect damages resulting from reliance on service notifications.</li>
+        </ul>
+
+        <h2>5. Suspension and Termination</h2>
+        <p>
+          The operator reserves the right to modify, suspend, or terminate the service
+          or any user account at any time, with or without notice, in particular for
+          violations of these Terms or system stability concerns.
+        </p>
+        <p>
+          You may discontinue use at any time. To request account deletion and removal
+          of stored watch configurations, email us from your verified account address at
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.
+        </p>
+
+        <h2>6. Privacy</h2>
+        <p>
+          Our collection and use of personal data are described in our separate
+          <a href="/privacy/en/">Privacy Policy</a>, which forms an integral part
+          of your agreement with us.
+        </p>
+
+        <h2>7. Governing Law</h2>
+        <p>
+          These Terms and any disputes arising out of or related to the service shall
+          be governed by and construed in accordance with the laws of the Czech Republic.
+        </p>
+
+        <h2>8. Changes to These Terms</h2>
+        <p>
+          We may update these Terms from time to time. The current version will always
+          be posted on this page with the effective revision date.
+        </p>
+
+        <h2>9. Contact</h2>
+        <p>
+          If you have questions about these Terms, please reach out to
+          <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.
+        </p>
+      </article>
+
+      <footer>
+        <span><a href="/en/">DropPulse</a> &middot; <code>dp.ondralinek.cz</code> &middot; <a href="/privacy/en/">Privacy Policy</a></span>
+        <nav class="langs" aria-label="Language">
+          <a href="/terms/" lang="cs" hreflang="cs">Čeština</a>
+          <a href="/terms/en/" lang="en" hreflang="en" aria-current="page">English</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>

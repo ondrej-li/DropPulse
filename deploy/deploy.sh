@@ -139,7 +139,7 @@ echo "    http://$DOMAIN/ -> $redirect"
 
 # The vhost allows one request per second per IP. Space the page checks so a
 # successful deploy does not trip its own limiter.
-for path in /privacy/ /en/ /privacy/en/; do
+for path in /privacy/ /en/ /privacy/en/ /terms/ /terms/en/; do
     sleep 1
     page_code="$(curl -sS -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN$path" || true)"
     echo "    https://$DOMAIN$path -> ${page_code:-no response}"
