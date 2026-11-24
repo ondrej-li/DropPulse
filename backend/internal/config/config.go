@@ -79,8 +79,12 @@ type Config struct {
 	SendmailPath      string
 	SMTPFrom          string
 
-	AdminEmails map[string]struct{}
-	Providers   map[string]ProviderConfig
+	// AllowedEmails is the invite list for multi-user sign-in. When it is
+	// non-empty, only those verified addresses may sign in and no other account
+	// is created. Production requires it to be non-empty; see LoadFrom.
+	AllowedEmails map[string]struct{}
+	AdminEmails   map[string]struct{}
+	Providers     map[string]ProviderConfig
 
 	TrustedProxyPrefixes []netip.Prefix
 	AuthRatePerMinute    int
@@ -107,12 +111,13 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	}
 
 	cfg := Config{
-		Environment:        getDefault("APP_ENV", "development"),
+		Environment:        strings.ToLower(strings.TrimSpace(getDefault("APP_ENV", "development"))),
 		Port:               getDefault("PORT", defaultPort),
 		BindAddr:           getDefault("BIND_ADDR", defaultBindAddr),
 		DatabaseURL:        get("DATABASE_URL"),
 		RunMigrations:      true,
 		LogLevel:           slog.LevelInfo,
+		AllowedEmails:      make(map[string]struct{}),
 		AdminEmails:        make(map[string]struct{}),
 		Providers:          make(map[string]ProviderConfig),
 		SessionIdleTTL:     defaultSessionIdle,
@@ -273,15 +278,16 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 
-	for _, raw := range strings.Split(get("ADMIN_EMAILS"), ",") {
-		email := strings.ToLower(strings.TrimSpace(raw))
-		if email == "" {
-			continue
-		}
-		if !strings.Contains(email, "@") || strings.ContainsAny(email, " \t\r\n") {
-			return Config{}, fmt.Errorf("ADMIN_EMAILS contains an invalid address %q", email)
-		}
-		cfg.AdminEmails[email] = struct{}{}
+	cfg.AllowedEmails, err = parseEmailSet(get("ALLOWED_EMAILS"), "ALLOWED_EMAILS")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.AdminEmails, err = parseEmailSet(get("ADMIN_EMAILS"), "ADMIN_EMAILS")
+	if err != nil {
+		return Config{}, err
+	}
+	if !cfg.SingleUserMode && cfg.Environment == "production" && len(cfg.AllowedEmails) == 0 {
+		return Config{}, errors.New("ALLOWED_EMAILS is required when APP_ENV=production and SINGLE_USER_MODE is off; list the invited verified addresses")
 	}
 
 	cfg.SendmailPath = getDefault("SENDMAIL_PATH", defaultSendmailPath)
@@ -328,6 +334,21 @@ func (c Config) ProviderNames() []string {
 		}
 	}
 	return names
+}
+
+// EmailAllowed reports whether a provider-supplied email may sign in. An empty
+// allowlist preserves the historical open multi-user behaviour; production
+// requires the list to be non-empty, so this is only open in development and
+// tests. A non-empty list requires the provider to mark the address verified.
+func (c Config) EmailAllowed(email string, verified bool) bool {
+	if len(c.AllowedEmails) == 0 {
+		return true
+	}
+	if !verified {
+		return false
+	}
+	_, ok := c.AllowedEmails[strings.ToLower(strings.TrimSpace(email))]
+	return ok
 }
 
 // OriginAllowed reports whether origin is an exact configured frontend origin
@@ -611,6 +632,24 @@ func parseMailbox(raw, name string) (string, error) {
 		return "", fmt.Errorf("%s must be one bare email address", name)
 	}
 	return address, nil
+}
+
+// parseEmailSet turns a comma-separated list into a set of lowercase addresses.
+// Empty entries are ignored; a display name or malformed value is an error.
+func parseEmailSet(raw, name string) (map[string]struct{}, error) {
+	set := make(map[string]struct{})
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		address, err := parseMailbox(part, name)
+		if err != nil {
+			return nil, err
+		}
+		set[address] = struct{}{}
+	}
+	return set, nil
 }
 
 // validateSendmailPath keeps notification mail on the local MTA. The command

@@ -1,0 +1,21 @@
+[Unit]
+Description=DropPulse backend (dp.ondralinek.cz)
+Documentation=https://github.com/ondrej-li/DropPulse
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/agent/repos/DropPulse/backend
+ExecStart=/home/agent/repos/DropPulse/backend/bin/droppulse-server
+EnvironmentFile=/home/agent/.config/droppulse/backend.env
+Restart=always
+RestartSec=5
+StateDirectory=droppulse
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/droppulse
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

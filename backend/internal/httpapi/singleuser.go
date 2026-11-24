@@ -68,7 +68,7 @@ func (s *Server) singleUser(next http.Handler) http.Handler {
 }
 
 func (s *Server) handleFrontend(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	if r.URL.Path != "/" && r.URL.Path != "/app/" {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			writeError(w, http.StatusNotFound, "not_found", "not found")
 			return

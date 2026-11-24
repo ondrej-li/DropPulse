@@ -5,3 +5,6 @@
 /backend/bin/
 /backend/backend
 /backend/*.test
+
+# Python bytecode
+__pycache__/
