@@ -125,6 +125,23 @@ Google would assert, so a person who uses it will not be auto-linked across
 providers. Signing in with the same provider again still finds the same
 account.
 
+### Account types
+
+Every account has exactly one type, stored in the `users.role` column and
+returned as `user.role` by `/api/v1/me`. The database enforces the set:
+
+| Role | Meaning |
+|---|---|
+| `user` | A normal customer account; the default for a new sign-in. |
+| `admin` | A platform administrator. `ADMIN_EMAILS` grants it on first sign-in, and the single-user account is always an admin. |
+| `vendor` | A vendor account. |
+| `agent` | A human agent account. |
+| `ai` | An AI-operated account. |
+
+Only `admin` carries administrative access. `vendor`, `agent` and `ai` are
+account types for now; they are assigned administratively, and no sign-in flow
+creates them.
+
 Sessions are opaque tokens whose SHA-256 is stored server-side. The cookie is
 `__Host-dp_session` on HTTPS (`__Host-` requires a secure, host-only cookie),
 `SameSite=Lax`, and session-relative. Unsafe requests must also carry

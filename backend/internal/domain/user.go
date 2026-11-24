@@ -2,17 +2,26 @@ package domain
 
 import "time"
 
-// Role is the coarse authorization role attached to a user account.
+// Role is the account type attached to a user account. It is both the
+// authorization role and the kind of actor the account represents.
 type Role string
 
 const (
-	RoleUser  Role = "user"
-	RoleAdmin Role = "admin"
+	RoleUser   Role = "user"
+	RoleAdmin  Role = "admin"
+	RoleVendor Role = "vendor"
+	RoleAgent  Role = "agent"
+	RoleAI     Role = "ai"
 )
 
 // Valid reports whether r is a role the database accepts.
 func (r Role) Valid() bool {
-	return r == RoleUser || r == RoleAdmin
+	switch r {
+	case RoleUser, RoleAdmin, RoleVendor, RoleAgent, RoleAI:
+		return true
+	default:
+		return false
+	}
 }
 
 // UserStatus is the lifecycle state of an account.
