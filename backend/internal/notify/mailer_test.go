@@ -43,6 +43,21 @@ func TestBuildMessage(t *testing.T) {
 	}
 }
 
+func TestBuildMessageForProviderAvailability(t *testing.T) {
+	m := &Mailer{
+		from: "agent@example.com",
+		to:   "alerts@example.com",
+		now:  time.Now,
+	}
+	message := string(m.buildMessage(domain.Event{
+		Name: "Dune at Flora IMAX",
+		URL:  "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
+	}, "http://localhost:8090"))
+	if !strings.Contains(message, "Status: availability confirmed") {
+		t.Fatalf("provider message did not describe availability:\n%s", message)
+	}
+}
+
 func TestBuildMessageSanitisesHeaderInjection(t *testing.T) {
 	m := &Mailer{
 		from: "agent@example.com",

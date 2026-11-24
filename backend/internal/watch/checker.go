@@ -1,8 +1,10 @@
-// Package watch checks whether an HTTPS page is available.
+// Package watch checks whether an HTTPS page is available, or delegates a
+// recognised provider URL to that provider's checker.
 //
-// The checker is deliberately narrow: one GET, no redirects, no cookies, no
-// proxy, and a dialer that refuses every non-public destination. These rules
-// are what keep a user-supplied URL from becoming a request forgery primitive.
+// The generic checker is deliberately narrow: one GET, no redirects, no
+// cookies, no proxy, and a dialer that refuses every non-public destination.
+// These rules are what keep a user-supplied URL from becoming a request
+// forgery primitive. Providers receive the same guarded client.
 package watch
 
 import (
@@ -20,12 +22,15 @@ import (
 	"time"
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinemacity"
 )
 
 // Result is one check. StatusCode is nil when the request did not produce an
-// HTTP response at all.
+// HTTP response at all. Available is set by a provider check; nil means the
+// result is the generic HTTP status result.
 type Result struct {
 	StatusCode *int
+	Available  *bool
 	Err        error
 	CheckedAt  time.Time
 }
@@ -73,7 +78,9 @@ func NewChecker(timeout time.Duration) *Checker {
 	return c
 }
 
-// Check requests target once. Exactly HTTP 200 means the event is on.
+// Check performs one availability check. A built-in provider target is
+// interpreted by that provider; every other target is on exactly when it
+// returns HTTP 200.
 func (c *Checker) Check(ctx context.Context, target string) Result {
 	result := Result{CheckedAt: c.now()}
 	normalised, err := ValidateTargetURL(target)
@@ -81,6 +88,20 @@ func (c *Checker) Check(ctx context.Context, target string) Result {
 		result.Err = err
 		return result
 	}
+	if providerTarget, matched, matchErr := cinemacity.Match(normalised); matched {
+		if matchErr != nil {
+			result.Err = matchErr
+			return result
+		}
+		available, checkErr := cinemacity.Check(ctx, c.client, providerTarget)
+		if checkErr != nil {
+			result.Err = checkErr
+			return result
+		}
+		result.Available = &available
+		return result
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, normalised, nil)
 	if err != nil {
 		result.Err = err
@@ -101,6 +122,15 @@ func (c *Checker) Check(ctx context.Context, target string) Result {
 	status := resp.StatusCode
 	result.StatusCode = &status
 	return result
+}
+
+// ValidateProviderTarget applies a built-in provider's URL rules. URLs from
+// other hosts are left to ValidateTargetURL.
+func ValidateProviderTarget(raw string) error {
+	if _, matched, err := cinemacity.Match(raw); matched {
+		return err
+	}
+	return nil
 }
 
 // ValidateTargetURL accepts only absolute HTTPS URLs without credentials or a

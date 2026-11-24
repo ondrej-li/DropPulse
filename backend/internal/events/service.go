@@ -25,12 +25,13 @@ type Repository interface {
 	UpdateEvent(ctx context.Context, userID, id string, input domain.EventInput) (domain.Event, error)
 	DeleteEvent(ctx context.Context, userID, id string) (bool, error)
 	DueEvents(ctx context.Context, limit int) ([]domain.Event, error)
-	RecordCheck(ctx context.Context, eventID string, statusCode *int, errText string) (domain.Event, error)
+	RecordCheck(ctx context.Context, eventID string, statusCode *int, available *bool, errText string) (domain.Event, error)
 	MarkNotified(ctx context.Context, eventID, notificationErr string) error
 	CountActiveEvents(ctx context.Context, userID string) (int, error)
 }
 
-// Checker performs one HTTPS availability check.
+// Checker performs one availability check: a generic HTTPS status request or a
+// provider lookup, depending on the target.
 type Checker interface {
 	Check(ctx context.Context, target string) watch.Result
 }
@@ -202,15 +203,17 @@ func (s *Service) check(ctx context.Context, eventID string) (domain.Event, erro
 	}
 	result := s.checker.Check(ctx, event.URL)
 	var (
-		status  *int
-		errText string
+		status    *int
+		available *bool
+		errText   string
 	)
 	if result.Err != nil {
 		errText = domain.TruncateError(result.Err.Error())
 	} else {
 		status = result.StatusCode
+		available = result.Available
 	}
-	updated, err := s.repo.RecordCheck(ctx, event.ID, status, errText)
+	updated, err := s.repo.RecordCheck(ctx, event.ID, status, available, errText)
 	if err != nil {
 		return domain.Event{}, err
 	}
@@ -248,6 +251,9 @@ func validateInput(input domain.EventInput) (domain.EventInput, error) {
 	}
 	target, err := watch.ValidateTargetURL(input.URL)
 	if err != nil {
+		return domain.EventInput{}, &ValidationError{Message: err.Error()}
+	}
+	if err := watch.ValidateProviderTarget(target); err != nil {
 		return domain.EventInput{}, &ValidationError{Message: err.Error()}
 	}
 	interval, err := domain.NormaliseCheckInterval(input.CheckIntervalSeconds)

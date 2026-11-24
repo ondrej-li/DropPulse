@@ -79,7 +79,7 @@ func (f *fakeRepo) DueEvents(context.Context, int) ([]domain.Event, error) {
 	return nil, nil
 }
 
-func (f *fakeRepo) RecordCheck(_ context.Context, eventID string, statusCode *int, errText string) (domain.Event, error) {
+func (f *fakeRepo) RecordCheck(_ context.Context, eventID string, statusCode *int, available *bool, errText string) (domain.Event, error) {
 	event, ok := f.events[eventID]
 	if !ok {
 		return domain.Event{}, store.ErrNotFound
@@ -87,6 +87,9 @@ func (f *fakeRepo) RecordCheck(_ context.Context, eventID string, statusCode *in
 	wasOn := event.IsOn
 	wasNotified := event.NotifiedOn
 	isOn := statusCode != nil && *statusCode == 200
+	if available != nil {
+		isOn = *available
+	}
 	event.IsOn = isOn
 	event.NotifiedOn = isOn && wasOn && wasNotified
 	event.LastStatusCode = statusCode
@@ -146,6 +149,8 @@ func (m *recordingMailer) SendEventOn(context.Context, domain.Event, string) err
 }
 
 func status(code int) *int { return &code }
+
+func availability(value bool) *bool { return &value }
 
 func testService(t *testing.T, repo *fakeRepo, checker Checker, mailer Mailer) *Service {
 	t.Helper()
@@ -255,6 +260,86 @@ func TestNotificationRetriesAfterSendFailure(t *testing.T) {
 	if !second.NotifiedOn || second.LastNotificationErr != "" || mailer.sends != 2 {
 		t.Fatalf("retry: notified=%v err=%q sends=%d",
 			second.NotifiedOn, second.LastNotificationErr, mailer.sends)
+	}
+}
+
+func TestProviderAvailabilityDrivesNotifications(t *testing.T) {
+	repo := newFakeRepo(baseEvent())
+	checker := &queueChecker{results: []watch.Result{
+		{Available: availability(false)},
+		{Available: availability(true)},
+		{Available: availability(true)},
+		{Available: availability(false)},
+		{Available: availability(true)},
+	}}
+	mailer := &recordingMailer{}
+	service := testService(t, repo, checker, mailer)
+	ctx := context.Background()
+
+	want := []struct {
+		on    bool
+		sends int
+	}{
+		{false, 0},
+		{true, 1},
+		{true, 1},
+		{false, 1},
+		{true, 2},
+	}
+	for i, expected := range want {
+		event, err := service.CheckNow(ctx, testUserID, testEventID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if event.IsOn != expected.on || mailer.sends != expected.sends {
+			t.Fatalf("check %d: on=%v sends=%d, want on=%v sends=%d",
+				i+1, event.IsOn, mailer.sends, expected.on, expected.sends)
+		}
+		if event.LastStatusCode != nil {
+			t.Fatalf("check %d: provider check stored HTTP status %d", i+1, *event.LastStatusCode)
+		}
+	}
+}
+
+func TestCinemaCityTargetValidation(t *testing.T) {
+	repo := newFakeRepo(baseEvent())
+	service := testService(t, repo, &queueChecker{}, &recordingMailer{})
+	ctx := context.Background()
+
+	valid := "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX"
+	created, err := service.Create(ctx, testUserID, domain.EventInput{
+		Name:                 "Dune at Flora IMAX",
+		URL:                  valid,
+		CheckIntervalSeconds: 300,
+		Enabled:              true,
+	})
+	if err != nil {
+		t.Fatalf("valid Cinema City target rejected: %v", err)
+	}
+	if created.URL != valid {
+		t.Fatalf("created URL = %q, want %q", created.URL, valid)
+	}
+
+	invalid := []string{
+		"https://www.cinemacity.cz/films/duna-cast-treti/8105s2r",
+		"https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=abc",
+		"https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&date=15-12-2026",
+		"https://www.cinemacity.cz/cinemas/flora/1052?cinema=1052",
+	}
+	for _, raw := range invalid {
+		_, err := service.Create(ctx, testUserID, domain.EventInput{
+			Name:                 "Bad Cinema City target",
+			URL:                  raw,
+			CheckIntervalSeconds: 300,
+			Enabled:              true,
+		})
+		if err == nil {
+			t.Fatalf("Cinema City target %q must be rejected", raw)
+		}
+		var validation *ValidationError
+		if !errors.As(err, &validation) {
+			t.Fatalf("error %v is not a ValidationError", err)
+		}
 	}
 }
 

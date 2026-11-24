@@ -109,7 +109,7 @@ func (m *Mailer) buildMessage(event domain.Event, uiURL string) []byte {
 	name := headerSafe(event.Name)
 	to := m.recipient(event)
 	subject := "DropPulse: " + name + " is on"
-	status := "no HTTP response"
+	status := "availability confirmed"
 	if event.LastStatusCode != nil {
 		status = fmt.Sprintf("HTTP %d", *event.LastStatusCode)
 	}

@@ -49,6 +49,19 @@ func TestValidateTargetURL(t *testing.T) {
 	}
 }
 
+func TestValidateProviderTarget(t *testing.T) {
+	valid := "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX"
+	if err := ValidateProviderTarget(valid); err != nil {
+		t.Fatalf("valid provider target rejected: %v", err)
+	}
+	if err := ValidateProviderTarget("https://www.cinemacity.cz/films/duna-cast-treti/8105s2r"); err == nil {
+		t.Fatal("a Cinema City target without a cinema must be rejected")
+	}
+	if err := ValidateProviderTarget("https://example.com/tickets"); err != nil {
+		t.Fatalf("a generic URL must be left alone: %v", err)
+	}
+}
+
 func TestIsPublicIP(t *testing.T) {
 	public := []string{
 		"8.8.8.8",

@@ -170,12 +170,24 @@ it, `GET /api/v1/me/sessions` lists the account's sessions and `DELETE
 
 ## Events and notifications
 
-An event is a name, an HTTPS URL, a check interval and an enabled flag. A check
-issues one `GET`; exactly HTTP 200 means the event is on. Redirects are not
-followed, the request has a timeout, no cookies or proxy are used, and the
-checker refuses loopback, private, link-local, CGNAT, multicast and reserved
-destinations. It resolves a hostname once and dials the resulting public IP
-directly, so DNS rebinding cannot redirect the request.
+An event is a name, an HTTPS URL, a check interval and an enabled flag. A
+generic watch issues one `GET`; exactly HTTP 200 means the event is on.
+Redirects are not followed, the request has a timeout, no cookies or proxy are
+used, and the checker refuses loopback, private, link-local, CGNAT, multicast and
+reserved destinations. It resolves a hostname once and dials the resulting public
+IP directly, so DNS rebinding cannot redirect the request.
+
+A URL on a built-in provider host is interpreted by that provider instead of
+being checked for HTTP 200. The first provider is `cinemacity.cz`: a film page
+URL such as
+`https://www.cinemacity.cz/films/<slug>/<film-id>?cinema=<cinema-id>&auditorium=IMAX`
+is checked against Cinema City's public programme API. The watch is on when at
+least one matching show is not sold out and has seats available. The optional
+`date=YYYY-MM-DD` narrows the check to one date and `auditorium` matches either
+the full room name or its short name. The film page itself is never fetched, and
+the provider uses the same guarded client, redirect policy and response-size
+limit as the generic checker. An upstream failure is recorded as an error, never
+as a sold-out result.
 
 The watch routes are mounted in both modes. In single-user mode they act on the
 fixed local account; otherwise every one of them requires a session and is
@@ -210,9 +222,10 @@ skipped. The UI is served at `/` (and `/app/` in multi-user mode) when
 The UI creates events through a three-step wizard: choose a provider template,
 fill in template-specific details and watch settings, then choose a notification
 channel. The template catalogue lives in `frontend/index.html` and currently has
-one placeholder, `Example.com`; template management will move it server-side for
-higher tiers. Email is the only notification channel. A theme control switches
-between Automatic, Light and Dark and stores the choice in `localStorage`.
+the `cinemacity.cz` Flora IMAX watch and an `Example.com` placeholder; template
+management will move it server-side for higher tiers. Email is the only
+notification channel. A theme control switches between Automatic, Light and Dark
+and stores the choice in `localStorage`.
 
 ### Email
 
