@@ -36,10 +36,13 @@ publish an unauthenticated API.
 
 Without `SINGLE_USER_MODE`, `/` serves `FRONTEND_FILE` if it is set, and the
 landing page is public. The page asks the public provider endpoint which
-sign-in methods exist; Google and Apple are supported. On iOS and macOS the
-interface offers Apple only, as requested; on other platforms it offers both
-when both are configured. `/api/v1/events` and every other watch route require
-a session, so storing a watch always needs a signed-in user. A local example:
+sign-in methods exist; Google and Apple are supported. A provider the server
+does not have configured is shown as a disabled button. On iOS and macOS Apple
+is preferred: once Apple is configured, Google is not offered there; until
+then, Google stays available so the page is usable. On other platforms both
+are offered when configured. `/api/v1/events` and every other watch route
+require a session, so storing a watch always needs a signed-in user. A local
+example:
 
 ```sh
 cd backend
@@ -107,10 +110,13 @@ secret is signed by the backend with the ES256 key, not stored. The sign-in
 flow is web-only: sessions are cookies, not bearer tokens, so a native app needs
 the same browser flow, and a future mobile client has no token endpoint yet.
 
-The interface offers Apple only on iOS and macOS and both providers elsewhere,
-as requested. That is a UI policy, not an authorization rule: the backend
-accepts any configured provider from any client, because the user agent is
-trivially spoofable and a policy enforced on it would be false assurance.
+The interface prefers Apple on iOS and macOS and offers both providers
+elsewhere when configured. An unconfigured provider renders as a disabled
+button rather than disappearing. On Apple devices Google is hidden only once
+Apple is configured; while Apple is not, Google remains offered there. That is
+a UI policy, not an authorization rule: the backend accepts any configured
+provider from any client, because the user agent is trivially spoofable and a
+policy enforced on it would be false assurance.
 
 Sign-in is invite-only when `ALLOWED_EMAILS` is set. After the provider
 exchange, an address that is not on the list — or that the provider did not mark
