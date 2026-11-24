@@ -208,6 +208,15 @@
         border-color: var(--accent);
       }
 
+      button.auth-button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      button.auth-button:disabled:hover {
+        border-color: var(--line);
+      }
+
       .notice {
         margin: 0 0 16px;
         border-radius: 10px;
@@ -1082,9 +1091,11 @@
           element.className = "form-status " + (isError ? "error-text" : "muted");
         }
 
-        // Google sign-in is not offered on iOS or macOS. This is a UI policy,
-        // not a security boundary: the server still accepts any configured
-        // provider for a client that asks for it.
+        // On Apple devices the interface prefers Apple: once Apple sign-in is
+        // configured, Google is not offered there. This is a UI policy, not a
+        // security boundary: the server still accepts any configured provider
+        // for a client that asks for it. While Apple is not configured, Google
+        // stays available on every platform so the page remains usable.
         function isApplePlatform() {
           const ua = navigator.userAgent || "";
           const platform = navigator.platform || "";
@@ -1148,25 +1159,32 @@
           }
           if (request !== providersRequest) return;
 
-          const appleOnly = isApplePlatform();
+          const applePlatform = isApplePlatform();
           const configured = new Set(providers);
-          const available = AUTH_PROVIDER_ORDER.filter((name) =>
-            configured.has(name) && (name !== "google" || !appleOnly));
+          const appleAvailable = configured.has("apple");
           els.authProviders.replaceChildren();
-          if (!available.length) {
-            const message = appleOnly && configured.has("google")
-              ? "Apple sign-in is not configured on this server. Google sign-in is hidden on Apple devices."
-              : "No sign-in provider is configured on this server yet.";
-            setStatus(els.authStatus, message, true);
-            return;
-          }
-          for (const name of available) {
+          for (const name of AUTH_PROVIDER_ORDER) {
+            // Apple devices give Google way once Apple sign-in is configured.
+            if (name === "google" && applePlatform && appleAvailable) continue;
             const button = document.createElement("button");
             button.type = "button";
             button.className = "auth-button";
             button.textContent = AUTH_PROVIDERS[name].label;
-            button.addEventListener("click", () => startSignIn(name));
+            if (configured.has(name)) {
+              button.addEventListener("click", () => startSignIn(name));
+            } else {
+              // Render a provider the server does not have yet as greyed out
+              // instead of hiding it, so the page says what is coming.
+              button.disabled = true;
+              button.title = AUTH_PROVIDERS[name].label.replace("Continue with ", "") +
+                " sign-in is not configured on this server yet.";
+            }
             els.authProviders.append(button);
+          }
+          if (!configured.size) {
+            setStatus(els.authStatus,
+              "No sign-in provider is configured on this server yet.", true);
+            return;
           }
           if (landingMessage) {
             setStatus(els.authStatus, landingMessage, landingMessageIsError);
