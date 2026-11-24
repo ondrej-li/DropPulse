@@ -245,6 +245,139 @@ LANGUAGES = [
     },
 ]
 
+SECTIONS_DATA = {
+    "cs": {
+        "features_title": "Hlavní funkce a způsob fungování",
+        "features": [
+            ("Automatizované sledování dostupnosti", "DropPulse na pozadí pravidelně ověřuje veřejně přístupné stránky se vstupenkami a zjišťuje, zda se neuvolnila místa či nové termíny."),
+            ("Okamžitá e-mailová upozornění", "Jakmile se vstupenka uvolní, obdržíte zprávu na ověřený e-mail s přímým odkazem na nákup, abyste nemuseli stránku ručně obnovovat."),
+            ("Férové monitorování bez obcházení", "Zásadně neprovádíme automatizované luštění CAPTCHA ani obcházení ochran. Při detekci výzvy kontrolu pozastavíme pro ruční ověření."),
+            ("Ochrana soukromí a minimální data", "Přihlášení slouží výhradně ke správě sledování a doručení e-mailů. Nepoužíváme reklamní trackery a osobní data neprodáváme."),
+        ],
+        "compliance_title": "Účel aplikace a soulad s pravidly rozhraní Google API",
+        "compliance_p1": "Aplikace <strong>DropPulse</strong> slouží výhradně k automatizovanému sledování dostupnosti veřejně přístupných stránek se vstupenkami a událostmi a zasílání notifikačních e-mailů. Přihlášení přes Google vyžaduje pouze základní rozsah (<code>openid</code>, <code>email</code>, <code>profile</code>) výhradně pro ověření identity oprávněného uživatele a doručení vyžádaných notifikací.",
+        "compliance_p2": "Využití a předávání informací získaných z rozhraní Google API přísně dodržuje pravidla <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> včetně požadavků na omezené použití (Limited Use).",
+        "compliance_p3": "<strong>Zákaz generování intimního obsahu (AI NCII):</strong> V plném souladu se smluvními podmínkami rozhraní Google API aplikace DropPulse nevyužívá rozhraní Google API, uživatelská data Google ani technologie AI k vytváření, hostování ani šíření intimního materiálu bez souhlasu (AI NCII), sexuálně explicitního obsahu ani jiného škodlivého materiálu.",
+    },
+    "en": {
+        "features_title": "Features & How DropPulse Works",
+        "features": [
+            ("Automated Availability Tracking", "DropPulse monitors publicly accessible event and ticket pages in the background, detecting released seats and cancellations without excessive requests."),
+            ("Instant Email Alerts", "The moment tickets or seats become available, DropPulse sends an immediate alert to your verified email with a direct link to the booking page."),
+            ("Ethical & Human-First", "DropPulse strictly respects target websites: we do not perform automated CAPTCHA solving. If a challenge is encountered, the check pauses so you can verify manually."),
+            ("Privacy & Minimal Data", "Sign-in is used solely to authenticate your account and route alert emails. We use no ad trackers, no analytics pixels, and never sell user data."),
+        ],
+        "compliance_title": "Application Purpose & Google API Terms of Service Compliance",
+        "compliance_p1": "The <strong>DropPulse</strong> application is dedicated to automated event ticket availability tracking and notification delivery. Google Sign-In is used exclusively to authenticate authorized users and deliver email notifications via minimal OAuth scopes (<code>openid</code>, <code>email</code>, <code>profile</code>).",
+        "compliance_p2": "DropPulse's use and transfer to any other app of information received from Google APIs adheres to the <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, including the Limited Use requirements.",
+        "compliance_p3": "<strong>Prohibition on AI-Generated Non-Consensual Intimate Imagery (AI NCII):</strong> In strict compliance with the Google APIs Terms of Service, DropPulse does not use Google APIs, user data, or artificial intelligence systems to generate, create, process, host, or distribute Non-Consensual Intimate Imagery (AI NCII), sexually explicit material, or harmful content.",
+    },
+    "de": {
+        "features_title": "Funktionen & Funktionsweise von DropPulse",
+        "features": [
+            ("Automatische Verfügbarkeitsprüfung", "DropPulse überwacht öffentlich zugängliche Ticket- und Veranstaltungsseiten im Hintergrund auf freigegebene Plätze."),
+            ("Sofortige E-Mail-Benachrichtigungen", "Sobald Tickets verfügbar werden, sendet DropPulse eine Benachrichtigung an Ihre verifizierte E-Mail-Adresse."),
+            ("Ethisches Monitoring ohne Umgehung", "Keine automatisierte CAPTCHA-Lösung oder Umgehung von Schutzmaßnahmen. Bei Abfragen pausiert die Prüfung zur manuellen Überprüfung."),
+            ("Datenschutz & minimale Daten", "Die Anmeldung dient ausschließlich der Kontoverwaltung und dem Benachrichtigungsversand. Keine Tracker, kein Datenverkauf."),
+        ],
+        "compliance_title": "Anwendungszweck & Einhaltung der Google-API-Richtlinien",
+        "compliance_p1": "Die Anwendung <strong>DropPulse</strong> dient ausschließlich der automatisierten Überwachung von Ticketverfügbarkeiten und dem Versand von Benachrichtigungen. Die Google-Anmeldung erfordert minimale Berechtigungen (<code>openid</code>, <code>email</code>, <code>profile</code>) zur Nutzerauthentifizierung.",
+        "compliance_p2": "Die Nutzung von Google-API-Daten durch DropPulse entspricht den <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> einschließlich der Limited Use-Anforderungen.",
+        "compliance_p3": "<strong>Verbot von AI NCII:</strong> In voller Übereinstimmung mit den Google-API-Nutzungsbedingungen nutzt DropPulse keine Google-APIs oder KI-Systeme zur Erstellung oder Verbreitung nicht-einvernehmlicher intimer Bilder (AI NCII) oder schädlicher Inhalte.",
+    },
+    "fr": {
+        "features_title": "Fonctionnalités et fonctionnement de DropPulse",
+        "features": [
+            ("Suivi automatisé de la disponibilité", "DropPulse surveille en arrière-plan les pages publiques de billetterie pour détecter les places remises en vente."),
+            ("Alertes e-mail instantanées", "Dès que des billets se libèrent, DropPulse vous envoie une alerte avec un lien direct vers la réservation."),
+            ("Surveillance éthique sans contournement", "Aucune résolution automatisée de CAPTCHA. En cas de défi antibot, la surveillance s'interrompt pour une vérification manuelle."),
+            ("Confidentialité et données minimales", "La connexion sert uniquement à gérer vos alertes et envoyer les e-mails. Aucun traqueur publicitaire, aucune revente de données."),
+        ],
+        "compliance_title": "Finalité de l'application et conformité aux règles Google API",
+        "compliance_p1": "L'application <strong>DropPulse</strong> est dédiée au suivi automatisé de la disponibilité des billets et à l'envoi de notifications par e-mail. La connexion Google requiert les autorisations minimales (<code>openid</code>, <code>email</code>, <code>profile</code>).",
+        "compliance_p2": "L'utilisation des données reçues des API Google respecte les <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, y compris les exigences de Limited Use.",
+        "compliance_p3": "<strong>Interdiction des contenus AI NCII:</strong> Conformément aux conditions d'utilisation des API Google, DropPulse n'utilise pas les API Google ni l'IA pour générer ou diffuser des images intimes non consenties (AI NCII) ou des contenus nuisibles.",
+    },
+    "es": {
+        "features_title": "Características y funcionamiento de DropPulse",
+        "features": [
+            ("Seguimiento automatizado de disponibilidad", "DropPulse supervisa en segundo plano las páginas públicas de entradas para detectar asientos o entradas liberadas."),
+            ("Alertas inmediatas por correo electrónico", "En cuanto se liberan entradas, DropPulse envía una alerta a su correo con un enlace directo de compra."),
+            ("Monitorización ética sin evasión", "No resolvemos CAPTCHA de forma automatizada. Ante desafíos antibot, el control se pausa para verificación manual."),
+            ("Privacidad y datos mínimos", "El inicio de sesión sirve únicamente para gestionar alertas. Sin rastreadores publicitarios ni venta de datos."),
+        ],
+        "compliance_title": "Propósito de la aplicación y cumplimiento de Google API",
+        "compliance_p1": "La aplicación <strong>DropPulse</strong> se dedica exclusivamente a monitorizar la disponibilidad de entradas de eventos y enviar avisos. El inicio de sesión con Google requiere permisos mínimos (<code>openid</code>, <code>email</code>, <code>profile</code>).",
+        "compliance_p2": "El uso de la información obtenida a través de las API de Google cumple estrictamente con la <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> y los requisitos de Limited Use.",
+        "compliance_p3": "<strong>Prohibición de AI NCII:</strong> De conformidad con los Términos del servicio de las API de Google, DropPulse no utiliza las API de Google ni sistemas de IA para crear o distribuir imágenes íntimas sin consentimiento (AI NCII) ni contenido perjudicial.",
+    },
+    "it": {
+        "features_title": "Funzionalità e funzionamento di DropPulse",
+        "features": [
+            ("Monitoraggio automatico della disponibilità", "DropPulse controlla in background le pagine pubbliche di biglietti per rilevare posti o disponibilità rilasciate."),
+            ("Notifiche e-mail istantanee", "Non appena i biglietti tornano disponibili, DropPulse invia un avviso alla tua e-mail verificata."),
+            ("Monitoraggio etico senza bypass", "Nessuna risoluzione automatica di CAPTCHA. In caso di controlli antibot, la verifica si sospende per il controllo manuale."),
+            ("Privacy e dati minimi", "L'accesso serve esclusivamente a gestire i monitoraggi e inviare gli avvisi. Nessun tracciamento pubblicitario."),
+        ],
+        "compliance_title": "Finalità dell'applicazione e conformità alle API Google",
+        "compliance_p1": "L'applicazione <strong>DropPulse</strong> è dedicata al monitoraggio automatico della disponibilità di biglietti e all'invio di notifiche. L'accesso Google richiede permessi minimi (<code>openid</code>, <code>email</code>, <code>profile</code>).",
+        "compliance_p2": "L'uso dei dati ricevuti dalle API Google è conforme alle <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> e ai requisiti di Limited Use.",
+        "compliance_p3": "<strong>Divieto di AI NCII:</strong> In piena conformità con i Termini di servizio delle API Google, DropPulse non utilizza le API Google né l'IA per generare o diffondere immagini intime non consensuali (AI NCII) o contenuti dannosi.",
+    },
+    "pt": {
+        "features_title": "Funcionalidades e funcionamento do DropPulse",
+        "features": [
+            ("Monitorização automática de disponibilidade", "O DropPulse vigia em segundo plano as páginas públicas de bilhetes para detetar lugares disponíveis."),
+            ("Alertas por e-mail imediatos", "Assim que os bilhetes ficam disponíveis, o DropPulse envia um alerta com link direto para a compra."),
+            ("Monitorização ética sem contornar proteções", "Não resolvemos CAPTCHAs automaticamente. Perante desafios antibot, a verificação pausa para resolução manual."),
+            ("Privacidade e dados mínimos", "O início de sessão serve apenas para gerir alertas e enviar notificações. Sem rastreadores nem venda de dados."),
+        ],
+        "compliance_title": "Finalidade da aplicação e conformidade com a Google API",
+        "compliance_p1": "A aplicação <strong>DropPulse</strong> destina-se à monitorização de bilhetes e envio de alertas. O início de sessão com Google requer permissões mínimas (<code>openid</code>, <code>email</code>, <code>profile</code>).",
+        "compliance_p2": "A utilização de dados das APIs Google cumpre a <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, incluindo os requisitos de Limited Use.",
+        "compliance_p3": "<strong>Proibição de AI NCII:</strong> Em total conformidade com os Termos de Serviço das APIs Google, o DropPulse não utiliza as APIs Google nem IA para criar ou distribuir imagens íntimas não consensuais (AI NCII) ou conteúdos nocivos.",
+    },
+    "ja": {
+        "features_title": "DropPulse の主な機能と仕組み",
+        "features": [
+            ("空き状況の自動モニタリング", "DropPulse は公開されているチケットページをバックグラウンドで巡回し、座席の開放を検知します。"),
+            ("即時メール通知", "チケットが利用可能になった瞬間に、確認済みメールアドレスへ直接リンク付きのアラートを送信します。"),
+            ("セキュリティ保護を回避しない倫理的な設計", "CAPTCHA の自動突破などは行いません。ボット判定画面が出た場合は一時停止し、手動確認を促します。"),
+            ("プライバシー重視と最小限のデータ取得", "ログインは監視項目の管理と通知送信用にのみ使用されます。広告トラッカーやデータ販売はありません。"),
+        ],
+        "compliance_title": "アプリケーションの目的と Google API 利用規約の遵守",
+        "compliance_p1": "<strong>DropPulse</strong> は、イベントチケットの空き状況の監視およびメール通知配信を目的としたアプリケーションです。Google ログインは、最小限のスコープ（<code>openid</code>、<code>email</code>、<code>profile</code>）によるユーザー認証にのみ使用されます。",
+        "compliance_p2": "Google API から取得した情報の使用は、限定使用（Limited Use）要件を含む <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> に完全に準拠しています。",
+        "compliance_p3": "<strong>AI NCII（同意のない親密な画像）の禁止:</strong> Google API 利用規約に従い、DropPulse は Google API や AI 技術を使用して、同意のない親密な画像（AI NCII）や有害なコンテンツを生成、処理、配布することは一切ありません。",
+    },
+    "ko": {
+        "features_title": "DropPulse 주요 기능 및 작동 원리",
+        "features": [
+            ("자동 티켓 예매 가능 여부 모니터링", "DropPulse는 공개된 티켓 예매 페이지를 백그라운드에서 주기적으로 확인하여 취소표나 추가 좌석 오픈을 감지합니다."),
+            ("실시간 이메일 알림", "티켓 예매가 가능해지는 즉시 인증된 이메일로 바로 연결되는 링크와 함께 알림을 발송합니다."),
+            ("보안을 우회하지 않는 윤리적 모니터링", "CAPTCHA 자동 해결이나 악의적 우회를 하지 않습니다. 챌린지가 발생하면 확인을 일시 정지하고 직접 확인할 수 있도록 안내합니다."),
+            ("개인정보 보호 및 최소 데이터 수집", "로그인은 모니터링 관리 및 알림 전송에만 사용됩니다. 광고 트래커나 데이터 판매가 없습니다."),
+        ],
+        "compliance_title": "애플리케이션 목적 및 Google API 서비스 약관 준수",
+        "compliance_p1": "<strong>DropPulse</strong>는 이벤트 티켓 예매 가능 여부 모니터링 및 이메일 알림을 제공하는 유틸리티입니다. Google 로그인은 최소한의 권한(<code>openid</code>, <code>email</code>, <code>profile</code>)으로 사용자 인증에만 사용됩니다.",
+        "compliance_p2": "Google API에서 수신한 정보의 사용 및 전송은 Limited Use 요건을 포함한 <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>를 엄격히 준수합니다.",
+        "compliance_p3": "<strong>AI NCII(비동의 성적 영상물) 금지:</strong> Google API 서비스 약관에 따라, DropPulse는 Google API, 사용자 데이터 또는 AI 기술을 사용하여 비동의 성적 영상물(AI NCII)이나 유해 콘텐츠를 생성, 처리 또는 유포하지 않습니다.",
+    },
+    "ru": {
+        "features_title": "Возможности и принцип работы DropPulse",
+        "features": [
+            ("Автоматическое отслеживание билетов", "DropPulse в фоновом режиме проверяет общедоступные страницы билетов на появление освободившихся мест."),
+            ("Мгновенные уведомления на почту", "Как только появляются билеты, вы сразу получаете письмо со ссылкой на покупку на подтверждённый адрес."),
+            ("Этичный мониторинг без обхода защит", "Мы принципиально не занимаемся автоматическим решением CAPTCHA. При возникновении проверки мониторинг приостанавливается."),
+            ("Конфиденциальность и минимум данных", "Вход используется исключительно для сохранения параметров отслеживания и отправки уведомлений. Без рекламы и передачи данных."),
+        ],
+        "compliance_title": "Назначение приложения и соблюдение правил Google API",
+        "compliance_p1": "Приложение <strong>DropPulse</strong> предназначено для мониторинга доступности билетов и отправки уведомлений. Вход через Google запрашивает минимальные права (<code>openid</code>, <code>email</code>, <code>profile</code>) только для аутентификации пользователя.",
+        "compliance_p2": "Использование данных Google API строго соответствует <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, включая требования Limited Use.",
+        "compliance_p3": "<strong>Запрет AI NCII:</strong> В полном соответствии с Условиями использования Google API, DropPulse не использует Google API или технологии ИИ для создания или распространения интимных изображений без согласия (AI NCII) или вредоносных материалов.",
+    },
+}
+
 CSS = """
       :root {
         color-scheme: light dark;
@@ -294,8 +427,8 @@ CSS = """
       }
 
       .shell {
-        width: min(760px, 100%);
-        padding: clamp(28px, 7vw, 68px);
+        width: min(840px, 100%);
+        padding: clamp(28px, 6vw, 60px);
         border: 1px solid var(--line);
         border-radius: 28px;
         background: var(--surface);
@@ -307,8 +440,8 @@ CSS = """
         display: inline-flex;
         align-items: center;
         gap: 9px;
-        margin: 0 0 28px;
-        padding: 7px 12px;
+        margin: 0 0 24px;
+        padding: 7px 14px;
         border: 1px solid var(--line);
         border-radius: 999px;
         color: var(--muted);
@@ -329,14 +462,14 @@ CSS = """
 
       h1 {
         margin: 0;
-        font-size: clamp(2.5rem, 12.8vw, 7.5rem);
+        font-size: clamp(2.5rem, 11vw, 6.5rem);
         font-weight: 760;
         letter-spacing: -0.065em;
         line-height: 0.88;
       }
 
       .lede {
-        max-width: 26ch;
+        max-width: 32ch;
         margin: 22px 0 0;
         color: var(--accent);
         font-size: clamp(1.25rem, 3.8vw, 1.85rem);
@@ -346,30 +479,26 @@ CSS = """
       }
 
       .body {
-        max-width: 52ch;
-        margin: 24px 0 0;
+        max-width: 58ch;
+        margin: 20px 0 0;
         color: var(--muted);
         font-size: clamp(1rem, 2.4vw, 1.08rem);
       }
 
-      .note {
-        margin: 36px 0 0;
-        padding-top: 24px;
-        border-top: 1px solid var(--line);
-        color: var(--muted);
-        font-size: 0.92rem;
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin: 26px 0 0;
       }
-
-      .note strong { color: var(--text); }
-
-      .actions { margin: 22px 0 0; }
 
       .action {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 46px;
-        padding: 11px 20px;
+        min-height: 44px;
+        padding: 10px 20px;
         border-radius: 999px;
         background: var(--accent);
         color: var(--on-accent);
@@ -381,17 +510,110 @@ CSS = """
       .action:hover { filter: brightness(1.06); transform: translateY(-1px); }
       .action:active { transform: translateY(0); }
 
+      .action.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .action.secondary:hover {
+        background: var(--accent-soft);
+        filter: none;
+      }
+
       a:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 3px;
       }
+
+      .section-title {
+        margin: 38px 0 14px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        color: var(--text);
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+
+      .feature-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--accent-soft);
+      }
+
+      .feature-card h3 {
+        margin: 0 0 6px;
+        font-size: 0.94rem;
+        font-weight: 650;
+        color: var(--text);
+      }
+
+      .feature-card p {
+        margin: 0;
+        font-size: 0.86rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .compliance-box {
+        margin-top: 24px;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 16px;
+        background: var(--surface);
+      }
+
+      .compliance-box h3 {
+        margin: 0 0 8px;
+        font-size: 0.96rem;
+        font-weight: 680;
+        color: var(--text);
+      }
+
+      .compliance-box p {
+        margin: 0 0 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .compliance-box p:last-child {
+        margin-bottom: 0;
+      }
+
+      .compliance-box strong { color: var(--text); }
+      .compliance-box a { color: var(--accent); text-underline-offset: 2px; }
+      .compliance-box code {
+        padding: 0.1em 0.35em;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.88em;
+      }
+
+      .note {
+        margin: 32px 0 0;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .note strong { color: var(--text); }
 
       footer {
         display: flex;
         flex-wrap: wrap;
         justify-content: space-between;
         gap: 8px 24px;
-        margin-top: 42px;
+        margin-top: 36px;
         color: var(--muted);
         font-size: 0.8rem;
       }
@@ -433,8 +655,8 @@ CSS = """
 
       @media (max-width: 520px) {
         body { padding: 12px; }
-        .shell { padding: 30px 22px; border-radius: 22px; }
-        .eyebrow { margin-bottom: 22px; }
+        .shell { padding: 26px 18px; border-radius: 20px; }
+        .eyebrow { margin-bottom: 18px; }
         .lede { max-width: none; }
       }
 """
@@ -460,8 +682,18 @@ $alternates
       <h1>DropPulse</h1>
       <p class="lede">$lede</p>
       <p class="body">$body</p>
+
+      <div class="actions">
+        <a class="action" href="$app">$sign_in</a>
+        <a class="action secondary" href="$privacy_href" hreflang="$privacy_lang">$privacy</a>
+        <a class="action secondary" href="$terms_href" hreflang="$terms_lang">$terms</a>
+      </div>
+
+$features_html
+
+$compliance_html
+
       <p class="note"><strong>$note_strong</strong> $note_rest</p>
-      <p class="actions"><a class="action" href="$app">$sign_in</a></p>
       <footer>
         <span><code>dp.ondralinek.cz</code></span>
         <span><a href="$terms_href" hreflang="$terms_lang">$terms</a> &middot; <a href="$privacy_href" hreflang="$privacy_lang">$privacy</a> &middot; 2026</span>
@@ -503,7 +735,36 @@ def language_links(current: str) -> str:
     return "\n".join(links)
 
 
+def render_sections(code: str) -> tuple[str, str]:
+    data = SECTIONS_DATA.get(code, SECTIONS_DATA["en"])
+    features_cards = []
+    for title, desc in data["features"]:
+        features_cards.append(
+            f'        <div class="feature-card">\n'
+            f'          <h3>{title}</h3>\n'
+            f'          <p>{desc}</p>\n'
+            f'        </div>'
+        )
+    features_html = (
+        f'      <h2 class="section-title">{data["features_title"]}</h2>\n'
+        f'      <div class="features-grid">\n'
+        + "\n".join(features_cards)
+        + f'\n      </div>'
+    )
+
+    compliance_html = (
+        f'      <div class="compliance-box">\n'
+        f'        <h3>{data["compliance_title"]}</h3>\n'
+        f'        <p>{data["compliance_p1"]}</p>\n'
+        f'        <p>{data["compliance_p2"]}</p>\n'
+        f'        <p>{data["compliance_p3"]}</p>\n'
+        f'      </div>'
+    )
+    return features_html, compliance_html
+
+
 def render(language: dict) -> str:
+    features_html, compliance_html = render_sections(language["code"])
     return PAGE.substitute(
         code=language["code"],
         title=language["title"],
@@ -513,6 +774,8 @@ def render(language: dict) -> str:
         eyebrow=language["eyebrow"],
         lede=language["lede"],
         body=language["body"],
+        features_html=features_html,
+        compliance_html=compliance_html,
         note_strong=language["note_strong"],
         note_rest=language["note_rest"],
         sign_in=language["sign_in"],

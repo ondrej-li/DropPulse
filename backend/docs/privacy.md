@@ -212,7 +212,9 @@ ready, but no credentials are in the repository or on the VPS.
 2. Configure the OAuth consent screen:
    - app name `DropPulse`;
    - user support email and developer contact: an address the owner monitors;
-   - app homepage: `https://dp.ondralinek.cz/`;
+   - app homepage: `https://dp.ondralinek.cz/en/` (or `https://dp.ondralinek.cz/`;
+     do NOT use `/app/`, as Google requires an unauthenticated home page that
+     explains the app's purpose without a login wall);
    - privacy policy: `https://dp.ondralinek.cz/privacy/en/` (the English page
      is easier for reviewers; the Czech page is linked from it);
    - terms of service: `https://dp.ondralinek.cz/terms/en/` (required when

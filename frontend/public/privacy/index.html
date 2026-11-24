@@ -303,7 +303,43 @@
           ale nepřihlásíte.
         </p>
 
-        <h2>6. Komu údaje předáváme</h2>
+        <h2>6. Zásady pro uživatelská data Google API a pravidla Limited Use</h2>
+        <p>
+          DropPulse využívá autentizační službu Google OAuth 2.0, která umožňuje
+          oprávněným uživatelům bezpečné přihlášení bez nutnosti vytvářet samostatné
+          heslo. Při přihlášení prostřednictvím účtu Google požadujeme přístup k těmto
+          základním údajům v rámci rozsahů <code>openid</code>, <code>email</code> a
+          <code>profile</code>:
+        </p>
+        <ul>
+          <li><strong>E-mailová adresa účtu Google a stav jejího ověření:</strong> slouží výhradně k ověření totožnosti oproti seznamu povolených adres provozovatele, vedení uživatelského účtu a doručování e-mailových upozornění na dostupnost sledovaných stránek.</li>
+          <li><strong>Identifikátor účtu Google (Sub):</strong> neměnný identifikátor přidělený společností Google k propojení relace uživatele bez nutnosti znát či ukládat vaše heslo.</li>
+          <li><strong>Jméno a URL profilového obrázku:</strong> slouží výhradně k zobrazení v záhlaví uživatelského rozhraní přihlášeného účtu.</li>
+        </ul>
+        <p><strong>Způsob využití, uložení a ochrana údajů:</strong></p>
+        <ul>
+          <li><strong>Účelové omezení:</strong> Údaje z Google účtu jsou využívány výhradně pro přihlášení a zasílání vyžádaných notifikací o vstupenkách. Nikdy nejsou využívány pro reklamu, marketing, profilování ani jiné nesouvisející účely.</li>
+          <li><strong>Zákaz prodeje a předávání třetím stranám:</strong> DropPulse neprodává, nepronajímá ani nepředává údaje z Google účtu zprostředkovatelům dat ani reklamním sítím. Údaje jsou uloženy výhradně na serverech poskytovatele hostingu v EU (Hetzner Online GmbH) za účelem chodu databáze a backendu.</li>
+          <li><strong>Uložení a zabezpečení:</strong> Přenos je šifrován protokolem TLS a data jsou uložena v databázi PostgreSQL na serveru v Německu (EU). Relační tokeny jsou kryptograficky hashovány, hesla se neukládají ani nepředávají.</li>
+          <li><strong>Doba uchování a výmaz:</strong> Údaje uchováváme po dobu trvání účtu. Přístup aplikace DropPulse k účtu Google můžete kdykoliv zrušit v <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">nastavení zabezpečení účtu Google</a>. O okamžité a trvalé smazání účtu a všech údajů lze kdykoliv požádat na <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.</li>
+        </ul>
+        <p><strong>Soulad s pravidly Google API Services User Data Policy:</strong></p>
+        <p>
+          Využití a předávání informací získaných z rozhraní Google API do jakékoliv
+          jiné aplikace se řídí pravidly
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>,
+          včetně požadavků na omezené použití (Limited Use).
+        </p>
+        <p><strong>Zákaz generování intimního obsahu bez souhlasu (AI NCII):</strong></p>
+        <p>
+          V plném souladu se smluvními podmínkami rozhraní Google API a bezpečnostními
+          standardy DropPulse nevyužívá rozhraní Google API, uživatelská data Google ani
+          nástroje umělé inteligence k vytváření, zpracování, hostování ani šíření intimního
+          materiálu bez souhlasu (AI NCII), sexuálně explicitního obsahu ani jiného škodlivého
+          materiálu. DropPulse slouží výhradně k monitorování dostupnosti vstupenek a událostí.
+        </p>
+
+        <h2>7. Komu údaje předáváme</h2>
         <ul>
           <li><strong>Google</strong> (Google Ireland Limited) a <strong>Apple</strong> (Apple Distribution International Ltd.), pokud se rozhodnete přihlásit přes tyto poskytovatele. Ověřují vaši totožnost a vracejí nám výše uvedené údaje. Platí jejich vlastní zásady ochrany osobních údajů: <a href="https://policies.google.com/privacy" rel="noopener noreferrer">Google</a>, <a href="https://www.apple.com/legal/privacy/" rel="noopener noreferrer">Apple</a>.</li>
           <li><strong>Hetzner Online GmbH</strong>, náš poskytovatel hostingu v Německu (EU), který ukládá databázi a provozuje server.</li>
@@ -320,7 +356,7 @@
           žádné takové funkce nejsou aktivní.
         </p>
 
-        <h2>7. Předávání do třetích zemí</h2>
+        <h2>8. Předávání do třetích zemí</h2>
         <p>
           Služba a databáze jsou umístěny v EU (Německo). Google a Apple mohou
           zpracovávat údaje mimo EU/EHP na základě vlastních záruk, například
@@ -329,7 +365,7 @@
           nepředáváme.
         </p>
 
-        <h2>8. Jak dlouho údaje uchováváme</h2>
+        <h2>9. Jak dlouho údaje uchováváme</h2>
         <ul>
           <li><strong>Údaje o účtu:</strong> po dobu existence účtu. Po smazání záznamy účtu smažeme nebo anonymizujeme, kromě údajů, které musíme uchovat ze zákona.</li>
           <li><strong>Relace:</strong> 30 dní nečinnosti a nejpozději 90 dní po přihlášení; expirované záznamy se mažou.</li>
@@ -339,7 +375,7 @@
           <li><strong>Údaje potřebné k uplatnění, výkonu nebo obhajobě právních nároků:</strong> po dobu promlčecí lhůty.</li>
         </ul>
 
-        <h2>9. Vaše práva</h2>
+        <h2>10. Vaše práva</h2>
         <p>
           Máte právo na přístup ke svým osobním údajům, na jejich opravu nebo
           výmaz, na omezení zpracování nebo námitku proti němu, na přenositelnost
@@ -361,7 +397,7 @@
           vyžaduje zákon.
         </p>
 
-        <h2>10. Zabezpečení</h2>
+        <h2>11. Zabezpečení</h2>
         <p>
           Veškerý provoz používá TLS a HSTS. Relace jsou serverové a jejich tokeny
           ukládáme hashované. Cookies jsou podle potřeby HttpOnly, Secure a
@@ -373,21 +409,21 @@
           dotčené uživatele, jak ukládá zákon.
         </p>
 
-        <h2>11. Děti</h2>
+        <h2>12. Děti</h2>
         <p>
           Služba není určena dětem mladším 15 let. Vědomě jejich osobní údaje
           neshromažďujeme. Pokud zjistíme, že jsme je získali, smažeme je. Pokud se
           domníváte, že se přihlásilo dítě, kontaktujte nás.
         </p>
 
-        <h2>12. Změny těchto zásad</h2>
+        <h2>13. Změny těchto zásad</h2>
         <p>
           Tyto zásady můžeme aktualizovat. Změníme verzi a datum a u podstatných
           změn vás upozorníme na stránce nebo e-mailem, pokud to bude vhodné.
           Aktuální verze je vždy dostupná na této adrese.
         </p>
 
-        <h2>13. Kontakt</h2>
+        <h2>14. Kontakt</h2>
         <p>
           Ondřej Linek, Česká republika &mdash;
           <a href="mailto:me@ondralinek.cz">me@ondralinek.cz</a>.
