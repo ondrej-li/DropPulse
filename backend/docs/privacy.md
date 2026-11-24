@@ -215,6 +215,8 @@ ready, but no credentials are in the repository or on the VPS.
    - app homepage: `https://dp.ondralinek.cz/`;
    - privacy policy: `https://dp.ondralinek.cz/privacy/en/` (the English page
      is easier for reviewers; the Czech page is linked from it);
+   - terms of service: `https://dp.ondralinek.cz/terms/en/` (required when
+     publishing the app / exiting test mode);
    - authorized domain: `ondralinek.cz` (the top private domain; it covers
      `dp.ondralinek.cz`);
    - scopes: `openid`, `email`, `profile` — all non-sensitive, so no full

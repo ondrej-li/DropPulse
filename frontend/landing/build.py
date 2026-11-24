@@ -26,6 +26,8 @@ SITE = "https://dp.ondralinek.cz"
 ROOT = Path(__file__).resolve().parents[1] / "public"
 PRIVACY_CS = "/privacy/"
 PRIVACY_EN = "/privacy/en/"
+TERMS_CS = "/terms/"
+TERMS_EN = "/terms/en/"
 APP = "/app/"
 
 # Order is deliberate: Czech is the default, English the second preference,
@@ -43,6 +45,9 @@ LANGUAGES = [
         "note_strong": "Přístup je zatím na pozvání.",
         "note_rest": "Přihlásit se mohou pouze pozvané účty; registrace není otevřená.",
         "sign_in": "Přihlásit se",
+        "terms": "Podmínky služby",
+        "terms_href": TERMS_CS,
+        "terms_lang": "cs",
         "privacy": "Ochrana osobních údajů",
         "privacy_href": PRIVACY_CS,
         "privacy_lang": "cs",
@@ -61,6 +66,9 @@ LANGUAGES = [
         "note_strong": "Access is by invitation for now.",
         "note_rest": "Only invited accounts can sign in; registration is closed.",
         "sign_in": "Sign in",
+        "terms": "Terms of Service",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Privacy",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -79,6 +87,9 @@ LANGUAGES = [
         "note_strong": "Der Zugang ist vorerst nur auf Einladung möglich.",
         "note_rest": "Nur eingeladene Konten können sich anmelden; die Registrierung ist geschlossen.",
         "sign_in": "Anmelden",
+        "terms": "Nutzungsbedingungen",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Datenschutz",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -97,6 +108,9 @@ LANGUAGES = [
         "note_strong": "L’accès est pour l’instant sur invitation.",
         "note_rest": "Seuls les comptes invités peuvent se connecter ; l’inscription est fermée.",
         "sign_in": "Se connecter",
+        "terms": "Conditions d’utilisation",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Confidentialité",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -112,9 +126,12 @@ LANGUAGES = [
         "eyebrow": "Vista previa privada",
         "lede": "Disponibilidad de entradas, sin recargar.",
         "body": "DropPulse vigila una página de entradas y te avisa en cuanto se libera algo, para que no tengas que recargarla una y otra vez.",
-        "note_strong": "Por ahora el acceso es por invitación.",
+        "note_strong": "Por ahora el acceso es por invitation.",
         "note_rest": "Solo las cuentas invitadas pueden iniciar sesión; el registro está cerrado.",
         "sign_in": "Iniciar sesión",
+        "terms": "Condiciones del servicio",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Privacidad",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -133,6 +150,9 @@ LANGUAGES = [
         "note_strong": "Per ora l’accesso è su invito.",
         "note_rest": "Solo gli account invitati possono accedere; la registrazione è chiusa.",
         "sign_in": "Accedi",
+        "terms": "Termini di servizio",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Privacy",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -151,6 +171,9 @@ LANGUAGES = [
         "note_strong": "Por agora, o acesso é por convite.",
         "note_rest": "Apenas contas convidadas podem iniciar sessão; o registo está fechado.",
         "sign_in": "Entrar",
+        "terms": "Termos de serviço",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Privacidade",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -169,6 +192,9 @@ LANGUAGES = [
         "note_strong": "現在、アクセスは招待制です。",
         "note_rest": "招待されたアカウントのみサインインできます。新規登録は停止しています。",
         "sign_in": "サインイン",
+        "terms": "利用規約",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "プライバシー",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -187,6 +213,9 @@ LANGUAGES = [
         "note_strong": "현재는 초대를 통해서만 이용할 수 있습니다.",
         "note_rest": "초대된 계정만 로그인할 수 있으며, 신규 가입은 받지 않습니다.",
         "sign_in": "로그인",
+        "terms": "이용약관",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "개인정보",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -205,6 +234,9 @@ LANGUAGES = [
         "note_strong": "Пока доступ только по приглашению.",
         "note_rest": "Войти могут только приглашённые аккаунты; регистрация закрыта.",
         "sign_in": "Войти",
+        "terms": "Условия использования",
+        "terms_href": TERMS_EN,
+        "terms_lang": "en",
         "privacy": "Конфиденциальность",
         "privacy_href": PRIVACY_EN,
         "privacy_lang": "en",
@@ -417,6 +449,8 @@ PAGE = Template("""<!doctype html>
     <meta name="description" content="$description">
     <title>$title</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" sizes="120x120" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
 $alternates
     <style>$css    </style>
   </head>
@@ -430,7 +464,7 @@ $alternates
       <p class="actions"><a class="action" href="$app">$sign_in</a></p>
       <footer>
         <span><code>dp.ondralinek.cz</code></span>
-        <span><a href="$privacy_href" hreflang="$privacy_lang">$privacy</a> &middot; 2026</span>
+        <span><a href="$terms_href" hreflang="$terms_lang">$terms</a> &middot; <a href="$privacy_href" hreflang="$privacy_lang">$privacy</a> &middot; 2026</span>
         <nav class="langs" aria-label="$language">
 $language_links
         </nav>
@@ -483,6 +517,9 @@ def render(language: dict) -> str:
         note_rest=language["note_rest"],
         sign_in=language["sign_in"],
         app=APP,
+        terms_href=language["terms_href"],
+        terms_lang=language["terms_lang"],
+        terms=language["terms"],
         privacy_href=language["privacy_href"],
         privacy_lang=language["privacy_lang"],
         privacy=language["privacy"],
