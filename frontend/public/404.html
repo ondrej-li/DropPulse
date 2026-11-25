@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, follow">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Page not found — DropPulse.">
+    <title>404 — Page Not Found — DropPulse</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" sizes="120x120" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f5;
+        --surface: rgba(255, 255, 255, 0.82);
+        --text: #17201d;
+        --muted: #5e6b66;
+        --line: rgba(23, 32, 29, 0.12);
+        --accent: #0f766e;
+        --accent-soft: rgba(15, 118, 110, 0.10);
+        --on-accent: #ffffff;
+        --shadow: 0 24px 80px rgba(23, 32, 29, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1210;
+          --surface: rgba(22, 30, 27, 0.86);
+          --text: #edf4f0;
+          --muted: #9aaba4;
+          --line: rgba(237, 244, 240, 0.12);
+          --accent: #5eead4;
+          --accent-soft: rgba(94, 234, 212, 0.08);
+          --on-accent: #06201c;
+          --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100svh;
+        margin: 0;
+        padding: clamp(18px, 4vw, 48px);
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 15% 10%, var(--accent-soft), transparent 38%),
+          radial-gradient(circle at 88% 92%, var(--accent-soft), transparent 34%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      .shell {
+        width: min(640px, 100%);
+        margin: 0 auto;
+        padding: clamp(26px, 6vw, 52px);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+        margin-bottom: 24px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        color: #ffffff;
+        flex: none;
+      }
+
+      .brand-mark svg { display: block; width: 16px; height: 16px; }
+
+      .error-code {
+        margin: 12px 0 0;
+        font-size: clamp(4rem, 14vw, 6.5rem);
+        font-weight: 850;
+        letter-spacing: -0.06em;
+        line-height: 1;
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: clamp(1.3rem, 3.5vw, 1.7rem);
+        letter-spacing: -0.025em;
+      }
+
+      p {
+        margin: 12px auto 0;
+        max-width: 42ch;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 32px;
+      }
+
+      .action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 9px 20px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 650;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: transform 140ms ease, filter 140ms ease;
+      }
+
+      .action:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+      .action.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .action.secondary:hover {
+        background: var(--accent-soft);
+        filter: none;
+      }
+
+      footer {
+        margin-top: 36px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      footer a { color: var(--muted); text-underline-offset: 2px; }
+      footer a:hover { color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <a class="brand" href="/en/">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M6 17h5l2.6-6.2L18.4 23l2.6-6H26" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        DropPulse
+      </a>
+
+      <div class="error-code" aria-hidden="true">404</div>
+      <h1>Page Not Found / Stránka nenalezena</h1>
+      <p>
+        The page you are looking for does not exist or may have been moved.
+        Please check the address or return to the main site.
+      </p>
+
+      <div class="actions">
+        <a class="action" href="/en/">Home Page (English)</a>
+        <a class="action secondary" href="/">Hlavní stránka (Česky)</a>
+        <a class="action secondary" href="/app/">Web App</a>
+      </div>
+
+      <footer>
+        <span><code>dp.ondralinek.cz</code> &middot; <a href="/privacy/en/">Privacy</a> &middot; <a href="/terms/en/">Terms</a></span>
+      </footer>
+    </main>
+  </body>
+</html>

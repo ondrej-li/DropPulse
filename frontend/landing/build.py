@@ -1013,6 +1013,18 @@ PAGE = Template("""<!doctype html>
     <meta name="robots" content="noindex">
     <meta name="color-scheme" content="light dark">
     <meta name="description" content="$description">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="DropPulse">
+    <meta property="og:title" content="$title">
+    <meta property="og:description" content="$description">
+    <meta property="og:url" content="$site$path">
+    <meta property="og:image" content="$site/logo.png">
+    <meta property="og:image:width" content="120">
+    <meta property="og:image:height" content="120">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="$title">
+    <meta name="twitter:description" content="$description">
+    <meta name="twitter:image" content="$site/logo.png">
     <title>$title</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M14 34h8l5-12 8 24 5-12h10' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
     <link rel="icon" type="image/png" sizes="120x120" href="/logo.png">
@@ -1183,6 +1195,7 @@ def render_sections(code: str) -> dict[str, str]:
 def render(language: dict) -> str:
     sections = render_sections(language["code"])
     return PAGE.substitute(
+        site=SITE,
         code=language["code"],
         path=language["path"],
         title=language["title"],
