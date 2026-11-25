@@ -37,13 +37,13 @@ LANGUAGES = [
         "code": "cs",
         "path": "/",
         "name": "Čeština",
-        "title": "DropPulse — soukromá ukázka",
-        "description": "DropPulse sleduje stránku se vstupenkami a dá vám vědět, jakmile se něco uvolní.",
-        "eyebrow": "Soukromá ukázka",
-        "lede": "Dostupnost vstupenek bez neustálého obnovování.",
-        "body": "DropPulse sleduje stránku se vstupenkami a dá vám vědět ve chvíli, kdy se něco uvolní, abyste ji nemuseli pořád načítat znovu.",
-        "note_strong": "Přístup je zatím na pozvání.",
-        "note_rest": "Přihlásit se mohou pouze pozvané účty; registrace není otevřená.",
+        "title": "DropPulse — Sledování dostupnosti vstupenek",
+        "description": "DropPulse sleduje stránky se vstupenkami a okamžitě vám dá vědět e-mailem, jakmile se uvolní místa.",
+        "eyebrow": "Sledování dostupnosti vstupenek",
+        "lede": "Dostupnost vstupenek bez neustálého obnovování stránek.",
+        "body": "DropPulse monitoruje na pozadí veřejné stránky akcí, kin a divadel. Ve chvíli, kdy se uvolní dříve vyprodané vstupenky, obdržíte okamžité e-mailové upozornění.",
+        "note_strong": "Přístup je v současné době na pozvání.",
+        "note_rest": "Do webové aplikace se mohou přihlásit uživatelé na seznamu pozvaných. Přihlášení je dostupné v horní liště.",
         "sign_in": "Přihlásit se",
         "terms": "Podmínky služby",
         "terms_href": TERMS_CS,
@@ -58,13 +58,13 @@ LANGUAGES = [
         "code": "en",
         "path": "/en/",
         "name": "English",
-        "title": "DropPulse — private preview",
-        "description": "DropPulse watches a ticket page and tells you the moment something becomes available.",
-        "eyebrow": "Private preview",
-        "lede": "Ticket availability, without the refresh.",
-        "body": "DropPulse watches a ticket page and tells you the moment something becomes available, so you do not have to keep reloading it.",
-        "note_strong": "Access is by invitation for now.",
-        "note_rest": "Only invited accounts can sign in; registration is closed.",
+        "title": "DropPulse — Event & Ticket Availability Monitor",
+        "description": "DropPulse watches public ticket and event pages in the background and notifies you instantly via email when tickets become available.",
+        "eyebrow": "Event & Ticket Availability Monitor",
+        "lede": "Ticket availability monitoring, without the refresh.",
+        "body": "DropPulse continuously tracks publicly accessible event, cinema, and ticketing pages in the background and sends an immediate email alert the moment seats or tickets are released.",
+        "note_strong": "Access is currently in private preview.",
+        "note_rest": "Authorized users on the operator's allowlist can access the dashboard using the Sign In button in the navigation bar.",
         "sign_in": "Sign in",
         "terms": "Terms of Service",
         "terms_href": TERMS_EN,
@@ -79,13 +79,13 @@ LANGUAGES = [
         "code": "de",
         "path": "/de/",
         "name": "Deutsch",
-        "title": "DropPulse — private Vorschau",
-        "description": "DropPulse beobachtet eine Ticketseite und meldet sich, sobald etwas verfügbar wird.",
-        "eyebrow": "Private Vorschau",
+        "title": "DropPulse — Ticket- und Event-Verfügbarkeitsmonitor",
+        "description": "DropPulse beobachtet Ticketseiten im Hintergrund und meldet sich sofort per E-Mail, sobald Karten verfügbar werden.",
+        "eyebrow": "Verfügbarkeitsüberwachung",
         "lede": "Ticketverfügbarkeit – ohne ständiges Neuladen.",
-        "body": "DropPulse beobachtet eine Ticketseite und meldet sich, sobald etwas verfügbar wird – du musst die Seite nicht immer wieder neu laden.",
-        "note_strong": "Der Zugang ist vorerst nur auf Einladung möglich.",
-        "note_rest": "Nur eingeladene Konten können sich anmelden; die Registrierung ist geschlossen.",
+        "body": "DropPulse überwacht öffentlich zugängliche Veranstaltungs- und Ticketseiten im Hintergrund und sendet sofortige E-Mail-Benachrichtigungen, wenn Plätze frei werden.",
+        "note_strong": "Zugang derzeit nur auf Einladung.",
+        "note_rest": "Eingeladene Benutzer können sich über die Schaltfläche in der Navigationsleiste anmelden.",
         "sign_in": "Anmelden",
         "terms": "Nutzungsbedingungen",
         "terms_href": TERMS_EN,
@@ -100,13 +100,13 @@ LANGUAGES = [
         "code": "fr",
         "path": "/fr/",
         "name": "Français",
-        "title": "DropPulse — aperçu privé",
-        "description": "DropPulse surveille une page de billets et vous prévient dès que quelque chose se libère.",
-        "eyebrow": "Aperçu privé",
+        "title": "DropPulse — Surveillance de disponibilité des billets",
+        "description": "DropPulse surveille les billetteries en arrière-plan et vous alerte par e-mail dès que des places se libèrent.",
+        "eyebrow": "Surveillance de disponibilité",
         "lede": "La disponibilité des billets, sans actualiser.",
-        "body": "DropPulse surveille une page de billets et vous prévient dès que quelque chose se libère, sans que vous ayez à recharger la page sans cesse.",
-        "note_strong": "L’accès est pour l’instant sur invitation.",
-        "note_rest": "Seuls les comptes invités peuvent se connecter ; l’inscription est fermée.",
+        "body": "DropPulse surveille en arrière-plan les pages publiques de billetterie et vous envoie une alerte e-mail instantanée dès que des places sont remises en vente.",
+        "note_strong": "Accès actuellement sur invitation.",
+        "note_rest": "Les comptes autorisés peuvent se connecter via le bouton situé dans la barre de navigation.",
         "sign_in": "Se connecter",
         "terms": "Conditions d’utilisation",
         "terms_href": TERMS_EN,
@@ -121,13 +121,13 @@ LANGUAGES = [
         "code": "es",
         "path": "/es/",
         "name": "Español",
-        "title": "DropPulse — vista previa privada",
-        "description": "DropPulse vigila una página de entradas y te avisa en cuanto se libera algo.",
-        "eyebrow": "Vista previa privada",
+        "title": "DropPulse — Monitor de disponibilidad de entradas",
+        "description": "DropPulse vigila páginas de entradas en segundo plano y le avisa por correo en cuanto hay disponibilidad.",
+        "eyebrow": "Monitor de disponibilidad",
         "lede": "Disponibilidad de entradas, sin recargar.",
-        "body": "DropPulse vigila una página de entradas y te avisa en cuanto se libera algo, para que no tengas que recargarla una y otra vez.",
-        "note_strong": "Por ahora el acceso es por invitation.",
-        "note_rest": "Solo las cuentas invitadas pueden iniciar sesión; el registro está cerrado.",
+        "body": "DropPulse supervisa en segundo plano páginas públicas de espectáculos y eventos y le envía una alerta inmediata por correo electrónico cuando se liberan entradas.",
+        "note_strong": "Acceso disponible mediante invitación.",
+        "note_rest": "Los usuarios autorizados pueden iniciar sesión mediante el botón en la barra de navegación superior.",
         "sign_in": "Iniciar sesión",
         "terms": "Condiciones del servicio",
         "terms_href": TERMS_EN,
@@ -142,13 +142,13 @@ LANGUAGES = [
         "code": "it",
         "path": "/it/",
         "name": "Italiano",
-        "title": "DropPulse — anteprima privata",
-        "description": "DropPulse controlla una pagina di biglietti e ti avvisa appena qualcosa si libera.",
-        "eyebrow": "Anteprima privata",
+        "title": "DropPulse — Monitoraggio disponibilità biglietti",
+        "description": "DropPulse controlla le pagine dei biglietti in background e ti avvisa via email non appena si liberano posti.",
+        "eyebrow": "Monitoraggio disponibilità",
         "lede": "Disponibilità dei biglietti, senza ricaricare.",
-        "body": "DropPulse controlla una pagina di biglietti e ti avvisa appena qualcosa si libera, così non devi ricaricarla continuamente.",
-        "note_strong": "Per ora l’accesso è su invito.",
-        "note_rest": "Solo gli account invitati possono accedere; la registrazione è chiusa.",
+        "body": "DropPulse controlla in background le pagine pubbliche di eventi e biglietti e ti invia un avviso email istantaneo non appena i posti tornano disponibili.",
+        "note_strong": "Accesso attualmente su invito.",
+        "note_rest": "Gli account autorizzati possono accedere tramite il pulsante nella barra di navigazione in alto.",
         "sign_in": "Accedi",
         "terms": "Termini di servizio",
         "terms_href": TERMS_EN,
@@ -163,13 +163,13 @@ LANGUAGES = [
         "code": "pt",
         "path": "/pt/",
         "name": "Português",
-        "title": "DropPulse — pré-visualização privada",
-        "description": "O DropPulse vigia uma página de bilhetes e avisa assim que algo fica disponível.",
-        "eyebrow": "Pré-visualização privada",
+        "title": "DropPulse — Monitor de disponibilidade de bilhetes",
+        "description": "O DropPulse vigia páginas de bilhetes em segundo plano e avisa por e-mail assim que surgem lugares.",
+        "eyebrow": "Monitor de disponibilidade",
         "lede": "Disponibilidade de bilhetes, sem recarregar.",
-        "body": "O DropPulse vigia uma página de bilhetes e avisa assim que algo fica disponível, para não ter de a recarregar constantemente.",
-        "note_strong": "Por agora, o acesso é por convite.",
-        "note_rest": "Apenas contas convidadas podem iniciar sessão; o registo está fechado.",
+        "body": "O DropPulse vigia em segundo plano páginas públicas de espetáculos e bilhetes, enviando um alerta imediato por e-mail no momento em que os lugares ficam disponíveis.",
+        "note_strong": "Acesso atualmente por convite.",
+        "note_rest": "Os utilizadores autorizados podem iniciar sessão através do botão na barra de navegação.",
         "sign_in": "Entrar",
         "terms": "Termos de serviço",
         "terms_href": TERMS_EN,
@@ -184,13 +184,13 @@ LANGUAGES = [
         "code": "ja",
         "path": "/ja/",
         "name": "日本語",
-        "title": "DropPulse — 非公開プレビュー",
-        "description": "DropPulse はチケットページを監視し、空きが出た瞬間にお知らせします。",
-        "eyebrow": "非公開プレビュー",
+        "title": "DropPulse — チケット空き状況監視モニター",
+        "description": "DropPulse は公開チケットページを巡回し、座席が空いた瞬間にメールでお知らせします。",
+        "eyebrow": "空き状況モニター",
         "lede": "チケットの空き状況を、更新なしで。",
-        "body": "DropPulse はチケットページを監視し、空きが出た瞬間にお知らせします。何度も再読み込みする必要はありません。",
-        "note_strong": "現在、アクセスは招待制です。",
-        "note_rest": "招待されたアカウントのみサインインできます。新規登録は停止しています。",
+        "body": "DropPulse は公開されているイベントやチケットページをバックグラウンドで監視し、座席やキャンセル枠が解放された瞬間に即座にメールでお知らせします。",
+        "note_strong": "現在は招待制プレビューです。",
+        "note_rest": "招待されたアカウントは、上部ナビゲーションバーのサインインボタンからログインできます。",
         "sign_in": "サインイン",
         "terms": "利用規約",
         "terms_href": TERMS_EN,
@@ -205,13 +205,13 @@ LANGUAGES = [
         "code": "ko",
         "path": "/ko/",
         "name": "한국어",
-        "title": "DropPulse — 비공개 미리보기",
-        "description": "DropPulse는 티켓 페이지를 지켜보고 좌석이 풀리는 순간 알려드립니다.",
-        "eyebrow": "비공개 미리보기",
+        "title": "DropPulse — 티켓 예매 가능 여부 모니터",
+        "description": "DropPulse는 티켓 페이지를 백그라운드에서 감시하고 좌석이 오픈되는 순간 이메일로 즉시 알려드립니다.",
+        "eyebrow": "예매 가능 여부 모니터",
         "lede": "새로고침 없이 확인하는 티켓 예매 가능 여부.",
-        "body": "DropPulse는 티켓 페이지를 지켜보고 좌석이 풀리는 순간 알려드립니다. 계속 새로고침할 필요가 없습니다.",
-        "note_strong": "현재는 초대를 통해서만 이용할 수 있습니다.",
-        "note_rest": "초대된 계정만 로그인할 수 있으며, 신규 가입은 받지 않습니다.",
+        "body": "DropPulse는 공개된 공연 및 티켓 페이지를 지속적으로 모니터링하여 취소표나 추가 좌석이 풀리는 즉시 이메일 알림을 전달합니다.",
+        "note_strong": "현재 초대를 통해서만 이용 가능합니다.",
+        "note_rest": "초대된 사용자는 상단 탐색 표시줄의 로그인 버튼을 통해 대시보드에 접속할 수 있습니다.",
         "sign_in": "로그인",
         "terms": "이용약관",
         "terms_href": TERMS_EN,
@@ -226,13 +226,13 @@ LANGUAGES = [
         "code": "ru",
         "path": "/ru/",
         "name": "Русский",
-        "title": "DropPulse — закрытое превью",
-        "description": "DropPulse следит за страницей билетов и сообщает, как только что-то появляется.",
-        "eyebrow": "Закрытое превью",
+        "title": "DropPulse — Мониторинг доступности билетов",
+        "description": "DropPulse отслеживает страницы билетов в фоновом режиме и мгновенно сообщает на почту о появлении мест.",
+        "eyebrow": "Мониторинг доступности",
         "lede": "Наличие билетов — без постоянного обновления.",
-        "body": "DropPulse следит за страницей билетов и сообщает, как только что-то появляется, чтобы вам не приходилось перезагружать её снова и снова.",
-        "note_strong": "Пока доступ только по приглашению.",
-        "note_rest": "Войти могут только приглашённые аккаунты; регистрация закрыта.",
+        "body": "DropPulse непрерывно отслеживает общедоступные страницы мероприятий и кинотеатров в фоновом режиме и отправляет письмо, как только билеты появляются в наличии.",
+        "note_strong": "В настоящее время доступ только по приглашению.",
+        "note_rest": "Приглашённые пользователи могут войти в панель управления через кнопку входа в верхней панели.",
         "sign_in": "Войти",
         "terms": "Условия использования",
         "terms_href": TERMS_EN,
@@ -247,7 +247,20 @@ LANGUAGES = [
 
 SECTIONS_DATA = {
     "cs": {
-        "features_title": "Hlavní funkce a způsob fungování",
+        "nav_how": "Jak to funguje",
+        "nav_features": "Funkce",
+        "nav_compliance": "Soulad s pravidly",
+        "btn_explore": "Zjistit, jak to funguje",
+        "problem_title": "Proč DropPulse?",
+        "problem_desc": "Vstupenky na oblíbené koncerty, divadelní představení i filmová promítání v IMAXu se často vyprodají během několika minut. Řada rezervací se však v následujících dnech ruší a místa se nečekaně vrací do prodeje. Neustálé ruční obnovování stránek v prohlížeči je únavné a nespolehlivé. DropPulse hlídá veřejné stránky se vstupenkami za vás a ve chvíli, kdy se uvolní místo, vám pošle okamžitou zprávu na e-mail.",
+        "steps_title": "Jak DropPulse funguje ve 4 krocích",
+        "steps": [
+            ("1. Zadání URL adresy", "Zadáte odkaz na veřejnou stránku akce, kina či vstupenek, kterou chcete monitorovat."),
+            ("2. Kontrola na pozadí", "DropPulse v rozumných intervalech ověřuje dostupnost stránek bez přetěžování cizích serverů."),
+            ("3. E-mailové upozornění", "Jakmile se stav změní na volno, ihned obdržíte upozornění s přímým odkazem k nákupu."),
+            ("4. Nákup u prodejce", "Otevřete oficiální web prodejce ve svém prohlížeči a vstupenky si bezpečně zakoupíte sami."),
+        ],
+        "features_title": "Klíčové funkce a principy služby",
         "features": [
             ("Automatizované sledování dostupnosti", "DropPulse na pozadí pravidelně ověřuje veřejně přístupné stránky se vstupenkami a zjišťuje, zda se neuvolnila místa či nové termíny."),
             ("Okamžitá e-mailová upozornění", "Jakmile se vstupenka uvolní, obdržíte zprávu na ověřený e-mail s přímým odkazem na nákup, abyste nemuseli stránku ručně obnovovat."),
@@ -260,7 +273,20 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Zákaz generování intimního obsahu (AI NCII):</strong> V plném souladu se smluvními podmínkami rozhraní Google API aplikace DropPulse nevyužívá rozhraní Google API, uživatelská data Google ani technologie AI k vytváření, hostování ani šíření intimního materiálu bez souhlasu (AI NCII), sexuálně explicitního obsahu ani jiného škodlivého materiálu.",
     },
     "en": {
-        "features_title": "Features & How DropPulse Works",
+        "nav_how": "How It Works",
+        "nav_features": "Features",
+        "nav_compliance": "Compliance",
+        "btn_explore": "Explore how it works",
+        "problem_title": "Why DropPulse?",
+        "problem_desc": "High-demand concert tickets, theater plays, and movie screenings (like IMAX) frequently sell out within minutes. Yet reservations are continuously cancelled and seats quietly return to inventory at unpredictable hours. Constantly refreshing browser tabs throughout the day is tedious and unreliable. DropPulse acts as your automated availability sentry—monitoring public event pages around the clock and notifying you the second seats open up.",
+        "steps_title": "How DropPulse Works in 4 Steps",
+        "steps": [
+            ("1. Submit Event URL", "Enter the public URL of the ticket page, movie showing, or festival portal you want to monitor."),
+            ("2. Background Checks", "DropPulse checks the target page at balanced intervals without hammering or straining target servers."),
+            ("3. Email Notification", "The moment tickets transition from unavailable to open, DropPulse delivers an alert email with a direct booking link."),
+            ("4. Purchase Directly", "Click the official vendor link in your alert and finalize your purchase securely in your own browser."),
+        ],
+        "features_title": "Key Capabilities & Design Principles",
         "features": [
             ("Automated Availability Tracking", "DropPulse monitors publicly accessible event and ticket pages in the background, detecting released seats and cancellations without excessive requests."),
             ("Instant Email Alerts", "The moment tickets or seats become available, DropPulse sends an immediate alert to your verified email with a direct link to the booking page."),
@@ -273,6 +299,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Prohibition on AI-Generated Non-Consensual Intimate Imagery (AI NCII):</strong> In strict compliance with the Google APIs Terms of Service, DropPulse does not use Google APIs, user data, or artificial intelligence systems to generate, create, process, host, or distribute Non-Consensual Intimate Imagery (AI NCII), sexually explicit material, or harmful content.",
     },
     "de": {
+        "nav_how": "Funktionsweise",
+        "nav_features": "Funktionen",
+        "nav_compliance": "Richtlinien",
+        "btn_explore": "Funktionsweise entdecken",
+        "problem_title": "Warum DropPulse?",
+        "problem_desc": "Gefragte Tickets für Konzerte, Theater und Kinovorstellungen sind oft in Minuten ausverkauft. Durch Stornierungen werden jedoch regelmäßig Plätze wieder frei. Manuelles Neuladen ist mühsam und ineffizient. DropPulse überwacht die Seiten automatisch und benachrichtigt Sie sofort per E-Mail.",
+        "steps_title": "So funktioniert DropPulse in 4 Schritten",
+        "steps": [
+            ("1. URL eingeben", "Geben Sie die öffentlich zugängliche URL der Ticket- oder Vorstellungsseite ein."),
+            ("2. Prüfung im Hintergrund", "DropPulse prüft die Verfügbarkeit regelmäßig und schonend für den Zielserver."),
+            ("3. E-Mail-Alarm", "Sobald Plätze frei werden, erhalten Sie eine Benachrichtigung mit direktem Buchungslink."),
+            ("4. Sicher buchen", "Öffnen Sie den Link des Anbieters im Browser und schließen Sie den Kauf direkt ab."),
+        ],
         "features_title": "Funktionen & Funktionsweise von DropPulse",
         "features": [
             ("Automatische Verfügbarkeitsprüfung", "DropPulse überwacht öffentlich zugängliche Ticket- und Veranstaltungsseiten im Hintergrund auf freigegebene Plätze."),
@@ -286,6 +325,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Verbot von AI NCII:</strong> In voller Übereinstimmung mit den Google-API-Nutzungsbedingungen nutzt DropPulse keine Google-APIs oder KI-Systeme zur Erstellung oder Verbreitung nicht-einvernehmlicher intimer Bilder (AI NCII) oder schädlicher Inhalte.",
     },
     "fr": {
+        "nav_how": "Fonctionnement",
+        "nav_features": "Fonctionnalités",
+        "nav_compliance": "Conformité",
+        "btn_explore": "Découvrir le fonctionnement",
+        "problem_title": "Pourquoi DropPulse ?",
+        "problem_desc": "Les billets pour les concerts et séances populaires sont souvent complets en quelques minutes. Pourtant, des annulations surviennent régulièrement et des places sont remises en vente. DropPulse surveille ces pages pour vous et vous alerte dès qu'un créneau s'ouvre.",
+        "steps_title": "Comment fonctionne DropPulse en 4 étapes",
+        "steps": [
+            ("1. Soumettre l'URL", "Indiquez l'URL publique de la billetterie ou de la séance à surveiller."),
+            ("2. Contrôle en continu", "DropPulse vérifie la disponibilité sans surcharger les serveurs distants."),
+            ("3. Alerte e-mail", "Dès que des places se libèrent, vous recevez un e-mail avec le lien direct."),
+            ("4. Réservation directe", "Finalisez votre commande en toute sécurité sur le site officiel du vendeur."),
+        ],
         "features_title": "Fonctionnalités et fonctionnement de DropPulse",
         "features": [
             ("Suivi automatisé de la disponibilité", "DropPulse surveille en arrière-plan les pages publiques de billetterie pour détecter les places remises en vente."),
@@ -299,6 +351,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Interdiction des contenus AI NCII:</strong> Conformément aux conditions d'utilisation des API Google, DropPulse n'utilise pas les API Google ni l'IA pour générer ou diffuser des images intimes non consenties (AI NCII) ou des contenus nuisibles.",
     },
     "es": {
+        "nav_how": "Cómo funciona",
+        "nav_features": "Características",
+        "nav_compliance": "Cumplimiento",
+        "btn_explore": "Descubra cómo funciona",
+        "problem_title": "¿Por qué DropPulse?",
+        "problem_desc": "Las entradas para conciertos y proyecciones de cine a menudo se agotan en minutos. Sin embargo, muchas reservas se cancelan y las entradas vuelven a salir a la venta. DropPulse supervisa las páginas por usted y le envía una alerta inmediata cuando se liberan plazas.",
+        "steps_title": "Cómo funciona DropPulse en 4 pasos",
+        "steps": [
+            ("1. Añadir la URL", "Pegue el enlace público de la entrada o evento que desea monitorizar."),
+            ("2. Control en segundo plano", "DropPulse consulta la disponibilidad de manera equilibrada y respetuosa."),
+            ("3. Aviso por correo", "En cuanto se detecta disponibilidad, recibe un aviso inmediato con enlace directo."),
+            ("4. Compra en el proveedor", "Acceda al sitio oficial desde su navegador y adquiera las entradas directamente."),
+        ],
         "features_title": "Características y funcionamiento de DropPulse",
         "features": [
             ("Seguimiento automatizado de disponibilidad", "DropPulse supervisa en segundo plano las páginas públicas de entradas para detectar asientos o entradas liberadas."),
@@ -312,6 +377,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Prohibición de AI NCII:</strong> De conformidad con los Términos del servicio de las API de Google, DropPulse no utiliza las API de Google ni sistemas de IA para crear o distribuir imágenes íntimas sin consentimiento (AI NCII) ni contenido perjudicial.",
     },
     "it": {
+        "nav_how": "Come funziona",
+        "nav_features": "Funzionalità",
+        "nav_compliance": "Conformità",
+        "btn_explore": "Scopri come funziona",
+        "problem_title": "Perché DropPulse?",
+        "problem_desc": "I biglietti per concerti ed eventi richiesti vanno spesso esauriti in pochi minuti. Tuttavia, molte prenotazioni vengono annullate e i posti tornano disponibili. DropPulse monitora le pagine pubbliche al posto tuo e ti avvisa non appena si libera un posto.",
+        "steps_title": "Come funziona DropPulse in 4 passi",
+        "steps": [
+            ("1. Inserisci l'URL", "Aggiungi il link pubblico della pagina del biglietto o dello spettacolo da monitorare."),
+            ("2. Controlli in background", "DropPulse controlla la disponibilità a intervalli regolari senza sovraccaricare i server."),
+            ("3. Notifica via email", "Non appena tornano disponibili posti, ricevi un'email con il link diretto di prenotazione."),
+            ("4. Acquisto diretto", "Apri il link del fornitore ufficiale e completa l'acquisto in autonomia nel tuo browser."),
+        ],
         "features_title": "Funzionalità e funzionamento di DropPulse",
         "features": [
             ("Monitoraggio automatico della disponibilità", "DropPulse controlla in background le pagine pubbliche di biglietti per rilevare posti o disponibilità rilasciate."),
@@ -325,6 +403,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Divieto di AI NCII:</strong> In piena conformità con i Termini di servizio delle API Google, DropPulse non utilizza le API Google né l'IA per generare o diffondere immagini intime non consensuali (AI NCII) o contenuti dannosi.",
     },
     "pt": {
+        "nav_how": "Como funciona",
+        "nav_features": "Funcionalidades",
+        "nav_compliance": "Conformidade",
+        "btn_explore": "Saiba como funciona",
+        "problem_title": "Porquê o DropPulse?",
+        "problem_desc": "Os bilhetes para grandes concertos e eventos esgotam frequentemente em minutos. No entanto, muitas reservas são canceladas e os lugares voltam a ficar vagos. O DropPulse monitoriza as páginas por si e envia-lhe um alerta por e-mail no instante em que surgem bilhetes.",
+        "steps_title": "Como funciona o DropPulse em 4 passos",
+        "steps": [
+            ("1. Submeter o URL", "Indique a ligação pública da página do evento ou cinema que deseja vigiar."),
+            ("2. Verificação em segundo plano", "O DropPulse vigia a disponibilidade de forma equilibrada e sem sobrecarregar o site."),
+            ("3. Alerta por e-mail", "Assim que surgem lugares, recebe um e-mail com a ligação direta de compra."),
+            ("4. Compra no vendedor oficial", "Abra a ligação oficial no seu navegador e termine a compra com total segurança."),
+        ],
         "features_title": "Funcionalidades e funcionamento do DropPulse",
         "features": [
             ("Monitorização automática de disponibilidade", "O DropPulse vigia em segundo plano as páginas públicas de bilhetes para detetar lugares disponíveis."),
@@ -338,6 +429,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>Proibição de AI NCII:</strong> Em total conformidade com os Termos de Serviço das APIs Google, o DropPulse não utiliza as APIs Google nem IA para criar ou distribuir imagens íntimas não consensuais (AI NCII) ou conteúdos nocivos.",
     },
     "ja": {
+        "nav_how": "仕組み",
+        "nav_features": "機能",
+        "nav_compliance": "利用規約遵守",
+        "btn_explore": "仕組みを見る",
+        "problem_title": "なぜ DropPulse なのか？",
+        "problem_desc": "人気コンサートや IMAX 映画のチケットは数分で完売することがあります。しかし、予約キャンセルにより座席が再放出されることも少なくありません。DropPulse が公開チケットページを監視し、空きが出た瞬間にメールで通知します。",
+        "steps_title": "DropPulse の利用手順（4ステップ）",
+        "steps": [
+            ("1. URLを登録", "監視したいチケットページや上映スケジュールの公開URLを入力します。"),
+            ("2. バックグラウンド確認", "対象サーバーに負担をかけないよう適切な間隔で巡回します。"),
+            ("3. メール通知", "座席の空きが検知された瞬間に直通リンク付きの通知メールが届きます。"),
+            ("4. 公式サイトで購入", "ブラウザで正規販売サイトを開き、安全にチケットを購入できます。"),
+        ],
         "features_title": "DropPulse の主な機能と仕組み",
         "features": [
             ("空き状況の自動モニタリング", "DropPulse は公開されているチケットページをバックグラウンドで巡回し、座席の開放を検知します。"),
@@ -351,6 +455,19 @@ SECTIONS_DATA = {
         "compliance_p3": "<strong>AI NCII（同意のない親密な画像）の禁止:</strong> Google API 利用規約に従い、DropPulse は Google API や AI 技術を使用して、同意のない親密な画像（AI NCII）や有害なコンテンツを生成、処理、配布することは一切ありません。",
     },
     "ko": {
+        "nav_how": "작동 방식",
+        "nav_features": "주요 기능",
+        "nav_compliance": "규정 준수",
+        "btn_explore": "작동 방식 알아보기",
+        "problem_title": "왜 DropPulse인가요?",
+        "problem_desc": "인기 콘서트나 영화 티켓은 순식간에 매진됩니다. 하지만 예매 취소로 인해 불시에 잔여석이 발생하곤 합니다. 하루 종일 새로고침하는 대신, DropPulse가 티켓 페이지를 대신 모니터링하여 잔여석이 나오는 순간 이메일로 알려드립니다.",
+        "steps_title": "간편한 4단계 이용 방법",
+        "steps": [
+            ("1. URL 등록", "모니터링하고자 하는 티켓 또는 상영 페이지의 공개 URL을 등록합니다."),
+            ("2. 백그라운드 점검", "대상 서버에 부하를 주지 않는 적절한 간격으로 상태를 확인합니다."),
+            ("3. 즉시 이메일 알림", "좌석이 열리는 즉시 예매 페이지로 직행할 수 있는 링크를 이메일로 발송합니다."),
+            ("4. 안전한 직접 예매", "사용자 브라우저에서 공식 예매처에 접속하여 안전하게 결제를 완료합니다."),
+        ],
         "features_title": "DropPulse 주요 기능 및 작동 원리",
         "features": [
             ("자동 티켓 예매 가능 여부 모니터링", "DropPulse는 공개된 티켓 예매 페이지를 백그라운드에서 주기적으로 확인하여 취소표나 추가 좌석 오픈을 감지합니다."),
@@ -361,9 +478,22 @@ SECTIONS_DATA = {
         "compliance_title": "애플리케이션 목적 및 Google API 서비스 약관 준수",
         "compliance_p1": "<strong>DropPulse</strong>는 이벤트 티켓 예매 가능 여부 모니터링 및 이메일 알림을 제공하는 유틸리티입니다. Google 로그인은 최소한의 권한(<code>openid</code>, <code>email</code>, <code>profile</code>)으로 사용자 인증에만 사용됩니다.",
         "compliance_p2": "Google API에서 수신한 정보의 사용 및 전송은 Limited Use 요건을 포함한 <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>를 엄격히 준수합니다.",
-        "compliance_p3": "<strong>AI NCII(비동의 성적 영상물) 금지:</strong> Google API 서비스 약관에 따라, DropPulse는 Google API, 사용자 데이터 또는 AI 기술을 사용하여 비동의 성적 영상물(AI NCII)이나 유해 콘텐츠를 생성, 처리 또는 유포하지 않습니다.",
+        "compliance_p3": "<strong>AI NCII(비동의 성적 영상物) 금지:</strong> Google API 서비스 약관에 따라, DropPulse는 Google API, 사용자 데이터 또는 AI 기술을 사용하여 비동의 성적 영상물(AI NCII)이나 유해 콘텐츠를 생성, 처리 또는 유포하지 않습니다.",
     },
     "ru": {
+        "nav_how": "Как это работает",
+        "nav_features": "Возможности",
+        "nav_compliance": "Соответствие правилам",
+        "btn_explore": "Узнать больше о работе",
+        "problem_title": "Зачем нужен DropPulse?",
+        "problem_desc": "Билеты на популярные концерты и премьеры часто раскупают за минуты. Однако брони регулярно отменяются, и места снова поступают в продажу. Постоянно обновлять вкладку в браузере неудобно. DropPulse отслеживает страницу за вас и присылает уведомление в момент появления мест.",
+        "steps_title": "Принцип работы в 4 шага",
+        "steps": [
+            ("1. Добавление ссылки", "Укажите общедоступную ссылку на страницу билетов или сеанса для отслеживания."),
+            ("2. Проверка в фоне", "DropPulse проверяет доступность с умеренной периодичностью, не перегружая сервер."),
+            ("3. Уведомление на почту", "Как только появляются билеты, вы получаете письмо с прямой ссылкой на бронирование."),
+            ("4. Покупка на сайте", "Откройте ссылку в своём браузере и безопасно оформите заказ на официальном сайте."),
+        ],
         "features_title": "Возможности и принцип работы DropPulse",
         "features": [
             ("Автоматическое отслеживание билетов", "DropPulse в фоновом режиме проверяет общедоступные страницы билетов на появление освободившихся мест."),
@@ -408,12 +538,15 @@ CSS = """
 
       * { box-sizing: border-box; }
 
-      html { min-height: 100%; }
+      html {
+        min-height: 100%;
+        scroll-behavior: smooth;
+      }
 
       body {
         min-height: 100svh;
         margin: 0;
-        padding: clamp(20px, 5vw, 56px);
+        padding: clamp(20px, 4vw, 48px);
         display: grid;
         place-items: center;
         overflow-x: hidden;
@@ -427,8 +560,8 @@ CSS = """
       }
 
       .shell {
-        width: min(840px, 100%);
-        padding: clamp(28px, 6vw, 60px);
+        width: min(880px, 100%);
+        padding: clamp(24px, 5vw, 56px);
         border: 1px solid var(--line);
         border-radius: 28px;
         background: var(--surface);
@@ -436,12 +569,85 @@ CSS = """
         backdrop-filter: blur(18px);
       }
 
+      .top-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 22px;
+        margin-bottom: 30px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-size: 1.05rem;
+        font-weight: 750;
+        letter-spacing: -0.01em;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        color: #ffffff;
+        flex: none;
+      }
+
+      .brand-mark svg { display: block; width: 17px; height: 17px; }
+
+      .top-nav {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.88rem;
+      }
+
+      .nav-link {
+        color: var(--muted);
+        text-decoration: none;
+        transition: color 120ms ease;
+      }
+
+      .nav-link:hover { color: var(--text); }
+
+      .nav-signin {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 16px;
+        border: 1px solid var(--accent);
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: transform 140ms ease, background 140ms ease, color 140ms ease;
+      }
+
+      .nav-signin:hover {
+        background: var(--accent);
+        color: var(--on-accent);
+        transform: translateY(-1px);
+      }
+
+      .hero {
+        margin-bottom: 24px;
+      }
+
       .eyebrow {
         display: inline-flex;
         align-items: center;
         gap: 9px;
-        margin: 0 0 24px;
-        padding: 7px 14px;
+        margin: 0 0 20px;
+        padding: 6px 14px;
         border: 1px solid var(--line);
         border-radius: 999px;
         color: var(--muted);
@@ -460,29 +666,29 @@ CSS = """
         animation: breathe 2.8s ease-in-out infinite;
       }
 
-      h1 {
+      .hero-title {
         margin: 0;
-        font-size: clamp(2.5rem, 11vw, 6.5rem);
-        font-weight: 760;
-        letter-spacing: -0.065em;
-        line-height: 0.88;
+        font-size: clamp(2.5rem, 8vw, 4.6rem);
+        font-weight: 780;
+        letter-spacing: -0.055em;
+        line-height: 0.98;
       }
 
       .lede {
         max-width: 32ch;
-        margin: 22px 0 0;
+        margin: 20px 0 0;
         color: var(--accent);
-        font-size: clamp(1.25rem, 3.8vw, 1.85rem);
+        font-size: clamp(1.2rem, 3.4vw, 1.65rem);
         font-weight: 620;
-        letter-spacing: -0.025em;
-        line-height: 1.2;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
       }
 
       .body {
         max-width: 58ch;
-        margin: 20px 0 0;
+        margin: 18px 0 0;
         color: var(--muted);
-        font-size: clamp(1rem, 2.4vw, 1.08rem);
+        font-size: clamp(0.98rem, 2.2vw, 1.05rem);
       }
 
       .actions {
@@ -490,15 +696,15 @@ CSS = """
         flex-wrap: wrap;
         gap: 12px;
         align-items: center;
-        margin: 26px 0 0;
+        margin: 24px 0 0;
       }
 
       .action {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 44px;
-        padding: 10px 20px;
+        min-height: 42px;
+        padding: 9px 18px;
         border-radius: 999px;
         background: var(--accent);
         color: var(--on-accent);
@@ -526,31 +732,88 @@ CSS = """
         outline-offset: 3px;
       }
 
+      .content-section {
+        margin-top: 40px;
+        padding-top: 32px;
+        border-top: 1px solid var(--line);
+      }
+
       .section-title {
-        margin: 38px 0 14px;
-        font-size: 1.15rem;
+        margin: 0 0 12px;
+        font-size: 1.22rem;
         font-weight: 700;
-        letter-spacing: -0.015em;
+        letter-spacing: -0.02em;
         color: var(--text);
+      }
+
+      .section-desc {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--muted);
+        line-height: 1.65;
+        max-width: 68ch;
+      }
+
+      .steps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .step-card {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+
+      .step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .step-card h3 {
+        margin: 0 0 6px;
+        font-size: 0.95rem;
+        font-weight: 680;
+        color: var(--text);
+      }
+
+      .step-card p {
+        margin: 0;
+        font-size: 0.86rem;
+        color: var(--muted);
+        line-height: 1.5;
       }
 
       .features-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+        margin-top: 18px;
       }
 
       .feature-card {
-        padding: 16px 18px;
+        padding: 18px 20px;
         border: 1px solid var(--line);
-        border-radius: 16px;
+        border-radius: 18px;
         background: var(--accent-soft);
       }
 
       .feature-card h3 {
         margin: 0 0 6px;
-        font-size: 0.94rem;
-        font-weight: 650;
+        font-size: 0.95rem;
+        font-weight: 680;
         color: var(--text);
       }
 
@@ -558,30 +821,29 @@ CSS = """
         margin: 0;
         font-size: 0.86rem;
         color: var(--muted);
-        line-height: 1.45;
+        line-height: 1.5;
       }
 
       .compliance-box {
-        margin-top: 24px;
-        padding: 18px 20px;
+        padding: 22px 24px;
         border: 1px solid var(--line);
         border-left: 4px solid var(--accent);
-        border-radius: 16px;
+        border-radius: 18px;
         background: var(--surface);
       }
 
       .compliance-box h3 {
-        margin: 0 0 8px;
-        font-size: 0.96rem;
+        margin: 0 0 10px;
+        font-size: 1.02rem;
         font-weight: 680;
         color: var(--text);
       }
 
       .compliance-box p {
-        margin: 0 0 8px;
-        font-size: 0.85rem;
+        margin: 0 0 10px;
+        font-size: 0.88rem;
         color: var(--muted);
-        line-height: 1.5;
+        line-height: 1.6;
       }
 
       .compliance-box p:last-child {
@@ -598,8 +860,12 @@ CSS = """
         font-size: 0.88em;
       }
 
+      .preview-notice {
+        margin-top: 32px;
+      }
+
       .note {
-        margin: 32px 0 0;
+        margin: 0;
         padding-top: 20px;
         border-top: 1px solid var(--line);
         color: var(--muted);
@@ -653,10 +919,12 @@ CSS = """
         .action { transition: none; }
       }
 
-      @media (max-width: 520px) {
+      @media (max-width: 640px) {
         body { padding: 12px; }
-        .shell { padding: 26px 18px; border-radius: 20px; }
-        .eyebrow { margin-bottom: 18px; }
+        .shell { padding: 24px 18px; border-radius: 20px; }
+        .top-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .top-nav { flex-wrap: wrap; gap: 10px 14px; width: 100%; justify-content: space-between; }
+        .eyebrow { margin-bottom: 16px; }
         .lede { max-width: none; }
       }
 """
@@ -678,22 +946,68 @@ $alternates
   </head>
   <body>
     <main class="shell">
-      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> $eyebrow</p>
-      <h1>DropPulse</h1>
-      <p class="lede">$lede</p>
-      <p class="body">$body</p>
+      <header class="top-bar">
+        <a class="brand" href="$path">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M6 17h5l2.6-6.2L18.4 23l2.6-6H26" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          DropPulse
+        </a>
+        <nav class="top-nav" aria-label="Navigation">
+          <a href="#how-it-works" class="nav-link">$nav_how</a>
+          <a href="#features" class="nav-link">$nav_features</a>
+          <a href="#compliance" class="nav-link">$nav_compliance</a>
+          <a href="$app" class="nav-signin">$sign_in</a>
+        </nav>
+      </header>
 
-      <div class="actions">
-        <a class="action" href="$app">$sign_in</a>
-        <a class="action secondary" href="$privacy_href" hreflang="$privacy_lang">$privacy</a>
-        <a class="action secondary" href="$terms_href" hreflang="$terms_lang">$terms</a>
-      </div>
+      <section class="hero">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span> $eyebrow</p>
+        <h1 class="hero-title">DropPulse</h1>
+        <p class="lede">$lede</p>
+        <p class="body">$body</p>
 
+        <div class="actions">
+          <a class="action" href="#how-it-works">$btn_explore</a>
+          <a class="action secondary" href="$privacy_href" hreflang="$privacy_lang">$privacy</a>
+          <a class="action secondary" href="$terms_href" hreflang="$terms_lang">$terms</a>
+        </div>
+      </section>
+
+      <section id="why" class="content-section">
+        <h2 class="section-title">$problem_title</h2>
+        <p class="section-desc">$problem_desc</p>
+      </section>
+
+      <section id="how-it-works" class="content-section">
+        <h2 class="section-title">$steps_title</h2>
+        <div class="steps-grid">
+$steps_html
+        </div>
+      </section>
+
+      <section id="features" class="content-section">
+        <h2 class="section-title">$features_title</h2>
+        <div class="features-grid">
 $features_html
+        </div>
+      </section>
 
-$compliance_html
+      <section id="compliance" class="content-section">
+        <div class="compliance-box">
+          <h3>$compliance_title</h3>
+          <p>$compliance_p1</p>
+          <p>$compliance_p2</p>
+          <p>$compliance_p3</p>
+        </div>
+      </section>
 
-      <p class="note"><strong>$note_strong</strong> $note_rest</p>
+      <section class="preview-notice">
+        <p class="note"><strong>$note_strong</strong> $note_rest</p>
+      </section>
+
       <footer>
         <span><code>dp.ondralinek.cz</code></span>
         <span><a href="$terms_href" hreflang="$terms_lang">$terms</a> &middot; <a href="$privacy_href" hreflang="$privacy_lang">$privacy</a> &middot; 2026</span>
@@ -735,38 +1049,51 @@ def language_links(current: str) -> str:
     return "\n".join(links)
 
 
-def render_sections(code: str) -> tuple[str, str]:
+def render_sections(code: str) -> dict[str, str]:
     data = SECTIONS_DATA.get(code, SECTIONS_DATA["en"])
+
+    steps_cards = []
+    for i, (title, desc) in enumerate(data["steps"], start=1):
+        steps_cards.append(
+            f'          <div class="step-card">\n'
+            f'            <span class="step-num" aria-hidden="true">{i}</span>\n'
+            f'            <h3>{title}</h3>\n'
+            f'            <p>{desc}</p>\n'
+            f'          </div>'
+        )
+
     features_cards = []
     for title, desc in data["features"]:
         features_cards.append(
-            f'        <div class="feature-card">\n'
-            f'          <h3>{title}</h3>\n'
-            f'          <p>{desc}</p>\n'
-            f'        </div>'
+            f'          <div class="feature-card">\n'
+            f'            <h3>{title}</h3>\n'
+            f'            <p>{desc}</p>\n'
+            f'          </div>'
         )
-    features_html = (
-        f'      <h2 class="section-title">{data["features_title"]}</h2>\n'
-        f'      <div class="features-grid">\n'
-        + "\n".join(features_cards)
-        + f'\n      </div>'
-    )
 
-    compliance_html = (
-        f'      <div class="compliance-box">\n'
-        f'        <h3>{data["compliance_title"]}</h3>\n'
-        f'        <p>{data["compliance_p1"]}</p>\n'
-        f'        <p>{data["compliance_p2"]}</p>\n'
-        f'        <p>{data["compliance_p3"]}</p>\n'
-        f'      </div>'
-    )
-    return features_html, compliance_html
+    return {
+        "nav_how": data["nav_how"],
+        "nav_features": data["nav_features"],
+        "nav_compliance": data["nav_compliance"],
+        "btn_explore": data["btn_explore"],
+        "problem_title": data["problem_title"],
+        "problem_desc": data["problem_desc"],
+        "steps_title": data["steps_title"],
+        "steps_html": "\n".join(steps_cards),
+        "features_title": data["features_title"],
+        "features_html": "\n".join(features_cards),
+        "compliance_title": data["compliance_title"],
+        "compliance_p1": data["compliance_p1"],
+        "compliance_p2": data["compliance_p2"],
+        "compliance_p3": data["compliance_p3"],
+    }
 
 
 def render(language: dict) -> str:
-    features_html, compliance_html = render_sections(language["code"])
+    sections = render_sections(language["code"])
     return PAGE.substitute(
         code=language["code"],
+        path=language["path"],
         title=language["title"],
         description=language["description"],
         alternates=alternates(),
@@ -774,8 +1101,20 @@ def render(language: dict) -> str:
         eyebrow=language["eyebrow"],
         lede=language["lede"],
         body=language["body"],
-        features_html=features_html,
-        compliance_html=compliance_html,
+        nav_how=sections["nav_how"],
+        nav_features=sections["nav_features"],
+        nav_compliance=sections["nav_compliance"],
+        btn_explore=sections["btn_explore"],
+        problem_title=sections["problem_title"],
+        problem_desc=sections["problem_desc"],
+        steps_title=sections["steps_title"],
+        steps_html=sections["steps_html"],
+        features_title=sections["features_title"],
+        features_html=sections["features_html"],
+        compliance_title=sections["compliance_title"],
+        compliance_p1=sections["compliance_p1"],
+        compliance_p2=sections["compliance_p2"],
+        compliance_p3=sections["compliance_p3"],
         note_strong=language["note_strong"],
         note_rest=language["note_rest"],
         sign_in=language["sign_in"],
