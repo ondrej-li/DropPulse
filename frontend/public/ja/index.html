@@ -373,6 +373,52 @@
         font-size: 0.88em;
       }
 
+      .contact-card {
+        padding: 22px 24px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+
+      .contact-desc {
+        margin: 0 0 14px;
+        font-size: 0.95rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 18px;
+      }
+
+      .contact-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .contact-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: all 120ms ease;
+      }
+
+      .contact-link:hover {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: var(--accent);
+      }
+
       .preview-notice {
         margin-top: 32px;
       }
@@ -457,6 +503,7 @@
           <a href="#how-it-works" class="nav-link">仕組み</a>
           <a href="#features" class="nav-link">機能</a>
           <a href="#compliance" class="nav-link">利用規約遵守</a>
+          <a href="#contact" class="nav-link">お問い合わせ</a>
           <a href="/app/" class="nav-signin">サインイン</a>
         </nav>
       </header>
@@ -533,6 +580,17 @@
           <p><strong>DropPulse</strong> は、イベントチケットの空き状況の監視およびメール通知配信を目的としたアプリケーションです。Google ログインは、最小限のスコープ（<code>openid</code>、<code>email</code>、<code>profile</code>）によるユーザー認証にのみ使用されます。</p>
           <p>Google API から取得した情報の使用は、限定使用（Limited Use）要件を含む <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a> に完全に準拠しています。</p>
           <p><strong>AI NCII（同意のない親密な画像）の禁止:</strong> Google API 利用規約に従い、DropPulse は Google API や AI 技術を使用して、同意のない親密な画像（AI NCII）や有害なコンテンツを生成、処理、配布することは一切ありません。</p>
+        </div>
+      </section>
+
+      <section id="contact" class="content-section">
+        <h2 class="section-title">お問い合わせ</h2>
+        <div class="contact-card">
+          <p class="contact-desc">サービスに関するご質問やご意見、プレビュー参加についてのお問い合わせはこちら:</p>
+          <div class="contact-info">
+            <span class="contact-name">Ondrej Linek</span>
+            <a class="contact-link" href="mailto:ondrej.linek@gmail.com">ondrej.linek@gmail.com</a>
+          </div>
         </div>
       </section>
 

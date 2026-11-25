@@ -250,6 +250,7 @@ SECTIONS_DATA = {
         "nav_how": "Jak to funguje",
         "nav_features": "Funkce",
         "nav_compliance": "Soulad s pravidly",
+        "nav_contact": "Kontakt",
         "btn_explore": "Zjistit, jak to funguje",
         "problem_title": "Proč DropPulse?",
         "problem_desc": "Vstupenky na oblíbené koncerty, divadelní představení i filmová promítání v IMAXu se často vyprodají během několika minut. Řada rezervací se však v následujících dnech ruší a místa se nečekaně vrací do prodeje. Neustálé ruční obnovování stránek v prohlížeči je únavné a nespolehlivé. DropPulse hlídá veřejné stránky se vstupenkami za vás a ve chvíli, kdy se uvolní místo, vám pošle okamžitou zprávu na e-mail.",
@@ -271,11 +272,14 @@ SECTIONS_DATA = {
         "compliance_p1": "Aplikace <strong>DropPulse</strong> slouží výhradně k automatizovanému sledování dostupnosti veřejně přístupných stránek se vstupenkami a událostmi a zasílání notifikačních e-mailů. Přihlášení přes Google vyžaduje pouze základní rozsah (<code>openid</code>, <code>email</code>, <code>profile</code>) výhradně pro ověření identity oprávněného uživatele a doručení vyžádaných notifikací.",
         "compliance_p2": "Využití a předávání informací získaných z rozhraní Google API přísně dodržuje pravidla <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> včetně požadavků na omezené použití (Limited Use).",
         "compliance_p3": "<strong>Zákaz generování intimního obsahu (AI NCII):</strong> V plném souladu se smluvními podmínkami rozhraní Google API aplikace DropPulse nevyužívá rozhraní Google API, uživatelská data Google ani technologie AI k vytváření, hostování ani šíření intimního materiálu bez souhlasu (AI NCII), sexuálně explicitního obsahu ani jiného škodlivého materiálu.",
+        "contact_title": "Kontakt",
+        "contact_desc": "Máte dotaz k fungování služby, podnět na zlepšení nebo se chcete zeptat na přístup do preview? Můžete přímo kontaktovat provozovatele:",
     },
     "en": {
         "nav_how": "How It Works",
         "nav_features": "Features",
         "nav_compliance": "Compliance",
+        "nav_contact": "Contact",
         "btn_explore": "Explore how it works",
         "problem_title": "Why DropPulse?",
         "problem_desc": "High-demand concert tickets, theater plays, and movie screenings (like IMAX) frequently sell out within minutes. Yet reservations are continuously cancelled and seats quietly return to inventory at unpredictable hours. Constantly refreshing browser tabs throughout the day is tedious and unreliable. DropPulse acts as your automated availability sentry—monitoring public event pages around the clock and notifying you the second seats open up.",
@@ -297,11 +301,14 @@ SECTIONS_DATA = {
         "compliance_p1": "The <strong>DropPulse</strong> application is dedicated to automated event ticket availability tracking and notification delivery. Google Sign-In is used exclusively to authenticate authorized users and deliver email notifications via minimal OAuth scopes (<code>openid</code>, <code>email</code>, <code>profile</code>).",
         "compliance_p2": "DropPulse's use and transfer to any other app of information received from Google APIs adheres to the <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, including the Limited Use requirements.",
         "compliance_p3": "<strong>Prohibition on AI-Generated Non-Consensual Intimate Imagery (AI NCII):</strong> In strict compliance with the Google APIs Terms of Service, DropPulse does not use Google APIs, user data, or artificial intelligence systems to generate, create, process, host, or distribute Non-Consensual Intimate Imagery (AI NCII), sexually explicit material, or harmful content.",
+        "contact_title": "Contact",
+        "contact_desc": "Have questions about the service, feedback, or inquiries regarding preview access? Get in touch directly with the operator:",
     },
     "de": {
         "nav_how": "Funktionsweise",
         "nav_features": "Funktionen",
         "nav_compliance": "Richtlinien",
+        "nav_contact": "Kontakt",
         "btn_explore": "Funktionsweise entdecken",
         "problem_title": "Warum DropPulse?",
         "problem_desc": "Gefragte Tickets für Konzerte, Theater und Kinovorstellungen sind oft in Minuten ausverkauft. Durch Stornierungen werden jedoch regelmäßig Plätze wieder frei. Manuelles Neuladen ist mühsam und ineffizient. DropPulse überwacht die Seiten automatisch und benachrichtigt Sie sofort per E-Mail.",
@@ -323,11 +330,14 @@ SECTIONS_DATA = {
         "compliance_p1": "Die Anwendung <strong>DropPulse</strong> dient ausschließlich der automatisierten Überwachung von Ticketverfügbarkeiten und dem Versand von Benachrichtigungen. Die Google-Anmeldung erfordert minimale Berechtigungen (<code>openid</code>, <code>email</code>, <code>profile</code>) zur Nutzerauthentifizierung.",
         "compliance_p2": "Die Nutzung von Google-API-Daten durch DropPulse entspricht den <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> einschließlich der Limited Use-Anforderungen.",
         "compliance_p3": "<strong>Verbot von AI NCII:</strong> In voller Übereinstimmung mit den Google-API-Nutzungsbedingungen nutzt DropPulse keine Google-APIs oder KI-Systeme zur Erstellung oder Verbreitung nicht-einvernehmlicher intimer Bilder (AI NCII) oder schädlicher Inhalte.",
+        "contact_title": "Kontakt",
+        "contact_desc": "Haben Sie Fragen zum Dienst, Feedback oder Anfragen zum Vorschau-Zugang? Kontaktieren Sie gerne den Betreiber:",
     },
     "fr": {
         "nav_how": "Fonctionnement",
         "nav_features": "Fonctionnalités",
         "nav_compliance": "Conformité",
+        "nav_contact": "Contact",
         "btn_explore": "Découvrir le fonctionnement",
         "problem_title": "Pourquoi DropPulse ?",
         "problem_desc": "Les billets pour les concerts et séances populaires sont souvent complets en quelques minutes. Pourtant, des annulations surviennent régulièrement et des places sont remises en vente. DropPulse surveille ces pages pour vous et vous alerte dès qu'un créneau s'ouvre.",
@@ -349,11 +359,14 @@ SECTIONS_DATA = {
         "compliance_p1": "L'application <strong>DropPulse</strong> est dédiée au suivi automatisé de la disponibilité des billets et à l'envoi de notifications par e-mail. La connexion Google requiert les autorisations minimales (<code>openid</code>, <code>email</code>, <code>profile</code>).",
         "compliance_p2": "L'utilisation des données reçues des API Google respecte les <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, y compris les exigences de Limited Use.",
         "compliance_p3": "<strong>Interdiction des contenus AI NCII:</strong> Conformément aux conditions d'utilisation des API Google, DropPulse n'utilise pas les API Google ni l'IA pour générer ou diffuser des images intimes non consenties (AI NCII) ou des contenus nuisibles.",
+        "contact_title": "Contact",
+        "contact_desc": "Vous avez des questions sur le service, des remarques ou une demande d'accès ? N'hésitez pas à contacter le responsable :",
     },
     "es": {
         "nav_how": "Cómo funciona",
         "nav_features": "Características",
         "nav_compliance": "Cumplimiento",
+        "nav_contact": "Contacto",
         "btn_explore": "Descubra cómo funciona",
         "problem_title": "¿Por qué DropPulse?",
         "problem_desc": "Las entradas para conciertos y proyecciones de cine a menudo se agotan en minutos. Sin embargo, muchas reservas se cancelan y las entradas vuelven a salir a la venta. DropPulse supervisa las páginas por usted y le envía una alerta inmediata cuando se liberan plazas.",
@@ -375,11 +388,14 @@ SECTIONS_DATA = {
         "compliance_p1": "La aplicación <strong>DropPulse</strong> se dedica exclusivamente a monitorizar la disponibilidad de entradas de eventos y enviar avisos. El inicio de sesión con Google requiere permisos mínimos (<code>openid</code>, <code>email</code>, <code>profile</code>).",
         "compliance_p2": "El uso de la información obtenida a través de las API de Google cumple estrictamente con la <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> y los requisitos de Limited Use.",
         "compliance_p3": "<strong>Prohibición de AI NCII:</strong> De conformidad con los Términos del servicio de las API de Google, DropPulse no utiliza las API de Google ni sistemas de IA para crear o distribuir imágenes íntimas sin consentimiento (AI NCII) ni contenido perjudicial.",
+        "contact_title": "Contacto",
+        "contact_desc": "¿Tiene alguna pregunta sobre el servicio, comentarios o dudas sobre la vista previa? Puede contactar con el operador:",
     },
     "it": {
         "nav_how": "Come funziona",
         "nav_features": "Funzionalità",
         "nav_compliance": "Conformità",
+        "nav_contact": "Contatto",
         "btn_explore": "Scopri come funziona",
         "problem_title": "Perché DropPulse?",
         "problem_desc": "I biglietti per concerti ed eventi richiesti vanno spesso esauriti in pochi minuti. Tuttavia, molte prenotazioni vengono annullate e i posti tornano disponibili. DropPulse monitora le pagine pubbliche al posto tuo e ti avvisa non appena si libera un posto.",
@@ -401,11 +417,14 @@ SECTIONS_DATA = {
         "compliance_p1": "L'applicazione <strong>DropPulse</strong> è dedicata al monitoraggio automatico della disponibilità di biglietti e all'invio di notifiche. L'accesso Google richiede permessi minimi (<code>openid</code>, <code>email</code>, <code>profile</code>).",
         "compliance_p2": "L'uso dei dati ricevuti dalle API Google è conforme alle <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> e ai requisiti di Limited Use.",
         "compliance_p3": "<strong>Divieto di AI NCII:</strong> In piena conformità con i Termini di servizio delle API Google, DropPulse non utilizza le API Google né l'IA per generare o diffondere immagini intime non consensuali (AI NCII) o contenuti dannosi.",
+        "contact_title": "Contatto",
+        "contact_desc": "Hai domande sul servizio, suggerimenti o richieste di accesso all'anteprima? Contatta direttamente l'operatore:",
     },
     "pt": {
         "nav_how": "Como funciona",
         "nav_features": "Funcionalidades",
         "nav_compliance": "Conformidade",
+        "nav_contact": "Contacto",
         "btn_explore": "Saiba como funciona",
         "problem_title": "Porquê o DropPulse?",
         "problem_desc": "Os bilhetes para grandes concertos e eventos esgotam frequentemente em minutos. No entanto, muitas reservas são canceladas e os lugares voltam a ficar vagos. O DropPulse monitoriza as páginas por si e envia-lhe um alerta por e-mail no instante em que surgem bilhetes.",
@@ -427,11 +446,14 @@ SECTIONS_DATA = {
         "compliance_p1": "A aplicação <strong>DropPulse</strong> destina-se à monitorização de bilhetes e envio de alertas. O início de sessão com Google requer permissões mínimas (<code>openid</code>, <code>email</code>, <code>profile</code>).",
         "compliance_p2": "A utilização de dados das APIs Google cumpre a <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, incluindo os requisitos de Limited Use.",
         "compliance_p3": "<strong>Proibição de AI NCII:</strong> Em total conformidade com os Termos de Serviço das APIs Google, o DropPulse não utiliza as APIs Google nem IA para criar ou distribuir imagens íntimas não consensuais (AI NCII) ou conteúdos nocivos.",
+        "contact_title": "Contacto",
+        "contact_desc": "Tem dúvidas sobre o serviço, sugestões ou pedidos de acesso à pré-visualização? Entre em contacto com o operador:",
     },
     "ja": {
         "nav_how": "仕組み",
         "nav_features": "機能",
         "nav_compliance": "利用規約遵守",
+        "nav_contact": "お問い合わせ",
         "btn_explore": "仕組みを見る",
         "problem_title": "なぜ DropPulse なのか？",
         "problem_desc": "人気コンサートや IMAX 映画のチケットは数分で完売することがあります。しかし、予約キャンセルにより座席が再放出されることも少なくありません。DropPulse が公開チケットページを監視し、空きが出た瞬間にメールで通知します。",
@@ -453,11 +475,14 @@ SECTIONS_DATA = {
         "compliance_p1": "<strong>DropPulse</strong> は、イベントチケットの空き状況の監視およびメール通知配信を目的としたアプリケーションです。Google ログインは、最小限のスコープ（<code>openid</code>、<code>email</code>、<code>profile</code>）によるユーザー認証にのみ使用されます。",
         "compliance_p2": "Google API から取得した情報の使用は、限定使用（Limited Use）要件を含む <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a> に完全に準拠しています。",
         "compliance_p3": "<strong>AI NCII（同意のない親密な画像）の禁止:</strong> Google API 利用規約に従い、DropPulse は Google API や AI 技術を使用して、同意のない親密な画像（AI NCII）や有害なコンテンツを生成、処理、配布することは一切ありません。",
+        "contact_title": "お問い合わせ",
+        "contact_desc": "サービスに関するご質問やご意見、プレビュー参加についてのお問い合わせはこちら:",
     },
     "ko": {
         "nav_how": "작동 방식",
         "nav_features": "주요 기능",
         "nav_compliance": "규정 준수",
+        "nav_contact": "문의",
         "btn_explore": "작동 방식 알아보기",
         "problem_title": "왜 DropPulse인가요?",
         "problem_desc": "인기 콘서트나 영화 티켓은 순식간에 매진됩니다. 하지만 예매 취소로 인해 불시에 잔여석이 발생하곤 합니다. 하루 종일 새로고침하는 대신, DropPulse가 티켓 페이지를 대신 모니터링하여 잔여석이 나오는 순간 이메일로 알려드립니다.",
@@ -478,12 +503,15 @@ SECTIONS_DATA = {
         "compliance_title": "애플리케이션 목적 및 Google API 서비스 약관 준수",
         "compliance_p1": "<strong>DropPulse</strong>는 이벤트 티켓 예매 가능 여부 모니터링 및 이메일 알림을 제공하는 유틸리티입니다. Google 로그인은 최소한의 권한(<code>openid</code>, <code>email</code>, <code>profile</code>)으로 사용자 인증에만 사용됩니다.",
         "compliance_p2": "Google API에서 수신한 정보의 사용 및 전송은 Limited Use 요건을 포함한 <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>를 엄격히 준수합니다.",
-        "compliance_p3": "<strong>AI NCII(비동의 성적 영상物) 금지:</strong> Google API 서비스 약관에 따라, DropPulse는 Google API, 사용자 데이터 또는 AI 기술을 사용하여 비동의 성적 영상물(AI NCII)이나 유해 콘텐츠를 생성, 처리 또는 유포하지 않습니다.",
+        "compliance_p3": "<strong>AI NCII(비동의 성적 영상물) 금지:</strong> Google API 서비스 약관에 따라, DropPulse는 Google API, 사용자 데이터 또는 AI 기술을 사용하여 비동의 성적 영상물(AI NCII)이나 유해 콘텐츠를 생성, 처리 또는 유포하지 않습니다.",
+        "contact_title": "문의하기",
+        "contact_desc": "서비스 이용 관련 문의, 피드백 또는 미리보기 접근 권한 문의는 아래로 연락해 주세요:",
     },
     "ru": {
         "nav_how": "Как это работает",
         "nav_features": "Возможности",
         "nav_compliance": "Соответствие правилам",
+        "nav_contact": "Контакты",
         "btn_explore": "Узнать больше о работе",
         "problem_title": "Зачем нужен DropPulse?",
         "problem_desc": "Билеты на популярные концерты и премьеры часто раскупают за минуты. Однако брони регулярно отменяются, и места снова поступают в продажу. Постоянно обновлять вкладку в браузере неудобно. DropPulse отслеживает страницу за вас и присылает уведомление в момент появления мест.",
@@ -505,6 +533,8 @@ SECTIONS_DATA = {
         "compliance_p1": "Приложение <strong>DropPulse</strong> предназначено для мониторинга доступности билетов и отправки уведомлений. Вход через Google запрашивает минимальные права (<code>openid</code>, <code>email</code>, <code>profile</code>) только для аутентификации пользователя.",
         "compliance_p2": "Использование данных Google API строго соответствует <a href=\"https://developers.google.com/terms/api-services-user-data-policy\" target=\"_blank\" rel=\"noopener noreferrer\">Google API Services User Data Policy</a>, включая требования Limited Use.",
         "compliance_p3": "<strong>Запрет AI NCII:</strong> В полном соответствии с Условиями использования Google API, DropPulse не использует Google API или технологии ИИ для создания или распространения интимных изображений без согласия (AI NCII) или вредоносных материалов.",
+        "contact_title": "Контакты",
+        "contact_desc": "У вас есть вопросы по работе сервиса, предложения или вопросы по доступу к превью? Свяжитесь со мной:",
     },
 }
 
@@ -860,6 +890,52 @@ CSS = """
         font-size: 0.88em;
       }
 
+      .contact-card {
+        padding: 22px 24px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+
+      .contact-desc {
+        margin: 0 0 14px;
+        font-size: 0.95rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 18px;
+      }
+
+      .contact-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .contact-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: all 120ms ease;
+      }
+
+      .contact-link:hover {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: var(--accent);
+      }
+
       .preview-notice {
         margin-top: 32px;
       }
@@ -959,6 +1035,7 @@ $alternates
           <a href="#how-it-works" class="nav-link">$nav_how</a>
           <a href="#features" class="nav-link">$nav_features</a>
           <a href="#compliance" class="nav-link">$nav_compliance</a>
+          <a href="#contact" class="nav-link">$nav_contact</a>
           <a href="$app" class="nav-signin">$sign_in</a>
         </nav>
       </header>
@@ -1001,6 +1078,17 @@ $features_html
           <p>$compliance_p1</p>
           <p>$compliance_p2</p>
           <p>$compliance_p3</p>
+        </div>
+      </section>
+
+      <section id="contact" class="content-section">
+        <h2 class="section-title">$contact_title</h2>
+        <div class="contact-card">
+          <p class="contact-desc">$contact_desc</p>
+          <div class="contact-info">
+            <span class="contact-name">Ondrej Linek</span>
+            <a class="contact-link" href="mailto:ondrej.linek@gmail.com">ondrej.linek@gmail.com</a>
+          </div>
         </div>
       </section>
 
@@ -1075,6 +1163,7 @@ def render_sections(code: str) -> dict[str, str]:
         "nav_how": data["nav_how"],
         "nav_features": data["nav_features"],
         "nav_compliance": data["nav_compliance"],
+        "nav_contact": data["nav_contact"],
         "btn_explore": data["btn_explore"],
         "problem_title": data["problem_title"],
         "problem_desc": data["problem_desc"],
@@ -1086,6 +1175,8 @@ def render_sections(code: str) -> dict[str, str]:
         "compliance_p1": data["compliance_p1"],
         "compliance_p2": data["compliance_p2"],
         "compliance_p3": data["compliance_p3"],
+        "contact_title": data["contact_title"],
+        "contact_desc": data["contact_desc"],
     }
 
 
@@ -1104,6 +1195,7 @@ def render(language: dict) -> str:
         nav_how=sections["nav_how"],
         nav_features=sections["nav_features"],
         nav_compliance=sections["nav_compliance"],
+        nav_contact=sections["nav_contact"],
         btn_explore=sections["btn_explore"],
         problem_title=sections["problem_title"],
         problem_desc=sections["problem_desc"],
@@ -1115,6 +1207,8 @@ def render(language: dict) -> str:
         compliance_p1=sections["compliance_p1"],
         compliance_p2=sections["compliance_p2"],
         compliance_p3=sections["compliance_p3"],
+        contact_title=sections["contact_title"],
+        contact_desc=sections["contact_desc"],
         note_strong=language["note_strong"],
         note_rest=language["note_rest"],
         sign_in=language["sign_in"],

@@ -373,6 +373,52 @@
         font-size: 0.88em;
       }
 
+      .contact-card {
+        padding: 22px 24px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+
+      .contact-desc {
+        margin: 0 0 14px;
+        font-size: 0.95rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 18px;
+      }
+
+      .contact-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .contact-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: all 120ms ease;
+      }
+
+      .contact-link:hover {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: var(--accent);
+      }
+
       .preview-notice {
         margin-top: 32px;
       }
@@ -457,6 +503,7 @@
           <a href="#how-it-works" class="nav-link">Como funciona</a>
           <a href="#features" class="nav-link">Funcionalidades</a>
           <a href="#compliance" class="nav-link">Conformidade</a>
+          <a href="#contact" class="nav-link">Contacto</a>
           <a href="/app/" class="nav-signin">Entrar</a>
         </nav>
       </header>
@@ -533,6 +580,17 @@
           <p>A aplicação <strong>DropPulse</strong> destina-se à monitorização de bilhetes e envio de alertas. O início de sessão com Google requer permissões mínimas (<code>openid</code>, <code>email</code>, <code>profile</code>).</p>
           <p>A utilização de dados das APIs Google cumpre a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, incluindo os requisitos de Limited Use.</p>
           <p><strong>Proibição de AI NCII:</strong> Em total conformidade com os Termos de Serviço das APIs Google, o DropPulse não utiliza as APIs Google nem IA para criar ou distribuir imagens íntimas não consensuais (AI NCII) ou conteúdos nocivos.</p>
+        </div>
+      </section>
+
+      <section id="contact" class="content-section">
+        <h2 class="section-title">Contacto</h2>
+        <div class="contact-card">
+          <p class="contact-desc">Tem dúvidas sobre o serviço, sugestões ou pedidos de acesso à pré-visualização? Entre em contacto com o operador:</p>
+          <div class="contact-info">
+            <span class="contact-name">Ondrej Linek</span>
+            <a class="contact-link" href="mailto:ondrej.linek@gmail.com">ondrej.linek@gmail.com</a>
+          </div>
         </div>
       </section>
 

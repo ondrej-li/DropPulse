@@ -373,6 +373,52 @@
         font-size: 0.88em;
       }
 
+      .contact-card {
+        padding: 22px 24px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+
+      .contact-desc {
+        margin: 0 0 14px;
+        font-size: 0.95rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 18px;
+      }
+
+      .contact-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .contact-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+        text-decoration: none;
+        transition: all 120ms ease;
+      }
+
+      .contact-link:hover {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: var(--accent);
+      }
+
       .preview-notice {
         margin-top: 32px;
       }
@@ -457,6 +503,7 @@
           <a href="#how-it-works" class="nav-link">Как это работает</a>
           <a href="#features" class="nav-link">Возможности</a>
           <a href="#compliance" class="nav-link">Соответствие правилам</a>
+          <a href="#contact" class="nav-link">Контакты</a>
           <a href="/app/" class="nav-signin">Войти</a>
         </nav>
       </header>
@@ -533,6 +580,17 @@
           <p>Приложение <strong>DropPulse</strong> предназначено для мониторинга доступности билетов и отправки уведомлений. Вход через Google запрашивает минимальные права (<code>openid</code>, <code>email</code>, <code>profile</code>) только для аутентификации пользователя.</p>
           <p>Использование данных Google API строго соответствует <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, включая требования Limited Use.</p>
           <p><strong>Запрет AI NCII:</strong> В полном соответствии с Условиями использования Google API, DropPulse не использует Google API или технологии ИИ для создания или распространения интимных изображений без согласия (AI NCII) или вредоносных материалов.</p>
+        </div>
+      </section>
+
+      <section id="contact" class="content-section">
+        <h2 class="section-title">Контакты</h2>
+        <div class="contact-card">
+          <p class="contact-desc">У вас есть вопросы по работе сервиса, предложения или вопросы по доступу к превью? Свяжитесь со мной:</p>
+          <div class="contact-info">
+            <span class="contact-name">Ondrej Linek</span>
+            <a class="contact-link" href="mailto:ondrej.linek@gmail.com">ondrej.linek@gmail.com</a>
+          </div>
         </div>
       </section>
 
