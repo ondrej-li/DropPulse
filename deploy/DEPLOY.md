@@ -52,36 +52,65 @@ and the static `script-src 'none'` would break it.
 ## Deploying a backend change
 
 The VPS is arm64 and has no Go 1.27 toolchain. CI builds the binary and uploads
-it as the `droppulse-server-linux-arm64` artifact (retained 7 days).
+it as the `droppulse-server-linux-arm64` artifact (retained 7 days), and
+`app-deploy` — the `agent` account's timer — installs it:
+
+```
+app-deploy.timer (5 min)
+  └─ newest successful CI run on main → download → aarch64 ELF check
+       → install over backend/bin/droppulse-server (one .prev kept)
+       → sudo vps-site service restart droppulse.service
+       → unit active AND loopback /healthz 2xx within 30 s
+            └─ otherwise restore .prev, restart again, mail the owner
+```
+
+So the deploy is **merging to `main`**; nothing is copied by hand.
+
+```bash
+app-deploy status             # deployed commit, CI run, binary hash, unit, health
+app-deploy run --dry-run      # what the next pass would install
+journalctl -u app-deploy -n 50
+```
+
+A red CI run leaves the running binary alone. A hand-placed binary is drift:
+`app-deploy watch` mails when the installed hash stops matching the recorded
+one. Use the manual steps below only to bootstrap a fresh box, or to debug why
+the timer cannot do it.
+
+### Bootstrap a fresh box
 
 ```bash
 cd ~/repos/DropPulse
 
-# 1. Get the binary from the CI run you want to deploy. On main after a merge:
+# 1. Database, once.
+sudo vps-site db create droppulse
+
+# 2. Environment, once; edit the file, never commit it.
+install -d -m 0700 ~/.config/droppulse
+$EDITOR ~/.config/droppulse/backend.env
+chmod 0600 ~/.config/droppulse/backend.env
+
+# 3. Service and vhost. Both commands validate first and roll back on failure.
+sudo vps-site service install droppulse.service deploy/droppulse.service
+sudo vps-site vhost check deploy/nginx/dp.conf
+sudo vps-site vhost install dp deploy/nginx/dp.conf
+
+# 4. Static pages.
+sudo vps-site publish dp frontend/public
+
+# 5. The binary, from the CI run you want.
 gh run list --branch main --limit 5
 gh run download <run-id> -n droppulse-server-linux-arm64 -D backend/bin
 chmod 0755 backend/bin/droppulse-server
 file backend/bin/droppulse-server        # ELF 64-bit, ARM aarch64
 
-# 2. Database, once.
-sudo vps-site db create droppulse
-
-# 3. Environment, once; edit the file, never commit it.
-install -d -m 0700 ~/.config/droppulse
-$EDITOR ~/.config/droppulse/backend.env
-chmod 0600 ~/.config/droppulse/backend.env
-
-# 4. Service and vhost. Both commands validate first and roll back on failure.
-sudo vps-site service install droppulse.service deploy/droppulse.service
-sudo vps-site vhost check deploy/nginx/dp.conf
-sudo vps-site vhost install dp deploy/nginx/dp.conf
-
-# 5. Static pages.
-sudo vps-site publish dp frontend/public
-
-# 6. Restart after a new binary or a changed frontend/environment.
+# 6. Restart; a fresh box has no timer to do it.
 sudo vps-site service restart droppulse.service
 ```
+
+On a box with `app-deploy` installed (vps repo, `apps/`), step 5 is what the
+timer does on its own and step 6 only matters for a changed environment or
+`frontend/index.html`.
 
 `vps-site vhost install dp` adopts the pre-existing vhost; the old file is
 backed up under `/var/backups/vps-site/` first. `publish` adopts the
@@ -109,7 +138,22 @@ repository, a commit, a PR body, an issue or a log.
 
 `droppulse.service` runs with `NoNewPrivileges=yes` and `ProtectSystem=strict`, which blocks Postfix's setgid `postdrop` helper (`sendmail`). Do not weaken the sandbox to make `sendmail` work.
 
-Instead, configure SMTP submission in `~/.config/droppulse/backend.env` — the backend submits mail directly over TCP/TLS with no local privilege escalation:
+Instead the backend submits over SMTP. On this box the mail it needs is one hop, to the Postfix instance listening on loopback, so there is nothing to authenticate and no secret to keep:
+
+```sh
+# /home/agent/.config/droppulse/backend.env, mode 0600, never committed
+SMTP_FROM=alerts@ondralinek.cz   # DKIM-signed and SPF-aligned: spf1 mx -all
+SMTP_HOST=127.0.0.1
+SMTP_PORT=25
+SMTP_TLS=none                    # allowed for a loopback host with no credentials
+```
+
+`alerts@ondralinek.cz` is a virtual alias to `admin@` (`/etc/postfix/virtual`), so
+bounces still land in a mailbox. Multi-user mode mails each account's resolved
+address; `NOTIFICATION_EMAIL` is single-user only and the service refuses to
+start here with it set.
+
+An external relay works too, when that is what a deployment has:
 
 ```sh
 SMTP_FROM=alerts@dp.ondralinek.cz
@@ -122,7 +166,8 @@ SMTP_TLS=auto   # auto | starttls | implicit (port 465) | none (loopback unauth 
 
 `SMTP_HELO` is optional: the backend greets the server with the domain of
 `SMTP_FROM`. Postfix's `reject_non_fqdn_helo_hostname` refuses Go's default
-`EHLO localhost` at `RCPT TO`, so the greeting name matters even on loopback.
+`EHLO localhost` at `RCPT TO` — with `504 5.5.2` — so the greeting name matters
+even on loopback. Set `SMTP_HELO` only to override it.
 
 Credentials are never sent without TLS (`SMTP_TLS=none` is rejected for non-loopback hosts or when `SMTP_USERNAME` is set). When `SMTP_FROM` is unset, the backend logs `email notifications are disabled` and the app reports them as unavailable. Sign-in and the API are unaffected.
 

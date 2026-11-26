@@ -39,10 +39,16 @@ web-launch-check https://dp.ondralinek.cz
 
 ## Deploying this site
 
-https://dp.ondralinek.cz is published by the **deploy** account from this repository's
-`main` branch — the `site-deploy` timer, every five minutes. Merge is
-deploy: there is no publish command, and `sudo vps-site publish` refuses this
-web root (one writer per root, and it is not this account).
+Two halves, two accounts, both on a five-minute timer. Merging to `main` is the
+deploy for both: there is no publish command, and `sudo vps-site publish` refuses
+this web root (one writer per root, and it is not this account).
+
+| What | Who | Proof it arrived |
+|---|---|---|
+| Static pages (`frontend/public/`) → `/var/www/dp` | the **deploy** account, `site-deploy` | `https://dp.ondralinek.cz/deployed.json` |
+| The backend binary (`backend/bin/droppulse-server`) | the **agent** account, `app-deploy`, from the newest successful CI run | `app-deploy status` |
+
+### Static pages
 
 Verify after merging, and give it up to ten minutes:
 
@@ -56,6 +62,58 @@ The three commits must match. If it has not moved after two timer cycles, read
 `journalctl -u site-deploy -n 50`, report the commit that should be live and the
 one that is, and do not rsync into `/var/www` or edit a live file to compensate.
 The `static-site-deploy` skill has the full procedure.
+
+### The backend binary
+
+`frontend/index.html` is served by the Go process, so a UI change also needs the
+binary deployed. That is automatic too:
+
+```
+CI (on main) uploads droppulse-server-linux-arm64
+app-deploy.timer (5 min, as agent)
+  └─ newest successful run → download → aarch64 ELF check
+       → install over backend/bin/droppulse-server (one .prev kept)
+       → sudo vps-site service restart droppulse.service
+       → unit active AND http://127.0.0.1:8090/healthz 2xx, or restore .prev
+```
+
+```sh
+app-deploy status              # deployed commit, CI run, binary hash, unit, health
+app-deploy run --dry-run       # what it would install, without installing
+journalctl -u app-deploy -n 50 # the last pass
+```
+
+- **Never** `go build` here and never copy a binary onto the box. A hand-placed
+  binary is drift: `app-deploy watch` mails about the hash not matching, and the
+  next pass replaces it.
+- A red CI run leaves the running binary alone, so **fixing the build is the
+  deploy**. Do not work around it by installing something local.
+- A manual `vps-site service restart` is not a deploy, and doing it in the middle
+  of a timer run races the health check. Restart only to pick up a changed
+  `frontend/index.html` or environment, or when the timer is not running.
+
+### Email notifications
+
+Mail is enabled and submits over loopback SMTP; `sendmail` is blocked by the unit
+sandbox (`NoNewPrivileges=yes`) and must stay blocked — do not weaken the unit to
+make it work.
+
+```sh
+# /home/agent/.config/droppulse/backend.env, 0600, never in the repository
+SMTP_FROM=alerts@ondralinek.cz   # in a DKIM-signed, SPF-aligned domain
+SMTP_HOST=127.0.0.1
+SMTP_PORT=25
+SMTP_TLS=none                    # loopback relay: no credentials, no secrets
+```
+
+- Multi-user mode mails each account's **verified** address;
+  `NOTIFICATION_EMAIL` is single-user only and the service refuses to start with
+  it set here.
+- The EHLO name defaults to the sender domain. Postfix has
+  `reject_non_fqdn_helo_hostname`, which it applies at `RCPT TO`, so a greeting
+  of `localhost` fails with `504 5.5.2` — set `SMTP_HELO` if that ever needs
+  overriding.
+- Report a mail problem; do not disable delivery to make a test pass.
 
 ## Writing HTML and CSS
 
