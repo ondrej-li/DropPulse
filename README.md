@@ -83,6 +83,7 @@ Configuration is read from the environment and validated at start-up:
 | `SMTP_HOST`, `SMTP_PORT` | SMTP submission server (optional; default port `587`). Recommended in sandboxed systemd deployments |
 | `SMTP_USERNAME`, `SMTP_PASSWORD` or `SMTP_PASSWORD_FILE` | Optional SMTP AUTH credentials (must be set together; require TLS) |
 | `SMTP_TLS` | `auto` (default), `starttls`, `implicit` (port 465), or `none` (unauthenticated loopback only) |
+| `SMTP_HELO` | EHLO name announced to the server (optional; defaults to the domain of `SMTP_FROM`) |
 | `SENDMAIL_PATH` | Local MTA submission command used when `SMTP_HOST` is unset (default `/usr/sbin/sendmail`; must be absolute and executable) |
 
 `PUBLIC_API_URL` and `WEB_APP_URL` must use HTTPS unless they point at

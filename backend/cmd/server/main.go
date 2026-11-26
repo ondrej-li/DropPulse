@@ -91,6 +91,7 @@ func run() error {
 				Username: cfg.SMTPUsername,
 				Password: cfg.SMTPPassword,
 				TLSMode:  cfg.SMTPTLS,
+				Helo:     cfg.SMTPHelo,
 			}, cfg.SMTPFrom, recipient, 10*time.Second)
 		}
 		return notify.New(cfg.SendmailPath, cfg.SMTPFrom, recipient, 10*time.Second)

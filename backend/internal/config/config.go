@@ -83,6 +83,7 @@ type Config struct {
 	SMTPUsername      string
 	SMTPPassword      string
 	SMTPTLS           string
+	SMTPHelo          string
 
 	// AllowedEmails is the invite list for multi-user sign-in. When it is
 	// non-empty, only those verified addresses may sign in and no other account
@@ -679,6 +680,7 @@ func loadSMTP(cfg *Config, get func(string) string, getDefault func(string, stri
 	username := get("SMTP_USERNAME")
 	password := get("SMTP_PASSWORD")
 	passwordFile := get("SMTP_PASSWORD_FILE")
+	helo := strings.TrimSpace(get("SMTP_HELO"))
 	tlsMode := strings.ToLower(getDefault("SMTP_TLS", "auto"))
 
 	switch tlsMode {
@@ -690,8 +692,8 @@ func loadSMTP(cfg *Config, get func(string) string, getDefault func(string, stri
 		return errors.New("set only one of SMTP_PASSWORD and SMTP_PASSWORD_FILE")
 	}
 	if host == "" {
-		if port != "" || username != "" || password != "" || passwordFile != "" {
-			return errors.New("SMTP_HOST is required when SMTP_PORT, SMTP_USERNAME or SMTP_PASSWORD is set")
+		if port != "" || username != "" || password != "" || passwordFile != "" || helo != "" {
+			return errors.New("SMTP_HOST is required when SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD or SMTP_HELO is set")
 		}
 		cfg.SMTPTLS = tlsMode
 		return nil
@@ -727,12 +729,34 @@ func loadSMTP(cfg *Config, get func(string) string, getDefault func(string, stri
 			return errors.New("SMTP_TLS=none cannot be used with SMTP credentials")
 		}
 	}
+	if helo != "" {
+		if err := validateHeloName(helo); err != nil {
+			return fmt.Errorf("SMTP_HELO: %w", err)
+		}
+	}
 
 	cfg.SMTPHost = host
 	cfg.SMTPPort = port
 	cfg.SMTPUsername = username
 	cfg.SMTPPassword = password
 	cfg.SMTPTLS = tlsMode
+	cfg.SMTPHelo = helo
+	return nil
+}
+
+// validateHeloName rejects values a strict receiving MTA would refuse in EHLO:
+// RFC 5321 wants a fully-qualified domain name, and Postfix's
+// reject_non_fqdn_helo_hostname enforces it.
+func validateHeloName(name string) error {
+	if name == "" || strings.ContainsAny(name, " \t\r\n") {
+		return errors.New("must be a fully-qualified hostname without spaces")
+	}
+	if !strings.Contains(name, ".") || strings.HasPrefix(name, ".") || strings.HasSuffix(name, ".") {
+		return errors.New("must be a fully-qualified hostname, for example mail.example.com")
+	}
+	if len(name) > 253 {
+		return errors.New("must be 253 bytes or fewer")
+	}
 	return nil
 }
 
