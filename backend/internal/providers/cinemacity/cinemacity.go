@@ -20,28 +20,33 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata"
 )
 
 const (
 	apiBase          = "https://www.cinemacity.cz/cz/data-api-service/v1/quickbook/10101"
 	userAgent        = "DropPulse/0.1 (+https://dp.ondralinek.cz; availability monitor)"
 	maxResponseBytes = 1 << 20
-	// A film's programme is normally one or two weeks, but a long run must not
-	// turn one check into an unbounded crawl. The list is chronological, so a
-	// truncated list still covers the dates a drop is most likely to affect.
-	maxDatesPerCheck = 60
+	// A film's programme is normally one or two weeks; capping at 30 future
+	// screening dates covers premiere presales without turning a sold-out check
+	// into an unbounded crawl or exceeding requestTimeout.
+	maxDatesPerCheck = 30
 	requestTimeout   = 25 * time.Second
 )
 
 var (
 	filmIDPattern   = regexp.MustCompile(`^[A-Za-z0-9]{1,32}$`)
 	cinemaIDPattern = regexp.MustCompile(`^[0-9]{1,8}$`)
+	dateFetchDelay  = 100 * time.Millisecond
+	nowFunc         = time.Now
 
 	// eventDateTime has no offset because it is the cinema's local wall clock.
 	prague = func() *time.Location {
@@ -52,6 +57,28 @@ var (
 		return location
 	}()
 )
+
+// BlockedError reports that Cinema City or its edge WAF refused automated
+// access (HTTP 403/429 or an anti-bot/CAPTCHA challenge page). Callers must
+// back off and never attempt to bypass it.
+type BlockedError struct {
+	StatusCode int
+	RetryAfter time.Duration
+	Reason     string
+}
+
+func (e *BlockedError) Error() string {
+	if e.Reason != "" {
+		return e.Reason
+	}
+	return fmt.Sprintf("Cinema City blocked request (HTTP %d)", e.StatusCode)
+}
+
+// CheckResult is the outcome of one Cinema City availability lookup.
+type CheckResult struct {
+	Available bool
+	Detail    string
+}
 
 // Doer is the subset of http.Client used here. The caller supplies a client
 // with the same dial guard and redirect policy as the generic checker.
@@ -131,28 +158,54 @@ func Match(raw string) (target Target, matched bool, err error) {
 // request or decode failure is an error, never a sold-out result, so a
 // temporary upstream problem cannot turn an event off.
 func Check(ctx context.Context, doer Doer, target Target) (bool, error) {
+	res, err := CheckDetailed(ctx, doer, target)
+	return res.Available, err
+}
+
+// CheckDetailed checks seat availability and returns a human-readable summary
+// of the first matching open show (or why none matched).
+func CheckDetailed(ctx context.Context, doer Doer, target Target) (CheckResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
+	now := nowFunc().In(prague)
 	dates := []string{target.Date}
 	if target.Date == "" {
 		var err error
-		dates, err = fetchDates(ctx, doer, target)
+		dates, err = fetchDates(ctx, doer, target, now)
 		if err != nil {
-			return false, err
+			return CheckResult{}, err
 		}
+	}
+	if len(dates) == 0 {
+		return CheckResult{Available: false, Detail: "No upcoming dates scheduled"}, nil
 	}
 
-	for _, date := range dates {
+	for i, date := range dates {
+		if i > 0 && dateFetchDelay > 0 {
+			timer := time.NewTimer(dateFetchDelay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return CheckResult{}, fmt.Errorf("Cinema City request: %w", ctx.Err())
+			case <-timer.C:
+			}
+		}
 		events, err := fetchEvents(ctx, doer, target, date)
 		if err != nil {
-			return false, err
+			return CheckResult{}, err
 		}
-		if hasAvailable(events, target, time.Now().In(prague)) {
-			return true, nil
+		if show, ok := firstAvailable(events, target, now); ok {
+			return CheckResult{Available: true, Detail: formatShowDetail(show)}, nil
 		}
 	}
-	return false, nil
+	if len(dates) == 1 {
+		return CheckResult{Available: false, Detail: "No open seats on " + dates[0]}, nil
+	}
+	return CheckResult{
+		Available: false,
+		Detail:    fmt.Sprintf("No open seats across %d dates", len(dates)),
+	}, nil
 }
 
 type datesPayload struct {
@@ -161,8 +214,9 @@ type datesPayload struct {
 	} `json:"body"`
 }
 
-func fetchDates(ctx context.Context, doer Doer, target Target) ([]string, error) {
-	until := time.Now().AddDate(0, 0, 180).Format("2006-01-02")
+func fetchDates(ctx context.Context, doer Doer, target Target, now time.Time) ([]string, error) {
+	today := now.Format("2006-01-02")
+	until := now.AddDate(0, 0, 180).Format("2006-01-02")
 	endpoint := apiBase + "/dates/with-film/" + url.PathEscape(target.FilmID) +
 		"/until/" + until + "?" + url.Values{"attr": {""}, "ids": {target.CinemaID}}.Encode()
 
@@ -178,6 +232,9 @@ func fetchDates(ctx context.Context, doer Doer, target Target) ([]string, error)
 	for _, raw := range payload.Body.Dates {
 		if !validDate(raw) {
 			return nil, errors.New("Cinema City returned an invalid programme date")
+		}
+		if raw < today {
+			continue
 		}
 		dates = append(dates, raw)
 	}
@@ -232,9 +289,6 @@ func getJSON(ctx context.Context, doer Doer, endpoint string, out any) error {
 		return fmt.Errorf("Cinema City request: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Cinema City returned HTTP %d", resp.StatusCode)
-	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil {
@@ -243,10 +297,88 @@ func getJSON(ctx context.Context, doer Doer, endpoint string, out any) error {
 	if len(body) > maxResponseBytes {
 		return errors.New("Cinema City response is too large")
 	}
+
+	retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"), nowFunc())
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return &BlockedError{
+			StatusCode: resp.StatusCode,
+			RetryAfter: retryAfter,
+			Reason:     "Cinema City rate-limited requests (HTTP 429)",
+		}
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		return &BlockedError{
+			StatusCode: resp.StatusCode,
+			RetryAfter: retryAfter,
+			Reason:     "Cinema City blocked request (HTTP 403)",
+		}
+	}
+	if resp.StatusCode == http.StatusServiceUnavailable && looksLikeChallenge(resp.Header, body) {
+		return &BlockedError{
+			StatusCode: resp.StatusCode,
+			RetryAfter: retryAfter,
+			Reason:     "Cinema City returned an anti-bot challenge (HTTP 503)",
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Cinema City returned HTTP %d", resp.StatusCode)
+	}
+	if looksLikeChallenge(resp.Header, body) {
+		return &BlockedError{
+			StatusCode: resp.StatusCode,
+			RetryAfter: retryAfter,
+			Reason:     "Cinema City returned an anti-bot challenge page",
+		}
+	}
 	if err := json.Unmarshal(body, out); err != nil {
 		return fmt.Errorf("decode Cinema City response: %w", err)
 	}
 	return nil
+}
+
+func looksLikeChallenge(headers http.Header, body []byte) bool {
+	if strings.EqualFold(strings.TrimSpace(headers.Get("Cf-Mitigated")), "challenge") {
+		return true
+	}
+	ct := strings.ToLower(headers.Get("Content-Type"))
+	if strings.Contains(ct, "application/json") {
+		return false
+	}
+	sample := body
+	if len(sample) > 4096 {
+		sample = sample[:4096]
+	}
+	lower := strings.ToLower(string(sample))
+	for _, marker := range []string{
+		"just a moment",
+		"cf-challenge",
+		"challenge-platform",
+		"attention required",
+		"captcha",
+		"verify you are human",
+		"access denied",
+	} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseRetryAfter(raw string, now time.Time) time.Duration {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	if secs, err := strconv.Atoi(raw); err == nil && secs > 0 {
+		return time.Duration(secs) * time.Second
+	}
+	if when, err := http.ParseTime(raw); err == nil {
+		if d := when.Sub(now); d > 0 {
+			return d
+		}
+	}
+	return 0
 }
 
 // hasAvailable applies the target filters again even though the API endpoints
@@ -255,6 +387,11 @@ func getJSON(ctx context.Context, doer Doer, endpoint string, out any) error {
 // Shows that have already started are ignored: leftover seats on a past
 // screening are not a ticket someone can buy.
 func hasAvailable(events []event, target Target, now time.Time) bool {
+	_, ok := firstAvailable(events, target, now)
+	return ok
+}
+
+func firstAvailable(events []event, target Target, now time.Time) (event, bool) {
 	for _, show := range events {
 		if show.FilmID != "" && show.FilmID != target.FilmID {
 			continue
@@ -269,10 +406,42 @@ func hasAvailable(events []event, target Target, now time.Time) bool {
 			continue
 		}
 		if !show.SoldOut && show.AvailabilityRatio > 0 {
-			return true
+			return show, true
 		}
 	}
-	return false
+	return event{}, false
+}
+
+func formatShowDetail(show event) string {
+	room := strings.TrimSpace(show.Auditorium)
+	if room == "" {
+		room = strings.TrimSpace(show.AuditoriumTinyName)
+	}
+	when := strings.TrimSpace(show.EventDateTime)
+	if parsed, err := time.Parse("2006-01-02T15:04:05", when); err == nil {
+		when = parsed.Format("2006-01-02 15:04")
+	}
+	parts := make([]string, 0, 3)
+	if room != "" {
+		parts = append(parts, room)
+	}
+	if when != "" {
+		parts = append(parts, when)
+	}
+	pct := int(math.Round(show.AvailabilityRatio * 100))
+	if pct < 1 && show.AvailabilityRatio > 0 {
+		pct = 1
+	}
+	if pct > 100 {
+		pct = 100
+	}
+	if pct > 0 {
+		parts = append(parts, fmt.Sprintf("~%d%% open", pct))
+	}
+	if len(parts) == 0 {
+		return "Seats available"
+	}
+	return strings.Join(parts, " · ")
 }
 
 func auditoriumMatches(show event, wanted string) bool {

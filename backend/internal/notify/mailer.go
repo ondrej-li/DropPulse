@@ -1,23 +1,21 @@
-// Package notify sends availability email through the local MTA.
-//
-// Mail is submitted with the MTA's sendmail command, the privileged local
-// injection path. The SMTP listener on this host deliberately refuses relay to
-// external recipients from loopback, so using it would require widening the
-// relay policy; local submission does not. The message still passes through
-// rspamd for DKIM signing because Postfix applies non_smtpd_milters to locally
-// submitted mail. There is no remote SMTP, no authentication and no credential
-// configuration here.
+// Package notify sends availability email through either an SMTP submission
+// endpoint (compatible with a strict systemd sandbox) or the local MTA's
+// sendmail command.
 package notify
 
 import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"mime"
+	"net"
 	"net/mail"
+	"net/netip"
+	"net/smtp"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,11 +25,21 @@ import (
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 )
 
-// Mailer sends one email per off->on transition. A non-empty to address is a
-// fixed recipient (the single-user mode); otherwise the verified address on the
-// event's owning account is used.
+// SMTPConfig describes an SMTP submission endpoint.
+type SMTPConfig struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
+	TLSMode  string // "auto", "starttls", "implicit", or "none"
+}
+
+// Mailer sends availability and challenge-pause emails. A non-empty to address
+// is a fixed recipient (the single-user mode); otherwise the verified address
+// on the event's owning account is used.
 type Mailer struct {
 	sendmail string
+	smtp     *SMTPConfig
 	from     string
 	to       string
 	timeout  time.Duration
@@ -66,6 +74,52 @@ func New(sendmail, from, to string, timeout time.Duration) (*Mailer, error) {
 	return &Mailer{sendmail: sendmail, from: from, to: to, timeout: timeout, now: time.Now}, nil
 }
 
+// NewSMTP validates the addresses and SMTP settings and returns a mailer that
+// submits messages over TCP/TLS without invoking privileged local helpers.
+func NewSMTP(cfg SMTPConfig, from, to string, timeout time.Duration) (*Mailer, error) {
+	if err := validateAddress(from); err != nil {
+		return nil, fmt.Errorf("sender address: %w", err)
+	}
+	if to != "" {
+		if err := validateAddress(to); err != nil {
+			return nil, fmt.Errorf("recipient address: %w", err)
+		}
+	}
+	cfg.Host = strings.TrimSpace(cfg.Host)
+	cfg.Port = strings.TrimSpace(cfg.Port)
+	cfg.TLSMode = strings.ToLower(strings.TrimSpace(cfg.TLSMode))
+	if cfg.Host == "" {
+		return nil, errors.New("SMTP host is required")
+	}
+	if cfg.Port == "" {
+		cfg.Port = "587"
+	}
+	if cfg.TLSMode == "" {
+		cfg.TLSMode = "auto"
+	}
+	switch cfg.TLSMode {
+	case "auto", "starttls", "implicit", "none":
+	default:
+		return nil, fmt.Errorf("unsupported SMTP TLS mode %q", cfg.TLSMode)
+	}
+	if (cfg.Username == "") != (cfg.Password == "") {
+		return nil, errors.New("SMTP username and password must be set together")
+	}
+	if cfg.TLSMode == "none" {
+		if !isLoopbackHost(cfg.Host) {
+			return nil, errors.New("unencrypted SMTP is only allowed for loopback hosts")
+		}
+		if cfg.Username != "" {
+			return nil, errors.New("SMTP credentials require TLS")
+		}
+	}
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	copied := cfg
+	return &Mailer{smtp: &copied, from: from, to: to, timeout: timeout, now: time.Now}, nil
+}
+
 // SendEventOn sends the notification for an event that has just become
 // available. The caller decides whether this transition is new; the mailer
 // only formats and submits the message.
@@ -75,6 +129,29 @@ func (m *Mailer) SendEventOn(ctx context.Context, event domain.Event, uiURL stri
 		return fmt.Errorf("notification recipient: %w", err)
 	}
 	message := m.buildMessage(event, uiURL)
+	return m.deliver(ctx, recipient, message)
+}
+
+// SendEventPaused notifies the owner when a watch is automatically paused due
+// to repeated anti-bot challenges or rate limiting, giving them a direct link
+// to visit the site manually.
+func (m *Mailer) SendEventPaused(ctx context.Context, event domain.Event, uiURL string) error {
+	recipient := m.recipient(event)
+	if err := validateAddress(recipient); err != nil {
+		return fmt.Errorf("notification recipient: %w", err)
+	}
+	message := m.buildPausedMessage(event, uiURL)
+	return m.deliver(ctx, recipient, message)
+}
+
+func (m *Mailer) deliver(ctx context.Context, recipient string, message []byte) error {
+	if m.smtp != nil {
+		return m.sendSMTP(ctx, recipient, message)
+	}
+	return m.sendSendmail(ctx, recipient, message)
+}
+
+func (m *Mailer) sendSendmail(ctx context.Context, recipient string, message []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, m.timeout)
 	defer cancel()
 
@@ -95,6 +172,107 @@ func (m *Mailer) SendEventOn(ctx context.Context, event domain.Event, uiURL stri
 	return nil
 }
 
+func (m *Mailer) sendSMTP(ctx context.Context, recipient string, message []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, m.timeout)
+	defer cancel()
+
+	cfg := m.smtp
+	mode := resolveTLSMode(*cfg)
+	if mode == "none" && (!isLoopbackHost(cfg.Host) || cfg.Username != "") {
+		return errors.New("refusing plaintext SMTP for non-loopback or authenticated connection")
+	}
+
+	addr := net.JoinHostPort(cfg.Host, cfg.Port)
+	tlsCfg := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		ServerName: cfg.Host,
+	}
+
+	dialer := &net.Dialer{Timeout: m.timeout}
+	var (
+		conn net.Conn
+		err  error
+	)
+	if mode == "implicit" {
+		tlsDialer := &tls.Dialer{NetDialer: dialer, Config: tlsCfg}
+		conn, err = tlsDialer.DialContext(ctx, "tcp", addr)
+	} else {
+		conn, err = dialer.DialContext(ctx, "tcp", addr)
+	}
+	if err != nil {
+		return fmt.Errorf("dial SMTP %s: %w", addr, err)
+	}
+	if deadline, ok := ctx.Deadline(); ok {
+		_ = conn.SetDeadline(deadline)
+	}
+
+	client, err := smtp.NewClient(conn, cfg.Host)
+	if err != nil {
+		_ = conn.Close()
+		return fmt.Errorf("SMTP handshake: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	if mode == "starttls" {
+		ok, _ := client.Extension("STARTTLS")
+		if !ok {
+			return errors.New("SMTP server does not advertise STARTTLS")
+		}
+		if err := client.StartTLS(tlsCfg); err != nil {
+			return fmt.Errorf("SMTP STARTTLS: %w", err)
+		}
+	}
+	if cfg.Username != "" {
+		auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
+		if err := client.Auth(auth); err != nil {
+			return fmt.Errorf("SMTP auth: %w", err)
+		}
+	}
+	if err := client.Mail(m.from); err != nil {
+		return fmt.Errorf("SMTP MAIL FROM: %w", err)
+	}
+	if err := client.Rcpt(recipient); err != nil {
+		return fmt.Errorf("SMTP RCPT TO: %w", err)
+	}
+	writer, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("SMTP DATA: %w", err)
+	}
+	if _, err := writer.Write(message); err != nil {
+		_ = writer.Close()
+		return fmt.Errorf("SMTP write message: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("SMTP commit message: %w", err)
+	}
+	if err := client.Quit(); err != nil {
+		// Message is already accepted after DATA close; ignore benign close races.
+		return nil
+	}
+	return nil
+}
+
+func resolveTLSMode(cfg SMTPConfig) string {
+	if cfg.TLSMode != "" && cfg.TLSMode != "auto" {
+		return cfg.TLSMode
+	}
+	if cfg.Port == "465" {
+		return "implicit"
+	}
+	if isLoopbackHost(cfg.Host) && cfg.Username == "" && cfg.Port != "587" {
+		return "none"
+	}
+	return "starttls"
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip, err := netip.ParseAddr(strings.Trim(host, "[]"))
+	return err == nil && ip.IsLoopback()
+}
+
 // recipient prefers the fixed single-user address and falls back to the
 // verified email on the account that owns the event.
 func (m *Mailer) recipient(event domain.Event) string {
@@ -113,6 +291,9 @@ func (m *Mailer) buildMessage(event domain.Event, uiURL string) []byte {
 	if event.LastStatusCode != nil {
 		status = fmt.Sprintf("HTTP %d", *event.LastStatusCode)
 	}
+	if detail := strings.TrimSpace(headerSafe(event.LastDetail)); detail != "" {
+		status += " — " + detail
+	}
 	body := fmt.Sprintf(`%s is on.
 
 URL: %s
@@ -122,6 +303,36 @@ Open DropPulse: %s
 
 You will get another email for this event after it goes off and then on again.
 `, name, event.URL, status, now.Format(time.RFC3339), strings.TrimRight(uiURL, "/")+"/")
+	return m.formatRFC5322(to, subject, now, body)
+}
+
+func (m *Mailer) buildPausedMessage(event domain.Event, uiURL string) []byte {
+	now := m.now().UTC()
+	name := headerSafe(event.Name)
+	to := m.recipient(event)
+	subject := "DropPulse: " + name + " paused (site blocked checks)"
+	reason := strings.TrimSpace(headerSafe(event.PausedReason))
+	if reason == "" {
+		reason = "The target site repeatedly blocked or challenged automated checks."
+	}
+	lastErr := strings.TrimSpace(headerSafe(event.LastError))
+	detailLine := ""
+	if lastErr != "" {
+		detailLine = "Last response: " + lastErr + "\n"
+	}
+	body := fmt.Sprintf(`%s has been automatically paused.
+
+Reason: %s
+%sTarget URL (open manually in your browser): %s
+Checked: %s
+Open DropPulse: %s
+
+DropPulse does not bypass anti-bot walls or CAPTCHAs. You can check the page directly and re-enable the watch from DropPulse when ready.
+`, name, reason, detailLine, event.URL, now.Format(time.RFC3339), strings.TrimRight(uiURL, "/")+"/")
+	return m.formatRFC5322(to, subject, now, body)
+}
+
+func (m *Mailer) formatRFC5322(to, subject string, now time.Time, body string) []byte {
 	body = strings.ReplaceAll(body, "\n", "\r\n")
 
 	headers := []string{

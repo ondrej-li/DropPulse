@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -82,21 +83,38 @@ func run() error {
 	// A fixed recipient is a single-user convenience. Multi-user notices go to
 	// the verified address on the account that owns the event.
 	var mailer events.Mailer
+	newMailer := func(recipient string) (*notify.Mailer, error) {
+		if cfg.SMTPHost != "" {
+			return notify.NewSMTP(notify.SMTPConfig{
+				Host:     cfg.SMTPHost,
+				Port:     cfg.SMTPPort,
+				Username: cfg.SMTPUsername,
+				Password: cfg.SMTPPassword,
+				TLSMode:  cfg.SMTPTLS,
+			}, cfg.SMTPFrom, recipient, 10*time.Second)
+		}
+		return notify.New(cfg.SendmailPath, cfg.SMTPFrom, recipient, 10*time.Second)
+	}
 	switch {
 	case cfg.SingleUserMode && cfg.NotificationEmail != "":
-		mailer, err = notify.New(cfg.SendmailPath, cfg.SMTPFrom, cfg.NotificationEmail, 10*time.Second)
+		mailer, err = newMailer(cfg.NotificationEmail)
 		if err != nil {
 			return fmt.Errorf("configure notifications: %w", err)
 		}
 	case !cfg.SingleUserMode && cfg.SMTPFrom != "":
-		mailer, err = notify.New(cfg.SendmailPath, cfg.SMTPFrom, "", 10*time.Second)
+		mailer, err = newMailer("")
 		if err != nil {
 			return fmt.Errorf("configure notifications: %w", err)
 		}
 	case cfg.SingleUserMode:
-		logger.Warn("email notifications are disabled; set NOTIFICATION_EMAIL and SMTP_FROM to enable them")
+		logger.Warn("email notifications are disabled; set NOTIFICATION_EMAIL and SMTP_FROM (plus SMTP_HOST for sandboxed deployments) to enable them")
 	default:
-		logger.Warn("email notifications are disabled; set SMTP_FROM to email verified account addresses")
+		logger.Warn("email notifications are disabled; set SMTP_FROM (and SMTP_HOST for sandboxed deployments) to email verified account addresses")
+	}
+
+	uiURL := cfg.WebAppURL.String()
+	if !cfg.SingleUserMode && cfg.FrontendFile != "" {
+		uiURL = strings.TrimRight(uiURL, "/") + "/app/"
 	}
 
 	eventsSvc := events.NewService(
@@ -105,15 +123,27 @@ func run() error {
 		mailer,
 		logger,
 		admin,
-		cfg.WebAppURL.String(),
+		uiURL,
 	)
+	mailTransport := "disabled"
+	if mailer != nil {
+		if cfg.SMTPHost != "" {
+			mailTransport = "smtp"
+		} else {
+			mailTransport = "sendmail"
+		}
+	}
 	if cfg.SingleUserMode {
 		logger.Info("single-user mode enabled",
 			"username", admin.Username,
 			"notifications", mailer != nil,
+			"mail_transport", mailTransport,
 		)
 	} else {
-		logger.Info("multi-user mode enabled", "notifications", mailer != nil)
+		logger.Info("multi-user mode enabled",
+			"notifications", mailer != nil,
+			"mail_transport", mailTransport,
+		)
 	}
 
 	api, err := httpapi.New(cfg, st, authService, eventsSvc, logger)
@@ -126,7 +156,7 @@ func run() error {
 		Handler:           api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      45 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20,
 		ErrorLog:          slog.NewLogLogger(handler, slog.LevelError),

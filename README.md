@@ -80,7 +80,10 @@ Configuration is read from the environment and validated at start-up:
 | `FRONTEND_FILE` | Path to the single HTML app served at `/` (and `/app/` in multi-user mode); required in single-user mode |
 | `NOTIFICATION_EMAIL` | Fixed recipient for availability email; requires single-user mode and `SMTP_FROM` |
 | `SMTP_FROM` | Envelope/From address for notifications. In multi-user mode it enables mail to each account's verified address |
-| `SENDMAIL_PATH` | Local MTA submission command (default `/usr/sbin/sendmail`; must be absolute and executable) |
+| `SMTP_HOST`, `SMTP_PORT` | SMTP submission server (optional; default port `587`). Recommended in sandboxed systemd deployments |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` or `SMTP_PASSWORD_FILE` | Optional SMTP AUTH credentials (must be set together; require TLS) |
+| `SMTP_TLS` | `auto` (default), `starttls`, `implicit` (port 465), or `none` (unauthenticated loopback only) |
+| `SENDMAIL_PATH` | Local MTA submission command used when `SMTP_HOST` is unset (default `/usr/sbin/sendmail`; must be absolute and executable) |
 
 `PUBLIC_API_URL` and `WEB_APP_URL` must use HTTPS unless they point at
 localhost. Registered OAuth callback URLs must match exactly. The web frontend

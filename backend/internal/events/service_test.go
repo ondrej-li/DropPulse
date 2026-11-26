@@ -79,25 +79,33 @@ func (f *fakeRepo) DueEvents(context.Context, int) ([]domain.Event, error) {
 	return nil, nil
 }
 
-func (f *fakeRepo) RecordCheck(_ context.Context, eventID string, statusCode *int, available *bool, errText string) (domain.Event, error) {
+func (f *fakeRepo) RecordCheck(_ context.Context, eventID string, rec domain.CheckRecord) (domain.Event, bool, error) {
 	event, ok := f.events[eventID]
 	if !ok {
-		return domain.Event{}, store.ErrNotFound
+		return domain.Event{}, false, store.ErrNotFound
 	}
-	wasOn := event.IsOn
-	wasNotified := event.NotifiedOn
-	isOn := statusCode != nil && *statusCode == 200
-	if available != nil {
-		isOn = *available
+	now := time.Now().UTC()
+	tr := domain.ComputeCheckTransition(event, rec, now)
+	event.IsOn = tr.IsOn
+	event.NotifiedOn = tr.NotifiedOn
+	event.Enabled = tr.Enabled
+	event.PausedReason = tr.PausedReason
+	event.ConsecutiveFailures = tr.ConsecutiveFailures
+	event.ConsecutiveBlocks = tr.ConsecutiveBlocks
+	event.NextCheckAt = tr.NextCheckAt
+	event.LastStatusCode = rec.StatusCode
+	event.LastOutcome = tr.Outcome
+	if tr.Outcome == domain.OutcomeOK {
+		event.LastDetail = rec.Detail
 	}
-	event.IsOn = isOn
-	event.NotifiedOn = isOn && wasOn && wasNotified
-	event.LastStatusCode = statusCode
-	event.LastError = errText
-	now := time.Now()
+	event.LastError = rec.ErrorText
+	event.CheckCount++
+	if tr.Outcome != domain.OutcomeOK {
+		event.ErrorCount++
+	}
 	event.LastCheckedAt = &now
 	f.events[eventID] = event
-	return event, nil
+	return event, tr.JustAutoPaused, nil
 }
 
 func (f *fakeRepo) MarkNotified(_ context.Context, eventID, notificationErr string) error {
@@ -135,8 +143,9 @@ func (q *queueChecker) Check(context.Context, string) watch.Result {
 }
 
 type recordingMailer struct {
-	sends    int
-	failures int
+	sends      int
+	pauseSends int
+	failures   int
 }
 
 func (m *recordingMailer) SendEventOn(context.Context, domain.Event, string) error {
@@ -145,6 +154,11 @@ func (m *recordingMailer) SendEventOn(context.Context, domain.Event, string) err
 		m.failures--
 		return errors.New("smtp unavailable")
 	}
+	return nil
+}
+
+func (m *recordingMailer) SendEventPaused(context.Context, domain.Event, string) error {
+	m.pauseSends++
 	return nil
 }
 
@@ -362,5 +376,71 @@ func TestCreateRejectsUnsafeInput(t *testing.T) {
 				t.Fatalf("error %v is not a ValidationError", err)
 			}
 		}
+	}
+}
+
+func TestTransientErrorDoesNotResetOnStateOrDuplicateEmails(t *testing.T) {
+	repo := newFakeRepo(baseEvent())
+	checker := &queueChecker{results: []watch.Result{
+		{Outcome: domain.OutcomeOK, Available: availability(true), Detail: "IMAX VOLVO · 2026-12-18 19:30"},
+		{Outcome: domain.OutcomeError, Err: errors.New("Cinema City returned HTTP 503")},
+		{Outcome: domain.OutcomeOK, Available: availability(true), Detail: "IMAX VOLVO · 2026-12-18 19:30"},
+	}}
+	mailer := &recordingMailer{}
+	service := testService(t, repo, checker, mailer)
+	ctx := context.Background()
+
+	ev, err := service.CheckNow(ctx, testUserID, testEventID)
+	if err != nil || !ev.IsOn || mailer.sends != 1 {
+		t.Fatalf("first check: on=%v sends=%d err=%v", ev.IsOn, mailer.sends, err)
+	}
+
+	ev, err = service.CheckNow(ctx, testUserID, testEventID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ev.IsOn || !ev.NotifiedOn || ev.ConsecutiveFailures != 1 || ev.ErrorCount != 1 {
+		t.Fatalf("error check must preserve on/notified and record backoff: %+v", ev)
+	}
+
+	ev, err = service.CheckNow(ctx, testUserID, testEventID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ev.IsOn || ev.ConsecutiveFailures != 0 || mailer.sends != 1 {
+		t.Fatalf("recovery must not duplicate notification: on=%v failures=%d sends=%d",
+			ev.IsOn, ev.ConsecutiveFailures, mailer.sends)
+	}
+}
+
+func TestRepeatedBlocksAutoPauseAndNotifyOwner(t *testing.T) {
+	repo := newFakeRepo(baseEvent())
+	checker := &queueChecker{results: []watch.Result{
+		{Outcome: domain.OutcomeBlocked, Err: errors.New("HTTP 429"), RetryAfter: 20 * time.Minute},
+		{Outcome: domain.OutcomeBlocked, Err: errors.New("HTTP 403")},
+		{Outcome: domain.OutcomeBlocked, Err: errors.New("HTTP 403")},
+	}}
+	mailer := &recordingMailer{}
+	service := testService(t, repo, checker, mailer)
+	ctx := context.Background()
+
+	for i := 1; i <= 2; i++ {
+		ev, err := service.CheckNow(ctx, testUserID, testEventID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ev.Enabled || mailer.pauseSends != 0 || ev.ConsecutiveBlocks != i {
+			t.Fatalf("block %d unexpected state: enabled=%v pauseSends=%d blocks=%d",
+				i, ev.Enabled, mailer.pauseSends, ev.ConsecutiveBlocks)
+		}
+	}
+
+	ev, err := service.CheckNow(ctx, testUserID, testEventID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ev.Enabled || ev.PausedReason == "" || mailer.pauseSends != 1 {
+		t.Fatalf("third block must auto-pause and notify: enabled=%v reason=%q pauseSends=%d",
+			ev.Enabled, ev.PausedReason, mailer.pauseSends)
 	}
 }

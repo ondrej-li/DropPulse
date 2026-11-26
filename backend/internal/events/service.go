@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,7 +27,7 @@ type Repository interface {
 	UpdateEvent(ctx context.Context, userID, id string, input domain.EventInput) (domain.Event, error)
 	DeleteEvent(ctx context.Context, userID, id string) (bool, error)
 	DueEvents(ctx context.Context, limit int) ([]domain.Event, error)
-	RecordCheck(ctx context.Context, eventID string, statusCode *int, available *bool, errText string) (domain.Event, error)
+	RecordCheck(ctx context.Context, eventID string, rec domain.CheckRecord) (domain.Event, bool, error)
 	MarkNotified(ctx context.Context, eventID, notificationErr string) error
 	CountActiveEvents(ctx context.Context, userID string) (int, error)
 }
@@ -41,6 +43,12 @@ type Mailer interface {
 	SendEventOn(ctx context.Context, event domain.Event, uiURL string) error
 }
 
+// PauseNotifier is an optional extension of Mailer that sends an email when an
+// event is automatically paused after repeated anti-bot challenges or blocks.
+type PauseNotifier interface {
+	SendEventPaused(ctx context.Context, event domain.Event, uiURL string) error
+}
+
 // ValidationError is safe to show to the local UI.
 type ValidationError struct {
 	Message string
@@ -48,17 +56,21 @@ type ValidationError struct {
 
 func (e *ValidationError) Error() string { return e.Message }
 
+const defaultHostSpacing = 2 * time.Second
+
 // Service coordinates storage, checking and notification.
 type Service struct {
-	repo    Repository
-	checker Checker
-	mailer  Mailer
-	logger  *slog.Logger
-	admin   domain.User
-	uiURL   string
+	repo        Repository
+	checker     Checker
+	mailer      Mailer
+	logger      *slog.Logger
+	admin       domain.User
+	uiURL       string
+	hostSpacing time.Duration
 
-	mu    sync.Mutex
-	locks map[string]*sync.Mutex
+	mu       sync.Mutex
+	locks    map[string]*sync.Mutex
+	hostNext map[string]time.Time
 }
 
 // NewService builds the event service. admin is the fixed single-user account
@@ -68,13 +80,15 @@ func NewService(repo Repository, checker Checker, mailer Mailer, logger *slog.Lo
 		logger = slog.Default()
 	}
 	return &Service{
-		repo:    repo,
-		checker: checker,
-		mailer:  mailer,
-		logger:  logger,
-		admin:   admin,
-		uiURL:   uiURL,
-		locks:   make(map[string]*sync.Mutex),
+		repo:        repo,
+		checker:     checker,
+		mailer:      mailer,
+		logger:      logger,
+		admin:       admin,
+		uiURL:       uiURL,
+		hostSpacing: defaultHostSpacing,
+		locks:       make(map[string]*sync.Mutex),
+		hostNext:    make(map[string]time.Time),
 	}
 }
 
@@ -132,7 +146,7 @@ func (s *Service) CheckNow(ctx context.Context, userID, id string) (domain.Event
 	if err != nil {
 		return domain.Event{}, err
 	}
-	return s.check(ctx, event.ID)
+	return s.check(ctx, event.ID, false)
 }
 
 // Run performs due checks until ctx is cancelled. The tick is short relative
@@ -179,7 +193,7 @@ func (s *Service) runDue(ctx context.Context) {
 				<-sem
 				wg.Done()
 			}()
-			if _, err := s.check(ctx, eventID); err != nil {
+			if _, err := s.check(ctx, eventID, true); err != nil {
 				if ctx.Err() == nil && !errors.Is(err, store.ErrNotFound) {
 					s.logger.Warn("scheduled event check", "event_id", eventID, "err", err)
 				}
@@ -189,10 +203,11 @@ func (s *Service) runDue(ctx context.Context) {
 	wg.Wait()
 }
 
-// check serialises all checks of one event, records the result, and sends one
-// email when the event has just become available. A failed email leaves
+// check serialises all checks of one event, records the result, applies
+// backoff/auto-pause rules, and sends one email when the event has just become
+// available (or been auto-paused after repeated blocks). A failed email leaves
 // notified_on false, so the next check retries while the event remains on.
-func (s *Service) check(ctx context.Context, eventID string) (domain.Event, error) {
+func (s *Service) check(ctx context.Context, eventID string, paced bool) (domain.Event, error) {
 	lock := s.eventLock(eventID)
 	lock.Lock()
 	defer lock.Unlock()
@@ -201,19 +216,37 @@ func (s *Service) check(ctx context.Context, eventID string) (domain.Event, erro
 	if err != nil {
 		return domain.Event{}, err
 	}
-	result := s.checker.Check(ctx, event.URL)
-	var (
-		status    *int
-		available *bool
-		errText   string
-	)
-	if result.Err != nil {
-		errText = domain.TruncateError(result.Err.Error())
-	} else {
-		status = result.StatusCode
-		available = result.Available
+	if paced {
+		if err := s.paceHost(ctx, event.URL); err != nil {
+			return domain.Event{}, err
+		}
 	}
-	updated, err := s.repo.RecordCheck(ctx, event.ID, status, available, errText)
+
+	result := s.checker.Check(ctx, event.URL)
+	outcome := result.Outcome
+	if outcome == "" {
+		if result.Err != nil {
+			outcome = domain.OutcomeError
+		} else {
+			outcome = domain.OutcomeOK
+		}
+	}
+	rec := domain.CheckRecord{
+		Outcome:    outcome,
+		StatusCode: result.StatusCode,
+		Available:  result.Available,
+		Detail:     result.Detail,
+		RetryAfter: result.RetryAfter,
+		DurationMs: int(result.Duration.Milliseconds()),
+	}
+	if result.Err != nil {
+		rec.ErrorText = domain.TruncateError(result.Err.Error())
+		if outcome == domain.OutcomeError {
+			// Do not let a non-HTTP transport error keep an older status code.
+			rec.Available = nil
+		}
+	}
+	updated, justAutoPaused, err := s.repo.RecordCheck(ctx, event.ID, rec)
 	if err != nil {
 		return domain.Event{}, err
 	}
@@ -230,7 +263,58 @@ func (s *Service) check(ctx context.Context, eventID string) (domain.Event, erro
 			updated = refreshed
 		}
 	}
+
+	if justAutoPaused {
+		s.logger.Warn("auto-paused event after repeated blocks",
+			"event_id", updated.ID,
+			"consecutive_blocks", updated.ConsecutiveBlocks,
+			"last_error", updated.LastError,
+		)
+		if pn, ok := s.mailer.(PauseNotifier); ok {
+			if err := pn.SendEventPaused(ctx, updated, s.uiURL); err != nil {
+				s.logger.Warn("send pause notification", "event_id", updated.ID, "err", err)
+			}
+		}
+	}
 	return updated, nil
+}
+
+// paceHost spaces out scheduled checks targeting the same host so concurrent
+// watches do not burst requests against one site simultaneously.
+func (s *Service) paceHost(ctx context.Context, rawURL string) error {
+	if s.hostSpacing <= 0 {
+		return nil
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return nil
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "" {
+		return nil
+	}
+
+	s.mu.Lock()
+	now := time.Now()
+	slot := now
+	if next, ok := s.hostNext[host]; ok && next.After(now) {
+		slot = next
+	}
+	s.hostNext[host] = slot.Add(s.hostSpacing)
+	s.mu.Unlock()
+
+	wait := slot.Sub(now)
+	if wait <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func (s *Service) eventLock(id string) *sync.Mutex {

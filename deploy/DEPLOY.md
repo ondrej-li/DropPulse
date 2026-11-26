@@ -107,18 +107,20 @@ repository, a commit, a PR body, an issue or a log.
 
 ### Email notifications
 
-`SMTP_FROM` is deliberately not set in the deployed environment. The service
-runs with `NoNewPrivileges=yes` and `ProtectSystem=strict`; Postfix's
-`sendmail` relies on a setgid `postdrop` helper and a writable
-`/var/spool/postfix/maildrop`, so submission from inside this sandbox fails with
-`maildrop: Permission denied`. The backend therefore logs `email notifications
-are disabled` and the app reports them as unavailable. Sign-in and the API are
-unaffected.
+`droppulse.service` runs with `NoNewPrivileges=yes` and `ProtectSystem=strict`, which blocks Postfix's setgid `postdrop` helper (`sendmail`). Do not weaken the sandbox to make `sendmail` work.
 
-Do not fix this by setting `NoNewPrivileges=no` or adding
-`SupplementaryGroups=postdrop`; both weaken the service sandbox. A compatible
-submission path (for example a reviewed wrapper that submits to the local MTA
-on `127.0.0.1:25`) is a separate change with the record updated.
+Instead, configure SMTP submission in `~/.config/droppulse/backend.env` — the backend submits mail directly over TCP/TLS with no local privilege escalation:
+
+```sh
+SMTP_FROM=alerts@dp.ondralinek.cz
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=<smtp-user>
+SMTP_PASSWORD_FILE=/home/agent/.config/droppulse/smtp.pass   # mode 0600
+SMTP_TLS=auto   # auto | starttls | implicit (port 465) | none (loopback unauth only)
+```
+
+Credentials are never sent without TLS (`SMTP_TLS=none` is rejected for non-loopback hosts or when `SMTP_USERNAME` is set). When `SMTP_FROM` is unset, the backend logs `email notifications are disabled` and the app reports them as unavailable. Sign-in and the API are unaffected.
 
 The frontend is read at service start. After a `git pull` that changes
 `frontend/index.html`, restart `droppulse.service`.

@@ -3,6 +3,7 @@ package cinemacity
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,11 @@ import (
 	"testing"
 	"time"
 )
+
+func init() {
+	// Keep unit tests instantaneous.
+	dateFetchDelay = 0
+}
 
 type fakeDoer struct {
 	calls   []string
@@ -359,9 +365,11 @@ func TestCheckRejectsOversizedResponse(t *testing.T) {
 	}
 }
 
-func TestFetchDatesSortsAndCaps(t *testing.T) {
-	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	dates := make([]string, 0, maxDatesPerCheck+5)
+func TestFetchDatesSortsFiltersPastAndCaps(t *testing.T) {
+	start := time.Date(2026, 12, 1, 10, 0, 0, 0, prague)
+	dates := make([]string, 0, maxDatesPerCheck+7)
+	// Two past dates that must be skipped.
+	dates = append(dates, "2026-11-29", "2026-11-30")
 	for i := maxDatesPerCheck + 4; i >= 0; i-- {
 		dates = append(dates, start.AddDate(0, 0, i).Format("2006-01-02"))
 	}
@@ -373,17 +381,79 @@ func TestFetchDatesSortsAndCaps(t *testing.T) {
 		return jsonResponse(string(payload)), nil
 	}}
 
-	got, err := fetchDates(context.Background(), doer, Target{FilmID: "8105s2r", CinemaID: "1052"})
+	got, err := fetchDates(context.Background(), doer, Target{FilmID: "8105s2r", CinemaID: "1052"}, start)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(got) != maxDatesPerCheck {
 		t.Fatalf("got %d dates, want %d", len(got), maxDatesPerCheck)
 	}
-	if got[0] != "2026-01-01" {
-		t.Fatalf("first date = %s, want 2026-01-01", got[0])
+	if got[0] != "2026-12-01" {
+		t.Fatalf("first date = %s, want 2026-12-01", got[0])
 	}
 	if got[len(got)-1] != start.AddDate(0, 0, maxDatesPerCheck-1).Format("2006-01-02") {
 		t.Fatalf("last date = %s, want the end of the capped range", got[len(got)-1])
+	}
+}
+
+func TestCheckDetectsRateLimitAndChallengeAsBlocked(t *testing.T) {
+	t.Run("429 with Retry-After", func(t *testing.T) {
+		doer := &fakeDoer{respond: func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusTooManyRequests,
+				Header:     http.Header{"Retry-After": []string{"120"}},
+				Body:       io.NopCloser(strings.NewReader("")),
+			}, nil
+		}}
+		_, err := CheckDetailed(context.Background(), doer, Target{FilmID: "8105s2r", CinemaID: "1052"})
+		var blocked *BlockedError
+		if !errors.As(err, &blocked) {
+			t.Fatalf("want BlockedError, got %v", err)
+		}
+		if blocked.StatusCode != 429 || blocked.RetryAfter != 120*time.Second {
+			t.Fatalf("blocked = %+v", blocked)
+		}
+	})
+
+	t.Run("503 cloudflare challenge", func(t *testing.T) {
+		doer := &fakeDoer{respond: func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusServiceUnavailable,
+				Header: http.Header{
+					"Content-Type": []string{"text/html"},
+					"Cf-Mitigated": []string{"challenge"},
+				},
+				Body: io.NopCloser(strings.NewReader("<html><title>Just a moment...</title></html>")),
+			}, nil
+		}}
+		_, err := CheckDetailed(context.Background(), doer, Target{FilmID: "8105s2r", CinemaID: "1052"})
+		var blocked *BlockedError
+		if !errors.As(err, &blocked) {
+			t.Fatalf("want BlockedError, got %v", err)
+		}
+	})
+}
+
+func TestCheckDetailedFormatsOpenShow(t *testing.T) {
+	oldNow := nowFunc
+	nowFunc = func() time.Time { return time.Date(2026, 12, 16, 10, 0, 0, 0, prague) }
+	defer func() { nowFunc = oldNow }()
+
+	doer := &fakeDoer{respond: func(*http.Request) (*http.Response, error) {
+		return jsonResponse(`{"body":{"events":[
+			{"filmId":"8105s2r","cinemaId":"1052","auditorium":"IMAX VOLVO","auditoriumTinyName":"IMAX","eventDateTime":"2026-12-17T19:30:00","soldOut":false,"availabilityRatio":0.045}
+		]}}`), nil
+	}}
+	res, err := CheckDetailed(context.Background(), doer, Target{
+		FilmID:     "8105s2r",
+		CinemaID:   "1052",
+		Auditorium: "IMAX",
+		Date:       "2026-12-17",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Available || !strings.Contains(res.Detail, "IMAX VOLVO") || !strings.Contains(res.Detail, "2026-12-17 19:30") {
+		t.Fatalf("unexpected detail: %+v", res)
 	}
 }

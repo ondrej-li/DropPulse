@@ -1,7 +1,9 @@
 package notify
 
 import (
+	"bufio"
 	"context"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -177,5 +179,126 @@ func TestSendEventOnInvokesLocalSendmail(t *testing.T) {
 	}
 	if !strings.Contains(string(message), "Subject: DropPulse: Saturday show is on") {
 		t.Fatalf("message was not passed to sendmail:\n%s", message)
+	}
+}
+
+func TestBuildMessageIncludesDetailAndPausedFormat(t *testing.T) {
+	m := &Mailer{
+		from: "alerts@example.com",
+		to:   "viewer@example.com",
+		now:  func() time.Time { return time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC) },
+	}
+	onMsg := string(m.buildMessage(domain.Event{
+		Name:       "Flora IMAX",
+		URL:        "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
+		LastDetail: "IMAX VOLVO · 2026-12-18 19:30 · ~5% open",
+	}, "https://dp.example/app/"))
+	for _, want := range []string{
+		"Status: availability confirmed — IMAX VOLVO · 2026-12-18 19:30 · ~5% open",
+		"Open DropPulse: https://dp.example/app/",
+	} {
+		if !strings.Contains(onMsg, want) {
+			t.Errorf("availability message missing %q:\n%s", want, onMsg)
+		}
+	}
+
+	pausedMsg := string(m.buildPausedMessage(domain.Event{
+		Name:         "Flora IMAX",
+		URL:          "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
+		PausedReason: "Paused after repeated blocks",
+		LastError:    "Cinema City rate-limited requests (HTTP 429)",
+	}, "https://dp.example/app/"))
+	for _, want := range []string{
+		"Subject: DropPulse: Flora IMAX paused (site blocked checks)",
+		"Reason: Paused after repeated blocks",
+		"Last response: Cinema City rate-limited requests (HTTP 429)",
+		"Target URL (open manually in your browser):",
+	} {
+		if !strings.Contains(pausedMsg, want) {
+			t.Errorf("paused message missing %q:\n%s", want, pausedMsg)
+		}
+	}
+}
+
+func TestSendSMTPLoopback(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	received := make(chan string, 1)
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		r := bufio.NewReader(conn)
+		w := bufio.NewWriter(conn)
+		write := func(line string) {
+			_, _ = w.WriteString(line + "\r\n")
+			_ = w.Flush()
+		}
+		write("220 localhost ESMTP test")
+		var data strings.Builder
+		inData := false
+		for {
+			line, err := r.ReadString('\n')
+			if err != nil {
+				return
+			}
+			if inData {
+				if line == ".\r\n" {
+					inData = false
+					write("250 OK queued")
+					continue
+				}
+				data.WriteString(line)
+				continue
+			}
+			upper := strings.ToUpper(strings.TrimSpace(line))
+			switch {
+			case strings.HasPrefix(upper, "EHLO"), strings.HasPrefix(upper, "HELO"):
+				write("250 localhost")
+			case strings.HasPrefix(upper, "MAIL FROM:"):
+				write("250 OK")
+			case strings.HasPrefix(upper, "RCPT TO:"):
+				write("250 OK")
+			case upper == "DATA":
+				inData = true
+				write("354 Go ahead")
+			case upper == "QUIT":
+				write("221 Bye")
+				received <- data.String()
+				return
+			default:
+				write("250 OK")
+			}
+		}
+	}()
+
+	host, port, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := NewSMTP(SMTPConfig{Host: host, Port: port, TLSMode: "none"}, "alerts@example.com", "", 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SendEventOn(context.Background(), domain.Event{
+		Name:      "Flora IMAX",
+		URL:       "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
+		UserEmail: "viewer@example.com",
+	}, "https://dp.example/app/"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case msg := <-received:
+		if !strings.Contains(msg, "Subject: DropPulse: Flora IMAX is on") || !strings.Contains(msg, "To: viewer@example.com") {
+			t.Fatalf("unexpected SMTP payload:\n%s", msg)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for SMTP message")
 	}
 }
