@@ -29,8 +29,12 @@ import (
 // HTTP response at all. Available is set by a provider check; nil means the
 // result is the generic HTTP status result.
 type Result struct {
+	Outcome    domain.CheckOutcome
 	StatusCode *int
 	Available  *bool
+	Detail     string
+	RetryAfter time.Duration
+	Duration   time.Duration
 	Err        error
 	CheckedAt  time.Time
 }
@@ -64,7 +68,8 @@ func NewChecker(timeout time.Duration) *Checker {
 			TLSHandshakeTimeout:    5 * time.Second,
 			ResponseHeaderTimeout:  5 * time.Second,
 			IdleConnTimeout:        30 * time.Second,
-			DisableKeepAlives:      true,
+			MaxIdleConns:           16,
+			MaxIdleConnsPerHost:    2,
 			MaxResponseHeaderBytes: 64 << 10,
 			ForceAttemptHTTP2:      true,
 			TLSClientConfig:        &tls.Config{MinVersion: tls.VersionTLS12},
@@ -82,46 +87,123 @@ func NewChecker(timeout time.Duration) *Checker {
 // interpreted by that provider; every other target is on exactly when it
 // returns HTTP 200.
 func (c *Checker) Check(ctx context.Context, target string) Result {
-	result := Result{CheckedAt: c.now()}
+	start := c.now()
+	result := Result{CheckedAt: start}
+	defer func() {
+		result.Duration = c.now().Sub(start)
+		if result.Duration < 0 {
+			result.Duration = 0
+		}
+	}()
+
 	normalised, err := ValidateTargetURL(target)
 	if err != nil {
+		result.Outcome = domain.OutcomeError
 		result.Err = err
 		return result
 	}
 	if providerTarget, matched, matchErr := cinemacity.Match(normalised); matched {
 		if matchErr != nil {
+			result.Outcome = domain.OutcomeError
 			result.Err = matchErr
 			return result
 		}
-		available, checkErr := cinemacity.Check(ctx, c.client, providerTarget)
+		res, checkErr := cinemacity.CheckDetailed(ctx, c.client, providerTarget)
 		if checkErr != nil {
+			var blocked *cinemacity.BlockedError
+			if errors.As(checkErr, &blocked) {
+				result.Outcome = domain.OutcomeBlocked
+				result.RetryAfter = blocked.RetryAfter
+				if blocked.StatusCode > 0 {
+					code := blocked.StatusCode
+					result.StatusCode = &code
+				}
+			} else {
+				result.Outcome = domain.OutcomeError
+			}
 			result.Err = checkErr
 			return result
 		}
+		result.Outcome = domain.OutcomeOK
+		available := res.Available
 		result.Available = &available
+		result.Detail = res.Detail
 		return result
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, normalised, nil)
 	if err != nil {
+		result.Outcome = domain.OutcomeError
 		result.Err = err
 		return result
 	}
-	req.Header.Set("User-Agent", "DropPulse/0.1 (local availability check)")
+	req.Header.Set("User-Agent", "DropPulse/0.1 (+https://dp.ondralinek.cz; availability monitor)")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,*/*;q=0.8")
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		result.Outcome = domain.OutcomeError
 		result.Err = err
 		return result
 	}
 	defer resp.Body.Close()
-	// Do not download a ticket page. The status line and headers are all this
-	// watch uses; draining a little keeps the connection handling tidy.
-	_, _ = io.CopyN(io.Discard, resp.Body, 4096)
+	// Do not download a ticket page. Read only a small prefix to detect
+	// challenge headers/markers while keeping connection handling tidy.
+	prefix, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	status := resp.StatusCode
 	result.StatusCode = &status
+
+	retryAfter := parseRetryAfterHeader(resp.Header.Get("Retry-After"), c.now())
+	if status == http.StatusTooManyRequests {
+		result.Outcome = domain.OutcomeBlocked
+		result.RetryAfter = retryAfter
+		result.Err = errors.New("target site rate-limited requests (HTTP 429)")
+		return result
+	}
+	if (status == http.StatusForbidden || status == http.StatusServiceUnavailable) && isChallengeResponse(resp.Header, prefix) {
+		result.Outcome = domain.OutcomeBlocked
+		result.RetryAfter = retryAfter
+		result.Err = fmt.Errorf("target site returned an anti-bot challenge (HTTP %d)", status)
+		return result
+	}
+	result.Outcome = domain.OutcomeOK
 	return result
+}
+
+func isChallengeResponse(headers http.Header, body []byte) bool {
+	if strings.EqualFold(strings.TrimSpace(headers.Get("Cf-Mitigated")), "challenge") {
+		return true
+	}
+	lower := strings.ToLower(string(body))
+	for _, marker := range []string{
+		"just a moment",
+		"cf-challenge",
+		"challenge-platform",
+		"attention required",
+		"captcha",
+		"verify you are human",
+	} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseRetryAfterHeader(raw string, now time.Time) time.Duration {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	if secs, err := strconv.Atoi(raw); err == nil && secs > 0 {
+		return time.Duration(secs) * time.Second
+	}
+	if when, err := http.ParseTime(raw); err == nil {
+		if d := when.Sub(now); d > 0 {
+			return d
+		}
+	}
+	return 0
 }
 
 // ValidateProviderTarget applies a built-in provider's URL rules. URLs from

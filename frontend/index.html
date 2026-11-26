@@ -1198,6 +1198,37 @@
       (() => {
         "use strict";
 
+        function buildCinemaCityURL(basePath, values) {
+          const params = new URLSearchParams();
+          params.set("cinema", "1052");
+          const auditorium = (values.auditorium || "IMAX").trim();
+          if (auditorium) params.set("auditorium", auditorium);
+          const date = (values.date || "").trim();
+          if (date) params.set("date", date);
+          return "https://www.cinemacity.cz" + basePath + "?" + params.toString();
+        }
+
+        function extractCinemaCityFilmPath(raw) {
+          let parsed;
+          try {
+            parsed = new URL(raw);
+          } catch (_) {
+            return null;
+          }
+          const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+          if (parsed.protocol !== "https:" || (host !== "www.cinemacity.cz" && host !== "cinemacity.cz")) {
+            return null;
+          }
+          const segments = parsed.pathname.split("/").filter(Boolean);
+          if (segments.length < 3 || segments[segments.length - 3] !== "films") {
+            return null;
+          }
+          const slug = segments[segments.length - 2];
+          const id = segments[segments.length - 1];
+          if (!slug || !/^[A-Za-z0-9]{1,32}$/.test(id)) return null;
+          return "/films/" + encodeURIComponent(slug) + "/" + encodeURIComponent(id);
+        }
+
         // UI-side catalogue for now. When templates become manageable (and tier
         // aware), this should move behind an API and be fetched here instead.
         const TEMPLATES = Object.freeze([
@@ -1205,10 +1236,57 @@
             id: "cinemacity-flora-dune",
             provider: "cinemacity.cz",
             title: "Cinema City Flora — Dune: Part Three IMAX",
-            description: "Checks Cinema City's public programme for IMAX seats at Flora. Turns on when at least one seat is available.",
+            description: "Checks Cinema City's public programme for IMAX seats at Flora. Optionally pin one date (YYYY-MM-DD).",
             url: "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
             defaultInterval: 300,
-            fields: Object.freeze([]),
+            fields: Object.freeze([
+              Object.freeze({
+                name: "date",
+                label: "Date (optional, YYYY-MM-DD)",
+                placeholder: "Leave blank for any upcoming date",
+                maxLength: 10,
+                required: false,
+              }),
+            ]),
+            buildUrl: (values) => buildCinemaCityURL("/films/duna-cast-treti/8105s2r", values),
+          }),
+          Object.freeze({
+            id: "cinemacity-flora-film",
+            provider: "cinemacity.cz",
+            title: "Cinema City Flora — Custom Film IMAX",
+            description: "Paste any cinemacity.cz film page URL to watch IMAX seats at Cinema City Flora.",
+            url: "https://www.cinemacity.cz/films/<slug>/<film-id>?cinema=1052&auditorium=IMAX",
+            defaultInterval: 300,
+            fields: Object.freeze([
+              Object.freeze({
+                name: "film_url",
+                label: "Cinema City film page URL",
+                type: "url",
+                placeholder: "https://www.cinemacity.cz/films/...",
+                maxLength: 500,
+                required: true,
+              }),
+              Object.freeze({
+                name: "date",
+                label: "Date (optional, YYYY-MM-DD)",
+                placeholder: "Leave blank for any upcoming date",
+                maxLength: 10,
+                required: false,
+              }),
+              Object.freeze({
+                name: "auditorium",
+                label: "Auditorium (optional)",
+                value: "IMAX",
+                placeholder: "IMAX",
+                maxLength: 64,
+                required: false,
+              }),
+            ]),
+            buildUrl: (values) => {
+              const path = extractCinemaCityFilmPath(values.film_url || "");
+              if (!path) return "";
+              return buildCinemaCityURL(path, values);
+            },
           }),
           Object.freeze({
             id: "example-com",
@@ -1744,6 +1822,11 @@
             error.className = "error-text";
             error.textContent = event.last_error;
             checkCell.append(error);
+          } else if (event.last_detail) {
+            const detail = document.createElement("div");
+            detail.textContent = event.last_detail;
+            if (!event.is_on) detail.className = "muted";
+            checkCell.append(detail);
           } else if (isCinemaCityWatch(event.url) && event.last_checked_at) {
             const seats = document.createElement("div");
             seats.textContent = event.is_on ? "Seats available" : "No seats available";
@@ -1759,6 +1842,20 @@
             pending.className = "muted";
             pending.textContent = "Not checked yet";
             checkCell.append(pending);
+          }
+          if (event.paused_reason) {
+            const pausedInfo = document.createElement("div");
+            pausedInfo.className = "error-text";
+            pausedInfo.textContent = event.paused_reason;
+            checkCell.append(pausedInfo);
+          }
+          if (event.consecutive_failures > 0 && event.enabled && event.next_check_at) {
+            const backoff = document.createElement("div");
+            backoff.className = "meta";
+            const label = event.last_outcome === "blocked" ? "Blocked" : "Backing off";
+            backoff.textContent = label + " (" + event.consecutive_failures + ") · next " + relative(event.next_check_at);
+            backoff.title = absolute(event.next_check_at);
+            checkCell.append(backoff);
           }
           if (event.last_checked_at) {
             const when = document.createElement("div");
@@ -1990,6 +2087,9 @@
         }
 
         function buildTemplateURL(template, values) {
+          if (typeof template.buildUrl === "function") {
+            return template.buildUrl(values);
+          }
           let url = template.url;
           for (const [name, value] of Object.entries(values)) {
             url = url.split("{" + name + "}").join(encodeURIComponent(value));
@@ -2037,7 +2137,7 @@
 
           const url = buildTemplateURL(template, values);
           if (!/^https:\/\//i.test(url)) {
-            setStatus(els.wizardStatus, "The template did not produce an HTTPS URL.", true);
+            setStatus(els.wizardStatus, "Enter a valid Cinema City film page URL (https://www.cinemacity.cz/films/...).", true);
             return null;
           }
 

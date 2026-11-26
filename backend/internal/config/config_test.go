@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -317,5 +319,81 @@ func TestProviderNamesStable(t *testing.T) {
 	}
 	if got := strings.Join(cfg.ProviderNames(), ","); got != "google,facebook" {
 		t.Fatalf("ProviderNames = %q", got)
+	}
+}
+
+func TestLoadSMTPConfig(t *testing.T) {
+	dir := t.TempDir()
+	pwFile := filepath.Join(dir, "smtp.pass")
+	if err := os.WriteFile(pwFile, []byte("s3cr3t\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	env := baseEnv()
+	env["SMTP_FROM"] = "alerts@dp.example"
+	env["SMTP_HOST"] = "smtp.example.com"
+	env["SMTP_USERNAME"] = "mailer"
+	env["SMTP_PASSWORD_FILE"] = pwFile
+	cfg, err := LoadFrom(envLookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SMTPHost != "smtp.example.com" || cfg.SMTPPort != "587" || cfg.SMTPUsername != "mailer" || cfg.SMTPPassword != "s3cr3t" || cfg.SMTPTLS != "auto" {
+		t.Fatalf("SMTP config = %+v", cfg)
+	}
+}
+
+func TestLoadSMTPValidation(t *testing.T) {
+	cases := []struct {
+		name string
+		env  map[string]string
+	}{
+		{
+			name: "host without from",
+			env:  map[string]string{"SMTP_HOST": "smtp.example.com"},
+		},
+		{
+			name: "username without host",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_USERNAME": "u", "SMTP_PASSWORD": "p"},
+		},
+		{
+			name: "username without password",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com", "SMTP_USERNAME": "u"},
+		},
+		{
+			name: "plaintext remote host",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com", "SMTP_TLS": "none"},
+		},
+		{
+			name: "plaintext with credentials on loopback",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "127.0.0.1", "SMTP_USERNAME": "u", "SMTP_PASSWORD": "p", "SMTP_TLS": "none"},
+		},
+		{
+			name: "host with port suffix",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com:587"},
+		},
+		{
+			name: "invalid tls mode",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com", "SMTP_TLS": "bogus"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := baseEnv()
+			for k, v := range tc.env {
+				env[k] = v
+			}
+			if _, err := LoadFrom(envLookup(env)); err == nil {
+				t.Fatalf("case %q must be rejected", tc.name)
+			}
+		})
+	}
+
+	env := baseEnv()
+	env["SMTP_FROM"] = "a@example.com"
+	env["SMTP_HOST"] = "127.0.0.1"
+	env["SMTP_PORT"] = "25"
+	env["SMTP_TLS"] = "none"
+	if _, err := LoadFrom(envLookup(env)); err != nil {
+		t.Fatalf("unauthenticated loopback SMTP should be allowed: %v", err)
 	}
 }

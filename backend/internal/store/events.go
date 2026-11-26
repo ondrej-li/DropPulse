@@ -21,8 +21,17 @@ const eventColumns = `
 	e.is_on,
 	e.notified_on,
 	e.last_checked_at,
+	e.next_check_at,
 	e.last_status_code,
+	e.last_outcome,
+	e.last_detail,
 	e.last_error,
+	e.paused_reason,
+	e.consecutive_failures,
+	e.consecutive_blocks,
+	e.check_count,
+	e.error_count,
+	e.last_duration_ms,
 	e.last_notified_at,
 	e.last_notification_error,
 	e.created_at,
@@ -37,7 +46,10 @@ func scanEvent(row rowScanner) (domain.Event, error) {
 	var (
 		event          domain.Event
 		lastChecked    *time.Time
+		nextCheck      *time.Time
 		lastStatusCode *int
+		lastOutcome    string
+		lastDurationMs *int
 		lastNotified   *time.Time
 	)
 	if err := row.Scan(
@@ -50,8 +62,17 @@ func scanEvent(row rowScanner) (domain.Event, error) {
 		&event.IsOn,
 		&event.NotifiedOn,
 		&lastChecked,
+		&nextCheck,
 		&lastStatusCode,
+		&lastOutcome,
+		&event.LastDetail,
 		&event.LastError,
+		&event.PausedReason,
+		&event.ConsecutiveFailures,
+		&event.ConsecutiveBlocks,
+		&event.CheckCount,
+		&event.ErrorCount,
+		&lastDurationMs,
 		&lastNotified,
 		&event.LastNotificationErr,
 		&event.CreatedAt,
@@ -64,7 +85,10 @@ func scanEvent(row rowScanner) (domain.Event, error) {
 		return domain.Event{}, err
 	}
 	event.LastCheckedAt = lastChecked
+	event.NextCheckAt = nextCheck
 	event.LastStatusCode = lastStatusCode
+	event.LastOutcome = domain.CheckOutcome(lastOutcome)
+	event.LastDurationMs = lastDurationMs
 	event.LastNotifiedAt = lastNotified
 	return event, nil
 }
@@ -211,8 +235,15 @@ func (s *Store) UpdateEvent(ctx context.Context, userID, id string, input domain
 		    is_on = case when $6 then false else e.is_on end,
 		    notified_on = case when $6 then false else e.notified_on end,
 		    last_checked_at = case when $6 or $7 then null else e.last_checked_at end,
+		    next_check_at = case when $6 or $7 then null else e.next_check_at end,
 		    last_status_code = case when $6 then null else e.last_status_code end,
+		    last_outcome = case when $6 then '' else e.last_outcome end,
+		    last_detail = case when $6 then '' else e.last_detail end,
 		    last_error = case when $6 then '' else e.last_error end,
+		    paused_reason = case when $6 or $7 then '' else e.paused_reason end,
+		    consecutive_failures = case when $6 or $7 then 0 else e.consecutive_failures end,
+		    consecutive_blocks = case when $6 or $7 then 0 else e.consecutive_blocks end,
+		    last_duration_ms = case when $6 then null else e.last_duration_ms end,
 		    last_notification_error = case when $6 then '' else e.last_notification_error end,
 		    updated_at = now()
 		where e.id = $1::uuid
@@ -243,8 +274,8 @@ func (s *Store) DeleteEvent(ctx context.Context, userID, id string) (bool, error
 	return tag.RowsAffected() > 0, nil
 }
 
-// DueEvents returns enabled events for active accounts whose interval has
-// elapsed, oldest check first. The limit bounds one scheduler tick.
+// DueEvents returns enabled events for active accounts whose interval or
+// backoff window has elapsed, oldest check first. The limit bounds one tick.
 func (s *Store) DueEvents(ctx context.Context, limit int) ([]domain.Event, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 50
@@ -256,9 +287,14 @@ func (s *Store) DueEvents(ctx context.Context, limit int) ([]domain.Event, error
 		where e.enabled
 		  and u.status = 'active'
 		  and u.deleted_at is null
-		  and (e.last_checked_at is null
-		       or e.last_checked_at <= now() - (e.check_interval_seconds * interval '1 second'))
-		order by e.last_checked_at nulls first, e.created_at
+		  and (
+		      (e.next_check_at is not null and e.next_check_at <= now())
+		      or (e.next_check_at is null and (
+		          e.last_checked_at is null
+		          or e.last_checked_at <= now() - (e.check_interval_seconds * interval '1 second')
+		      ))
+		  )
+		order by coalesce(e.next_check_at, e.last_checked_at) nulls first, e.created_at
 		limit $1`,
 		limit,
 	)
@@ -280,17 +316,17 @@ func (s *Store) DueEvents(ctx context.Context, limit int) ([]domain.Event, error
 	return events, nil
 }
 
-// RecordCheck stores one result and computes the notification edge under a row
-// lock. notified_on stays true only while the event has been continuously on
-// since the last email, so every off->on transition re-arms it. available is
-// non-nil for a provider check and overrides the HTTP-status interpretation.
-func (s *Store) RecordCheck(ctx context.Context, eventID string, statusCode *int, available *bool, errText string) (domain.Event, error) {
+// RecordCheck stores one check result, applies exponential/challenge backoff
+// and auto-pause rules under a row lock, and computes the notification edge.
+// Upstream errors and blocks preserve is_on and notified_on so a transient
+// failure never turns an event off or triggers duplicate notifications.
+func (s *Store) RecordCheck(ctx context.Context, eventID string, rec domain.CheckRecord) (domain.Event, bool, error) {
 	if !domain.ValidUUID(eventID) {
-		return domain.Event{}, ErrNotFound
+		return domain.Event{}, false, ErrNotFound
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return domain.Event{}, fmt.Errorf("begin record check: %w", err)
+		return domain.Event{}, false, fmt.Errorf("begin record check: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -299,37 +335,68 @@ func (s *Store) RecordCheck(ctx context.Context, eventID string, statusCode *int
 		eventID,
 	))
 	if err != nil {
-		return domain.Event{}, err
+		return domain.Event{}, false, err
 	}
-	isOn := statusCode != nil && *statusCode == httpStatusOK
-	if available != nil {
-		isOn = *available
-	}
-	notifiedOn := isOn && current.IsOn && current.NotifiedOn
+
+	now := time.Now().UTC()
+	tr := domain.ComputeCheckTransition(current, rec, now)
 	var status any
-	if statusCode != nil {
-		status = *statusCode
+	if rec.StatusCode != nil {
+		status = *rec.StatusCode
 	}
+	var duration any
+	if rec.DurationMs >= 0 {
+		duration = rec.DurationMs
+	}
+	errIncrement := 0
+	if tr.Outcome != domain.OutcomeOK {
+		errIncrement = 1
+	}
+	detail := domain.TruncateError(rec.Detail)
+	errText := domain.TruncateError(rec.ErrorText)
 
 	updated, err := scanEvent(tx.QueryRow(ctx, `
 		update events as e
 		set is_on = $2,
 		    notified_on = $3,
-		    last_status_code = $4,
+		    enabled = $4,
+		    paused_reason = $5,
+		    consecutive_failures = $6,
+		    consecutive_blocks = $7,
+		    next_check_at = $8,
+		    last_status_code = $9,
+		    last_outcome = $10,
+		    last_detail = case when $10 = 'ok' then $11 else e.last_detail end,
+		    last_error = $12,
+		    check_count = e.check_count + 1,
+		    error_count = e.error_count + $13,
+		    last_duration_ms = $14,
 		    last_checked_at = now(),
-		    last_error = $5,
 		    updated_at = now()
 		where e.id = $1::uuid
 		returning `+eventColumns,
-		eventID, isOn, notifiedOn, status, errText,
+		eventID,
+		tr.IsOn,
+		tr.NotifiedOn,
+		tr.Enabled,
+		tr.PausedReason,
+		tr.ConsecutiveFailures,
+		tr.ConsecutiveBlocks,
+		tr.NextCheckAt,
+		status,
+		string(tr.Outcome),
+		detail,
+		errText,
+		errIncrement,
+		duration,
 	))
 	if err != nil {
-		return domain.Event{}, fmt.Errorf("record event check: %w", err)
+		return domain.Event{}, false, fmt.Errorf("record event check: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return domain.Event{}, fmt.Errorf("commit event check: %w", err)
+		return domain.Event{}, false, fmt.Errorf("commit event check: %w", err)
 	}
-	return updated, nil
+	return updated, tr.JustAutoPaused, nil
 }
 
 // MarkNotified records a successful email, or the failure that should be
@@ -364,5 +431,3 @@ func (s *Store) CountActiveEvents(ctx context.Context, userID string) (int, erro
 	}
 	return count, nil
 }
-
-const httpStatusOK = 200

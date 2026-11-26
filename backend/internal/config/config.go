@@ -72,12 +72,17 @@ type Config struct {
 
 	// Notifications are optional. A fixed NotificationEmail is a single-user
 	// convenience; in multi-user mode mail goes to the verified address on the
-	// event owner's account. Mail is injected through the local MTA's sendmail
-	// command, the privileged local submission path; the SMTP listener may
-	// reject relay.
+	// event owner's account. Mail is submitted over SMTP when SMTP_HOST is set
+	// (compatible with a strict systemd sandbox) or through the local MTA's
+	// sendmail command otherwise.
 	NotificationEmail string
 	SendmailPath      string
 	SMTPFrom          string
+	SMTPHost          string
+	SMTPPort          string
+	SMTPUsername      string
+	SMTPPassword      string
+	SMTPTLS           string
 
 	// AllowedEmails is the invite list for multi-user sign-in. When it is
 	// non-empty, only those verified addresses may sign in and no other account
@@ -311,6 +316,9 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	}
 	if cfg.NotificationEmail != "" && cfg.SMTPFrom == "" {
 		return Config{}, errors.New("SMTP_FROM is required when NOTIFICATION_EMAIL is set")
+	}
+	if err := loadSMTP(&cfg, get, getDefault); err != nil {
+		return Config{}, err
 	}
 
 	if err := loadProviders(&cfg, get, getDefault); err != nil {
@@ -663,4 +671,75 @@ func validateSendmailPath(raw string) error {
 		return errors.New("SENDMAIL_PATH must not contain whitespace")
 	}
 	return nil
+}
+
+func loadSMTP(cfg *Config, get func(string) string, getDefault func(string, string) string) error {
+	host := get("SMTP_HOST")
+	port := get("SMTP_PORT")
+	username := get("SMTP_USERNAME")
+	password := get("SMTP_PASSWORD")
+	passwordFile := get("SMTP_PASSWORD_FILE")
+	tlsMode := strings.ToLower(getDefault("SMTP_TLS", "auto"))
+
+	switch tlsMode {
+	case "auto", "starttls", "implicit", "none":
+	default:
+		return errors.New("SMTP_TLS must be auto, starttls, implicit or none")
+	}
+	if password != "" && passwordFile != "" {
+		return errors.New("set only one of SMTP_PASSWORD and SMTP_PASSWORD_FILE")
+	}
+	if host == "" {
+		if port != "" || username != "" || password != "" || passwordFile != "" {
+			return errors.New("SMTP_HOST is required when SMTP_PORT, SMTP_USERNAME or SMTP_PASSWORD is set")
+		}
+		cfg.SMTPTLS = tlsMode
+		return nil
+	}
+	if strings.ContainsAny(host, " \t\r\n/:") {
+		return errors.New("SMTP_HOST must be a bare hostname or IPv4 address (put the port in SMTP_PORT)")
+	}
+	if cfg.SMTPFrom == "" {
+		return errors.New("SMTP_FROM is required when SMTP_HOST is set")
+	}
+	if port == "" {
+		port = "587"
+	}
+	if err := validatePort(port); err != nil {
+		return fmt.Errorf("SMTP_PORT: %w", err)
+	}
+	if passwordFile != "" {
+		content, err := os.ReadFile(passwordFile)
+		if err != nil {
+			return fmt.Errorf("read SMTP_PASSWORD_FILE: %w", err)
+		}
+		password = strings.TrimRight(string(content), "\r\n")
+	}
+	if (username == "") != (password == "") {
+		return errors.New("SMTP_USERNAME and SMTP_PASSWORD (or SMTP_PASSWORD_FILE) must be set together")
+	}
+	loopback := isLoopbackHost(host)
+	if tlsMode == "none" {
+		if !loopback {
+			return errors.New("SMTP_TLS=none is only allowed for loopback SMTP hosts")
+		}
+		if username != "" {
+			return errors.New("SMTP_TLS=none cannot be used with SMTP credentials")
+		}
+	}
+
+	cfg.SMTPHost = host
+	cfg.SMTPPort = port
+	cfg.SMTPUsername = username
+	cfg.SMTPPassword = password
+	cfg.SMTPTLS = tlsMode
+	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip, err := netip.ParseAddr(strings.Trim(host, "[]"))
+	return err == nil && ip.IsLoopback()
 }
