@@ -45,6 +45,8 @@ const (
 var (
 	filmIDPattern   = regexp.MustCompile(`^[A-Za-z0-9]{1,32}$`)
 	cinemaIDPattern = regexp.MustCompile(`^[0-9]{1,8}$`)
+	attrPattern     = regexp.MustCompile(`^[a-z0-9-]{0,32}$`)
+	slugSafePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,160}$`)
 	dateFetchDelay  = 100 * time.Millisecond
 	nowFunc         = time.Now
 
@@ -78,6 +80,16 @@ func (e *BlockedError) Error() string {
 type CheckResult struct {
 	Available bool
 	Detail    string
+}
+
+// Film is one scheduled show returned by Cinema City's quickbook catalogue.
+type Film struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	ReleaseYear string `json:"release_year,omitempty"`
+	ReleaseDate string `json:"release_date,omitempty"`
+	LengthMins  int    `json:"length_minutes,omitempty"`
 }
 
 // Doer is the subset of http.Client used here. The caller supplies a client
@@ -243,6 +255,123 @@ func fetchDates(ctx context.Context, doer Doer, target Target, now time.Time) ([
 		dates = dates[:maxDatesPerCheck]
 	}
 	return dates, nil
+}
+
+type filmsPayload struct {
+	Body *struct {
+		Films []rawFilm `json:"films"`
+	} `json:"body"`
+}
+
+type rawFilm struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Length      int    `json:"length"`
+	Link        string `json:"link"`
+	ReleaseYear string `json:"releaseYear"`
+	ReleaseDate string `json:"releaseDate"`
+}
+
+// ListFilms fetches the currently scheduled films from Cinema City's public
+// quickbook catalogue (filtered by format attribute such as "imax") and builds
+// ready-to-watch URLs scoped to cinemaID.
+func ListFilms(ctx context.Context, doer Doer, cinemaID, attr string) ([]Film, error) {
+	cinemaID = strings.TrimSpace(cinemaID)
+	if cinemaID == "" {
+		cinemaID = "1052"
+	}
+	if !cinemaIDPattern.MatchString(cinemaID) {
+		return nil, errors.New("Cinema City cinema id is not valid")
+	}
+	attr = strings.ToLower(strings.TrimSpace(attr))
+	if !attrPattern.MatchString(attr) {
+		return nil, errors.New("Cinema City format attribute is not valid")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+
+	now := nowFunc().In(prague)
+	until := now.AddDate(0, 0, 180).Format("2006-01-02")
+	params := url.Values{
+		"attr": {attr},
+		"lang": {"cs_CZ"},
+	}
+	endpoint := apiBase + "/films/until/" + until + "?" + params.Encode()
+
+	var payload filmsPayload
+	if err := getJSON(ctx, doer, endpoint, &payload); err != nil {
+		return nil, err
+	}
+	if payload.Body == nil {
+		return nil, errors.New("Cinema City returned no films body")
+	}
+
+	seen := make(map[string]struct{}, len(payload.Body.Films))
+	out := make([]Film, 0, len(payload.Body.Films))
+	for _, rf := range payload.Body.Films {
+		id := strings.TrimSpace(rf.ID)
+		name := strings.TrimSpace(rf.Name)
+		if !filmIDPattern.MatchString(id) || name == "" {
+			continue
+		}
+		key := strings.ToLower(id)
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+
+		slug := extractFilmSlug(rf.Link)
+		q := url.Values{}
+		q.Set("cinema", cinemaID)
+		if attr == "imax" {
+			q.Set("auditorium", "IMAX")
+		}
+		watchURL := "https://www.cinemacity.cz/films/" + slug + "/" + id + "?" + q.Encode()
+
+		relDate := strings.TrimSpace(rf.ReleaseDate)
+		if len(relDate) >= 10 && validDate(relDate[:10]) {
+			relDate = relDate[:10]
+		} else {
+			relDate = ""
+		}
+		out = append(out, Film{
+			ID:          id,
+			Name:        name,
+			URL:         watchURL,
+			ReleaseYear: strings.TrimSpace(rf.ReleaseYear),
+			ReleaseDate: relDate,
+			LengthMins:  rf.Length,
+		})
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ReleaseDate != out[j].ReleaseDate {
+			if out[i].ReleaseDate == "" {
+				return false
+			}
+			if out[j].ReleaseDate == "" {
+				return true
+			}
+			return out[i].ReleaseDate < out[j].ReleaseDate
+		}
+		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
+	})
+	return out, nil
+}
+
+func extractFilmSlug(link string) string {
+	u, err := url.Parse(strings.TrimSpace(link))
+	if err == nil {
+		segments := pathSegments(u.Path)
+		if len(segments) >= 3 && segments[len(segments)-3] == "films" {
+			candidate := segments[len(segments)-2]
+			if slugSafePattern.MatchString(candidate) {
+				return candidate
+			}
+		}
+	}
+	return "film"
 }
 
 type eventsPayload struct {

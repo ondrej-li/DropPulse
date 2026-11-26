@@ -110,6 +110,28 @@ func (s *Server) handleCheckEvent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, event)
 }
 
+func (s *Server) handleCinemaCityShows(w http.ResponseWriter, r *http.Request) {
+	if _, ok := principalFrom(r.Context()); !ok {
+		s.unauthenticated(w, r)
+		return
+	}
+	cinemaID := r.URL.Query().Get("cinema")
+	if cinemaID == "" {
+		cinemaID = "1052"
+	}
+	attr := r.URL.Query().Get("attr")
+	if attr == "" {
+		attr = "imax"
+	}
+	shows, err := s.events.ListCinemaCityShows(r.Context(), cinemaID, attr)
+	if err != nil {
+		s.logger.Warn("fetch Cinema City shows", "cinema", cinemaID, "attr", attr, "err", err, "request_id", requestIDFrom(r.Context()))
+		writeError(w, http.StatusBadGateway, "upstream_unavailable", "Cinema City programme could not be loaded right now")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"shows": shows})
+}
+
 func (request eventRequest) input() domain.EventInput {
 	enabled := true
 	if request.Enabled != nil {

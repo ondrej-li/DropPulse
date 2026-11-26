@@ -218,7 +218,7 @@ A create or replace body looks like:
 }
 ```
 
-Intervals are 60 to 86400 seconds (default 300). The scheduler runs every 15
+Intervals are 60 to 86400 seconds (default 3600). The scheduler runs every 15
 seconds and checks whatever is due; events of suspended or deleted accounts are
 skipped. The UI is served at `/` (and `/app/` in multi-user mode) when
 `FRONTEND_FILE` is set and refreshes every 15 seconds.

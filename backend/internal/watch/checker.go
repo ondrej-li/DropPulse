@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
@@ -42,12 +43,20 @@ type Result struct {
 type lookupFunc func(ctx context.Context, network, host string) ([]netip.Addr, error)
 type dialFunc func(ctx context.Context, network, address string) (net.Conn, error)
 
+type cachedFilms struct {
+	films     []cinemacity.Film
+	expiresAt time.Time
+}
+
 // Checker performs the HTTPS status check. It is safe for concurrent use.
 type Checker struct {
 	client *http.Client
 	lookup lookupFunc
 	dial   dialFunc
 	now    func() time.Time
+
+	cacheMu   sync.Mutex
+	filmCache map[string]cachedFilms
 }
 
 // NewChecker builds a checker with a hard per-request timeout.
@@ -55,7 +64,10 @@ func NewChecker(timeout time.Duration) *Checker {
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
-	c := &Checker{now: time.Now}
+	c := &Checker{
+		now:       time.Now,
+		filmCache: make(map[string]cachedFilms),
+	}
 	c.lookup = net.DefaultResolver.LookupNetIP
 	dialer := &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
 	c.dial = dialer.DialContext
@@ -213,6 +225,47 @@ func ValidateProviderTarget(raw string) error {
 		return err
 	}
 	return nil
+}
+
+const cinemaCityFilmCacheTTL = 10 * time.Minute
+
+// ListCinemaCityFilms returns the scheduled Cinema City films for a cinema and
+// format attribute, caching successful lookups briefly in memory.
+func (c *Checker) ListCinemaCityFilms(ctx context.Context, cinemaID, attr string) ([]cinemacity.Film, error) {
+	cinemaID = strings.TrimSpace(cinemaID)
+	if cinemaID == "" {
+		cinemaID = "1052"
+	}
+	attr = strings.ToLower(strings.TrimSpace(attr))
+	key := cinemaID + ":" + attr
+	now := c.now()
+
+	c.cacheMu.Lock()
+	if entry, ok := c.filmCache[key]; ok && now.Before(entry.expiresAt) {
+		copied := make([]cinemacity.Film, len(entry.films))
+		copy(copied, entry.films)
+		c.cacheMu.Unlock()
+		return copied, nil
+	}
+	c.cacheMu.Unlock()
+
+	films, err := cinemacity.ListFilms(ctx, c.client, cinemaID, attr)
+	if err != nil {
+		return nil, err
+	}
+
+	c.cacheMu.Lock()
+	if c.filmCache == nil {
+		c.filmCache = make(map[string]cachedFilms)
+	}
+	copied := make([]cinemacity.Film, len(films))
+	copy(copied, films)
+	c.filmCache[key] = cachedFilms{
+		films:     copied,
+		expiresAt: c.now().Add(cinemaCityFilmCacheTTL),
+	}
+	c.cacheMu.Unlock()
+	return films, nil
 }
 
 // ValidateTargetURL accepts only absolute HTTPS URLs without credentials or a

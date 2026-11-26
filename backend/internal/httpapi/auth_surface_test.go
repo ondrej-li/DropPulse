@@ -100,6 +100,7 @@ func TestWatchRoutesRequireAuthentication(t *testing.T) {
 		{http.MethodPut, "/api/v1/events/22222222-2222-2222-2222-222222222222"},
 		{http.MethodDelete, "/api/v1/events/22222222-2222-2222-2222-222222222222"},
 		{http.MethodPost, "/api/v1/events/22222222-2222-2222-2222-222222222222/check"},
+		{http.MethodGet, "/api/v1/providers/cinemacity/shows"},
 		{http.MethodGet, "/api/v1/admin/overview"},
 		{http.MethodGet, "/api/v1/admin/watchers"},
 		{http.MethodPost, "/api/v1/admin/watchers"},

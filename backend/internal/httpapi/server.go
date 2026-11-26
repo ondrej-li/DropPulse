@@ -132,6 +132,7 @@ func (s *Server) mountUserRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	mount("PUT /api/v1/events/{id}", s.handleUpdateEvent)
 	mount("DELETE /api/v1/events/{id}", s.handleDeleteEvent)
 	mount("POST /api/v1/events/{id}/check", s.handleCheckEvent)
+	mount("GET /api/v1/providers/cinemacity/shows", s.handleCinemaCityShows)
 
 	mountAdmin("GET /api/v1/admin/overview", s.handleAdminOverview)
 	mountAdmin("GET /api/v1/admin/watchers", s.handleAdminListWatchers)

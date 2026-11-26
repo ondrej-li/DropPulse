@@ -457,3 +457,34 @@ func TestCheckDetailedFormatsOpenShow(t *testing.T) {
 		t.Fatalf("unexpected detail: %+v", res)
 	}
 }
+
+func TestListFilmsBuildsCanonicalIMAXWatchURLs(t *testing.T) {
+	doer := &fakeDoer{respond: func(req *http.Request) (*http.Response, error) {
+		if !strings.Contains(req.URL.Path, "/films/until/") || req.URL.Query().Get("attr") != "imax" {
+			return nil, fmt.Errorf("unexpected catalogue request: %s", req.URL)
+		}
+		return jsonResponse(`{"body":{"films":[
+			{"id":"7803s2r","name":"Hunger Games: Úsvit sklizně","length":159,"link":"https://www.cinemacity.cz/films/hunger-games-usvit-sklizne/7803s2r","releaseYear":"2026","releaseDate":"2026-11-19T00:00:00"},
+			{"id":"6377s2r1","name":"Duna","length":168,"link":"https://www.cinemacity.cz/films/duna/6377s2r1","releaseYear":"2021","releaseDate":"2026-12-03T00:00:00"},
+			{"id":"7803s2r","name":"Duplicate ID","length":159,"link":"https://www.cinemacity.cz/films/dup/7803s2r"}
+		]}}`), nil
+	}}
+
+	films, err := ListFilms(context.Background(), doer, "1052", "imax")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(films) != 2 {
+		t.Fatalf("got %d films, want 2: %+v", len(films), films)
+	}
+	if films[0].ID != "7803s2r" || films[0].ReleaseDate != "2026-11-19" {
+		t.Fatalf("first film = %+v", films[0])
+	}
+	wantURL := "https://www.cinemacity.cz/films/hunger-games-usvit-sklizne/7803s2r?auditorium=IMAX&cinema=1052"
+	if films[0].URL != wantURL {
+		t.Fatalf("film URL = %q, want %q", films[0].URL, wantURL)
+	}
+	if _, matched, err := Match(films[0].URL); !matched || err != nil {
+		t.Fatalf("generated URL rejected by Match: matched=%v err=%v", matched, err)
+	}
+}

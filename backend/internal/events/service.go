@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinemacity"
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
 	"github.com/ondrej-li/DropPulse/backend/internal/watch"
 )
@@ -36,6 +37,12 @@ type Repository interface {
 // provider lookup, depending on the target.
 type Checker interface {
 	Check(ctx context.Context, target string) watch.Result
+}
+
+// CinemaCityCatalogue is an optional capability on Checker for listing
+// currently scheduled Cinema City films.
+type CinemaCityCatalogue interface {
+	ListCinemaCityFilms(ctx context.Context, cinemaID, attr string) ([]cinemacity.Film, error)
 }
 
 // Mailer sends one availability email.
@@ -143,6 +150,16 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 // ValidateInput normalises and validates an event create/update payload.
 func ValidateInput(input domain.EventInput) (domain.EventInput, error) {
 	return validateInput(input)
+}
+
+// ListCinemaCityShows returns the currently scheduled shows for a Cinema City
+// venue and format (such as cinema "1052" and format "imax").
+func (s *Service) ListCinemaCityShows(ctx context.Context, cinemaID, attr string) ([]cinemacity.Film, error) {
+	cat, ok := s.checker.(CinemaCityCatalogue)
+	if !ok {
+		return []cinemacity.Film{}, nil
+	}
+	return cat.ListCinemaCityFilms(ctx, cinemaID, attr)
 }
 
 // CheckNow checks one event immediately, outside the scheduler.

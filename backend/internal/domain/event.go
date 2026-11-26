@@ -228,7 +228,7 @@ const (
 	// MaxCheckInterval is the longest supported watch interval.
 	MaxCheckInterval = 86400
 	// DefaultCheckInterval is used when a create request omits the interval.
-	DefaultCheckInterval = 300
+	DefaultCheckInterval = 3600
 	// MaxEventNameLength bounds display names in the UI and notification.
 	MaxEventNameLength = 120
 	// MaxEventURLLength bounds stored URLs before they reach the checker.

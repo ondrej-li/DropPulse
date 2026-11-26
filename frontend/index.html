@@ -452,6 +452,7 @@
       input[type="text"],
       input[type="url"],
       input[type="number"],
+      input[type="date"],
       select {
         width: 100%;
         border: 1px solid var(--line);
@@ -464,13 +465,56 @@
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
 
+      input[type="checkbox"],
+      input[type="radio"] {
+        accent-color: var(--accent);
+      }
+
       input[type="text"]:focus,
       input[type="url"]:focus,
       input[type="number"]:focus,
+      input[type="date"]:focus,
       select:focus {
         outline: none;
         border-color: var(--accent);
         box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+
+      :is(input, select, textarea):is(:user-invalid, .user-invalid-fallback) {
+        border-color: var(--danger);
+        background: var(--danger-bg);
+      }
+
+      fieldset.fieldset {
+        margin: 0;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--bg);
+        display: grid;
+        gap: 8px;
+      }
+
+      fieldset.fieldset > legend {
+        padding: 0 6px;
+        color: var(--muted);
+        font-size: 0.79rem;
+        font-weight: 650;
+      }
+
+      .radio-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .radio-row label {
+        flex-direction: row;
+        align-items: center;
+        color: var(--text);
+        font-size: 0.88rem;
+        font-weight: 500;
+        cursor: pointer;
       }
 
       input:focus-visible,
@@ -1423,7 +1467,7 @@
               <input id="admin-create-url" type="url" required placeholder="https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX">
             </label>
             <label>Check every (seconds)
-              <input id="admin-create-interval" type="number" min="60" max="86400" step="1" value="300" required>
+              <input id="admin-create-interval" type="number" min="60" max="86400" step="1" value="3600" required>
             </label>
             <label class="check">
               <input id="admin-create-enabled" type="checkbox" checked> Watch is active
@@ -1535,64 +1579,26 @@
           return "/films/" + encodeURIComponent(slug) + "/" + encodeURIComponent(id);
         }
 
+        function todayLocalISO() {
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          return yyyy + "-" + mm + "-" + dd;
+        }
+
         // UI-side catalogue for now. When templates become manageable (and tier
         // aware), this should move behind an API and be fetched here instead.
         const TEMPLATES = Object.freeze([
           Object.freeze({
-            id: "cinemacity-flora-dune",
+            id: "cinemacity-flora-imax",
+            kind: "cinemacity-flora-imax",
             provider: "cinemacity.cz",
-            title: "Cinema City Flora — Dune: Part Three IMAX",
-            description: "Checks Cinema City's public programme for IMAX seats at Flora. Optionally pin one date (YYYY-MM-DD).",
-            url: "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
-            defaultInterval: 300,
-            fields: Object.freeze([
-              Object.freeze({
-                name: "date",
-                label: "Date (optional, YYYY-MM-DD)",
-                placeholder: "Leave blank for any upcoming date",
-                maxLength: 10,
-                required: false,
-              }),
-            ]),
-            buildUrl: (values) => buildCinemaCityURL("/films/duna-cast-treti/8105s2r", values),
-          }),
-          Object.freeze({
-            id: "cinemacity-flora-film",
-            provider: "cinemacity.cz",
-            title: "Cinema City Flora — Custom Film IMAX",
-            description: "Paste any cinemacity.cz film page URL to watch IMAX seats at Cinema City Flora.",
+            title: "Cinema City Flora — IMAX",
+            description: "Pick an IMAX show at Cinema City Flora (or paste an upcoming film link) and optionally choose a screening date.",
             url: "https://www.cinemacity.cz/films/<slug>/<film-id>?cinema=1052&auditorium=IMAX",
-            defaultInterval: 300,
-            fields: Object.freeze([
-              Object.freeze({
-                name: "film_url",
-                label: "Cinema City film page URL",
-                type: "url",
-                placeholder: "https://www.cinemacity.cz/films/...",
-                maxLength: 500,
-                required: true,
-              }),
-              Object.freeze({
-                name: "date",
-                label: "Date (optional, YYYY-MM-DD)",
-                placeholder: "Leave blank for any upcoming date",
-                maxLength: 10,
-                required: false,
-              }),
-              Object.freeze({
-                name: "auditorium",
-                label: "Auditorium (optional)",
-                value: "IMAX",
-                placeholder: "IMAX",
-                maxLength: 64,
-                required: false,
-              }),
-            ]),
-            buildUrl: (values) => {
-              const path = extractCinemaCityFilmPath(values.film_url || "");
-              if (!path) return "";
-              return buildCinemaCityURL(path, values);
-            },
+            defaultInterval: 3600,
+            fields: Object.freeze([]),
           }),
           Object.freeze({
             id: "example-com",
@@ -1600,7 +1606,7 @@
             title: "Example.com availability",
             description: "Checks the example.com home page. HTTP 200 means the event is available.",
             url: "https://example.com/",
-            defaultInterval: 300,
+            defaultInterval: 3600,
             fields: Object.freeze([]),
           }),
         ]);
@@ -1773,7 +1779,11 @@
             filtered: [],
             draft: null,
             creating: false,
+            nameTouched: false,
+            floraState: null,
           },
+          floraShows: null,
+          floraShowsLoading: false,
         };
 
         function readThemePreference() {
@@ -2428,12 +2438,216 @@
           els.templateSelected.hidden = false;
         }
 
+        async function ensureFloraShows() {
+          if (Array.isArray(state.floraShows)) return state.floraShows;
+          if (state.floraShowsLoading) return null;
+          state.floraShowsLoading = true;
+          try {
+            const data = await api("/api/v1/providers/cinemacity/shows?cinema=1052&attr=imax");
+            state.floraShows = data && Array.isArray(data.shows) ? data.shows : [];
+            return state.floraShows;
+          } catch (_) {
+            state.floraShows = null;
+            return null;
+          } finally {
+            state.floraShowsLoading = false;
+          }
+        }
+
+        function formatShowOptionLabel(show) {
+          const suffix = [];
+          if (show.release_date) suffix.push("from " + show.release_date);
+          else if (show.release_year) suffix.push(show.release_year);
+          return show.name + (suffix.length ? " (" + suffix.join(", ") + ")" : "");
+        }
+
+        function renderFloraDetailsFields(resetFields) {
+          const saved = resetFields || !state.wizard.floraState
+            ? { showUrl: "", customUrl: "", dateMode: "any", date: "" }
+            : state.wizard.floraState;
+          state.wizard.floraState = saved;
+
+          const showGroup = document.createElement("div");
+          showGroup.className = "stack";
+
+          const showLabel = document.createElement("label");
+          showLabel.setAttribute("for", "template-field-show");
+          showLabel.textContent = "IMAX show";
+
+          const showSelect = document.createElement("select");
+          showSelect.id = "template-field-show";
+          showSelect.name = "show";
+          showSelect.required = true;
+
+          const customWrap = document.createElement("div");
+          customWrap.id = "flora-custom-wrap";
+          customWrap.hidden = saved.showUrl !== "__custom__";
+
+          const customLabel = document.createElement("label");
+          customLabel.setAttribute("for", "template-field-film_url");
+          customLabel.textContent = "Cinema City film page URL";
+
+          const customInput = document.createElement("input");
+          customInput.type = "url";
+          customInput.id = "template-field-film_url";
+          customInput.name = "film_url";
+          customInput.value = saved.customUrl || "";
+          customInput.placeholder = "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r";
+          customInput.maxLength = 500;
+          customInput.setAttribute("autocorrect", "off");
+          customInput.setAttribute("autocapitalize", "none");
+          customInput.spellcheck = false;
+          customInput.required = saved.showUrl === "__custom__";
+          customInput.addEventListener("input", () => {
+            saved.customUrl = customInput.value;
+          });
+          customWrap.append(customLabel, customInput);
+
+          const populateShows = (shows, failed) => {
+            showSelect.replaceChildren();
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.disabled = true;
+            placeholder.textContent = failed
+              ? "Programme unavailable — choose custom URL below"
+              : "Choose an IMAX show…";
+            placeholder.selected = !saved.showUrl;
+            showSelect.append(placeholder);
+
+            for (const show of (shows || [])) {
+              const opt = document.createElement("option");
+              opt.value = show.url;
+              opt.dataset.filmName = show.name;
+              opt.textContent = formatShowOptionLabel(show);
+              if (saved.showUrl === show.url) opt.selected = true;
+              showSelect.append(opt);
+            }
+
+            const customOpt = document.createElement("option");
+            customOpt.value = "__custom__";
+            customOpt.textContent = "Other / upcoming film URL (e.g. Dune: Part Three)…";
+            if (saved.showUrl === "__custom__" || (failed && !saved.showUrl)) {
+              customOpt.selected = true;
+              saved.showUrl = "__custom__";
+            }
+            showSelect.append(customOpt);
+
+            const isCustom = showSelect.value === "__custom__";
+            customWrap.hidden = !isCustom;
+            customInput.required = isCustom;
+          };
+
+          if (Array.isArray(state.floraShows)) {
+            populateShows(state.floraShows, false);
+          } else {
+            const loadingOpt = document.createElement("option");
+            loadingOpt.value = "";
+            loadingOpt.disabled = true;
+            loadingOpt.selected = true;
+            loadingOpt.textContent = "Loading scheduled IMAX shows…";
+            showSelect.append(loadingOpt);
+            ensureFloraShows().then((shows) => {
+              if (!els.wizard.open) return;
+              populateShows(shows || [], shows === null);
+            });
+          }
+
+          showSelect.addEventListener("change", () => {
+            saved.showUrl = showSelect.value;
+            const isCustom = showSelect.value === "__custom__";
+            customWrap.hidden = !isCustom;
+            customInput.required = isCustom;
+            const selectedOption = showSelect.options[showSelect.selectedIndex];
+            const filmName = selectedOption && selectedOption.dataset ? selectedOption.dataset.filmName : "";
+            if (filmName && !state.wizard.nameTouched) {
+              els.watchName.value = "Cinema City Flora — " + filmName + " IMAX";
+            } else if (isCustom && !state.wizard.nameTouched) {
+              els.watchName.value = "Cinema City Flora — IMAX";
+            }
+            if (isCustom) requestAnimationFrame(() => customInput.focus());
+          });
+
+          showGroup.append(showLabel, showSelect, customWrap);
+
+          const dateFieldset = document.createElement("fieldset");
+          dateFieldset.className = "fieldset";
+          const legend = document.createElement("legend");
+          legend.textContent = "Screening date";
+          dateFieldset.append(legend);
+
+          const anyRow = document.createElement("div");
+          anyRow.className = "radio-row";
+          const anyRadio = document.createElement("input");
+          anyRadio.type = "radio";
+          anyRadio.id = "flora-date-any";
+          anyRadio.name = "date_mode";
+          anyRadio.value = "any";
+          anyRadio.checked = saved.dateMode !== "specific";
+          const anyLabel = document.createElement("label");
+          anyLabel.setAttribute("for", "flora-date-any");
+          anyLabel.textContent = "Any upcoming date";
+          anyRow.append(anyRadio, anyLabel);
+
+          const specRow = document.createElement("div");
+          specRow.className = "radio-row";
+          const specRadio = document.createElement("input");
+          specRadio.type = "radio";
+          specRadio.id = "flora-date-specific";
+          specRadio.name = "date_mode";
+          specRadio.value = "specific";
+          specRadio.checked = saved.dateMode === "specific";
+          const specLabel = document.createElement("label");
+          specLabel.setAttribute("for", "flora-date-specific");
+          specLabel.textContent = "Pick a specific date";
+          specRow.append(specRadio, specLabel);
+
+          const datePickerWrap = document.createElement("div");
+          datePickerWrap.hidden = saved.dateMode !== "specific";
+          const dateLabel = document.createElement("label");
+          dateLabel.setAttribute("for", "template-field-date");
+          dateLabel.textContent = "Date";
+          const dateInput = document.createElement("input");
+          dateInput.type = "date";
+          dateInput.id = "template-field-date";
+          dateInput.name = "date";
+          dateInput.min = todayLocalISO();
+          dateInput.value = saved.date || "";
+          dateInput.required = saved.dateMode === "specific";
+          dateInput.addEventListener("input", () => {
+            saved.date = dateInput.value;
+          });
+          datePickerWrap.append(dateLabel, dateInput);
+
+          const syncDateMode = () => {
+            saved.dateMode = specRadio.checked ? "specific" : "any";
+            datePickerWrap.hidden = !specRadio.checked;
+            dateInput.required = specRadio.checked;
+            if (specRadio.checked && !dateInput.value) {
+              requestAnimationFrame(() => dateInput.focus());
+            }
+          };
+          anyRadio.addEventListener("change", syncDateMode);
+          specRadio.addEventListener("change", syncDateMode);
+
+          dateFieldset.append(anyRow, specRow, datePickerWrap);
+
+          els.templateFields.append(showGroup, dateFieldset);
+          els.templateNoFields.hidden = true;
+        }
+
         function renderDetailsStep(resetFields = false) {
           const template = state.wizard.template;
           if (!template) {
             els.templateSummary.replaceChildren();
             els.templateFields.replaceChildren();
             els.templateNoFields.hidden = true;
+            return;
+          }
+
+          if (template.kind === "cinemacity-flora-imax") {
+            els.templateSummary.replaceChildren(templateCard(template));
+            els.templateFields.replaceChildren();
+            renderFloraDetailsFields(resetFields);
             return;
           }
 
@@ -2450,6 +2664,7 @@
           const fields = Array.isArray(template.fields) ? template.fields : [];
           for (const field of fields) {
             const label = document.createElement("label");
+            label.setAttribute("for", "template-field-" + field.name);
             label.textContent = field.label;
 
             const input = document.createElement("input");
@@ -2463,8 +2678,7 @@
             if (field.placeholder) input.placeholder = field.placeholder;
             if (field.required) input.required = true;
 
-            label.append(input);
-            els.templateFields.append(label);
+            els.templateFields.append(label, input);
           }
 
           els.templateNoFields.hidden = fields.length > 0;
@@ -2477,6 +2691,8 @@
           state.wizard.template = template;
           state.wizard.active = -1;
           state.wizard.draft = null;
+          state.wizard.nameTouched = false;
+          state.wizard.floraState = null;
           els.templateSearch.value = template.provider;
           els.watchName.value = template.title;
           els.watchInterval.value = String(template.defaultInterval);
@@ -2527,6 +2743,53 @@
             return null;
           }
 
+          if (template.kind === "cinemacity-flora-imax") {
+            const showSelect = document.getElementById("template-field-show");
+            const showChoice = showSelect ? showSelect.value : "";
+            if (!showChoice) {
+              setStatus(els.wizardStatus, "Choose an IMAX show from the dropdown.", true);
+              if (showSelect) showSelect.focus();
+              return null;
+            }
+            let basePath = "";
+            if (showChoice === "__custom__") {
+              const customInput = document.getElementById("template-field-film_url");
+              const rawCustom = customInput ? customInput.value.trim() : "";
+              basePath = extractCinemaCityFilmPath(rawCustom);
+              if (!basePath) {
+                setStatus(els.wizardStatus, "Enter a valid Cinema City film page URL (https://www.cinemacity.cz/films/...).", true);
+                if (customInput) customInput.focus();
+                return null;
+              }
+            } else {
+              basePath = extractCinemaCityFilmPath(showChoice);
+              if (!basePath) {
+                setStatus(els.wizardStatus, "Selected show URL is not valid.", true);
+                return null;
+              }
+            }
+
+            const specRadio = document.getElementById("flora-date-specific");
+            let chosenDate = "";
+            if (specRadio && specRadio.checked) {
+              const dateInput = document.getElementById("template-field-date");
+              chosenDate = dateInput ? dateInput.value.trim() : "";
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(chosenDate)) {
+                setStatus(els.wizardStatus, "Pick a valid screening date.", true);
+                if (dateInput) dateInput.focus();
+                return null;
+              }
+            }
+
+            const url = buildCinemaCityURL(basePath, { auditorium: "IMAX", date: chosenDate });
+            return {
+              name,
+              url,
+              check_interval_seconds: interval,
+              enabled: els.watchEnabled.checked,
+            };
+          }
+
           const values = {};
           for (const field of template.fields || []) {
             const input = document.getElementById("template-field-" + field.name);
@@ -2541,7 +2804,7 @@
 
           const url = buildTemplateURL(template, values);
           if (!/^https:\/\//i.test(url)) {
-            setStatus(els.wizardStatus, "Enter a valid Cinema City film page URL (https://www.cinemacity.cz/films/...).", true);
+            setStatus(els.wizardStatus, "The template did not produce an HTTPS URL.", true);
             return null;
           }
 
@@ -2621,7 +2884,12 @@
           els.wizardNext.disabled = false;
           if (step === 2) {
             renderDetailsStep();
-            if (focus) requestAnimationFrame(() => els.watchName.focus());
+            if (focus) {
+              requestAnimationFrame(() => {
+                const showSelect = document.getElementById("template-field-show");
+                (showSelect || els.watchName).focus();
+              });
+            }
           }
           if (step === 3) {
             renderReview();
@@ -2642,6 +2910,8 @@
             filtered: [],
             draft: null,
             creating: false,
+            nameTouched: false,
+            floraState: null,
           };
           els.wizardForm.reset();
           els.templateSearch.value = "";
@@ -2654,7 +2924,7 @@
           els.templateFields.replaceChildren();
           els.templateNoFields.hidden = true;
           els.watchName.value = "";
-          els.watchInterval.value = "300";
+          els.watchInterval.value = "3600";
           els.watchEnabled.checked = true;
           els.wizardReview.replaceChildren();
           setStatus(els.wizardStatus, "");
@@ -2816,6 +3086,10 @@
 
         els.wizardBack.addEventListener("click", () => {
           if (state.wizard.step > 1) setStep(state.wizard.step - 1, true);
+        });
+
+        els.watchName.addEventListener("input", () => {
+          state.wizard.nameTouched = true;
         });
 
         els.templateSearch.addEventListener("input", () => {
@@ -3249,7 +3523,7 @@
 
         function openAdminCreateDialog() {
           els.adminCreateForm.reset();
-          els.adminCreateInterval.value = "300";
+          els.adminCreateInterval.value = "3600";
           els.adminCreateEnabled.checked = true;
           setStatus(els.adminCreateStatus, "");
           els.adminCreateOwner.replaceChildren();
