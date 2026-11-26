@@ -120,6 +120,10 @@ SMTP_PASSWORD_FILE=/home/agent/.config/droppulse/smtp.pass   # mode 0600
 SMTP_TLS=auto   # auto | starttls | implicit (port 465) | none (loopback unauth only)
 ```
 
+`SMTP_HELO` is optional: the backend greets the server with the domain of
+`SMTP_FROM`. Postfix's `reject_non_fqdn_helo_hostname` refuses Go's default
+`EHLO localhost` at `RCPT TO`, so the greeting name matters even on loopback.
+
 Credentials are never sent without TLS (`SMTP_TLS=none` is rejected for non-loopback hosts or when `SMTP_USERNAME` is set). When `SMTP_FROM` is unset, the backend logs `email notifications are disabled` and the app reports them as unavailable. Sign-in and the API are unaffected.
 
 The frontend is read at service start. After a `git pull` that changes

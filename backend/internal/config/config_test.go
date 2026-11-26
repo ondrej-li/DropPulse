@@ -333,11 +333,12 @@ func TestLoadSMTPConfig(t *testing.T) {
 	env["SMTP_HOST"] = "smtp.example.com"
 	env["SMTP_USERNAME"] = "mailer"
 	env["SMTP_PASSWORD_FILE"] = pwFile
+	env["SMTP_HELO"] = "dp.example"
 	cfg, err := LoadFrom(envLookup(env))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.SMTPHost != "smtp.example.com" || cfg.SMTPPort != "587" || cfg.SMTPUsername != "mailer" || cfg.SMTPPassword != "s3cr3t" || cfg.SMTPTLS != "auto" {
+	if cfg.SMTPHost != "smtp.example.com" || cfg.SMTPPort != "587" || cfg.SMTPUsername != "mailer" || cfg.SMTPPassword != "s3cr3t" || cfg.SMTPTLS != "auto" || cfg.SMTPHelo != "dp.example" {
 		t.Fatalf("SMTP config = %+v", cfg)
 	}
 }
@@ -374,6 +375,18 @@ func TestLoadSMTPValidation(t *testing.T) {
 		{
 			name: "invalid tls mode",
 			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com", "SMTP_TLS": "bogus"},
+		},
+		{
+			name: "helo without host",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HELO": "mail.example.com"},
+		},
+		{
+			name: "helo is not fully qualified",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com", "SMTP_HELO": "localhost"},
+		},
+		{
+			name: "helo contains a space",
+			env:  map[string]string{"SMTP_FROM": "a@example.com", "SMTP_HOST": "smtp.example.com", "SMTP_HELO": "mail example.com"},
 		},
 	}
 	for _, tc := range cases {

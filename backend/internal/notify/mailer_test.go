@@ -228,6 +228,7 @@ func TestSendSMTPLoopback(t *testing.T) {
 	defer ln.Close()
 
 	received := make(chan string, 1)
+	greeting := make(chan string, 1)
 	go func() {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -260,6 +261,7 @@ func TestSendSMTPLoopback(t *testing.T) {
 			upper := strings.ToUpper(strings.TrimSpace(line))
 			switch {
 			case strings.HasPrefix(upper, "EHLO"), strings.HasPrefix(upper, "HELO"):
+				greeting <- strings.TrimSpace(line)
 				write("250 localhost")
 			case strings.HasPrefix(upper, "MAIL FROM:"):
 				write("250 OK")
@@ -300,5 +302,42 @@ func TestSendSMTPLoopback(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("timed out waiting for SMTP message")
+	}
+	select {
+	case line := <-greeting:
+		if line != "EHLO example.com" {
+			t.Fatalf("greeting = %q, want the sender domain so strict MTAs accept it", line)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for the EHLO line")
+	}
+}
+
+func TestNewSMTPGreetingName(t *testing.T) {
+	base := SMTPConfig{Host: "127.0.0.1", Port: "25", TLSMode: "none"}
+	m, err := NewSMTP(base, "alerts@ondralinek.cz", "", time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.smtp.Helo != "ondralinek.cz" {
+		t.Fatalf("default HELO = %q, want the sender domain", m.smtp.Helo)
+	}
+
+	withHelo := base
+	withHelo.Helo = " mail.dp.example "
+	m, err = NewSMTP(withHelo, "alerts@ondralinek.cz", "", time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.smtp.Helo != "mail.dp.example" {
+		t.Fatalf("explicit HELO = %q", m.smtp.Helo)
+	}
+
+	for _, bad := range []string{"localhost", "mail dp.example", ".example.com", "example.com."} {
+		cfg := base
+		cfg.Helo = bad
+		if _, err := NewSMTP(cfg, "alerts@ondralinek.cz", "", time.Second); err == nil {
+			t.Errorf("HELO %q must be rejected", bad)
+		}
 	}
 }

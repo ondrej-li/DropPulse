@@ -32,6 +32,7 @@ type SMTPConfig struct {
 	Username string
 	Password string
 	TLSMode  string // "auto", "starttls", "implicit", or "none"
+	Helo     string // EHLO name; defaults to the sender domain
 }
 
 // Mailer sends availability and challenge-pause emails. A non-empty to address
@@ -112,6 +113,13 @@ func NewSMTP(cfg SMTPConfig, from, to string, timeout time.Duration) (*Mailer, e
 		if cfg.Username != "" {
 			return nil, errors.New("SMTP credentials require TLS")
 		}
+	}
+	cfg.Helo = strings.TrimSpace(cfg.Helo)
+	if cfg.Helo == "" {
+		cfg.Helo = senderDomain(from)
+	}
+	if err := validateHeloName(cfg.Helo); err != nil {
+		return nil, fmt.Errorf("SMTP HELO name: %w", err)
 	}
 	if timeout <= 0 {
 		timeout = 10 * time.Second
@@ -213,6 +221,12 @@ func (m *Mailer) sendSMTP(ctx context.Context, recipient string, message []byte)
 	}
 	defer func() { _ = client.Close() }()
 
+	// Go's client says EHLO localhost by default, which a receiving MTA with
+	// reject_non_fqdn_helo_hostname refuses at RCPT TO.
+	if err := client.Hello(cfg.Helo); err != nil {
+		return fmt.Errorf("SMTP EHLO %s: %w", cfg.Helo, err)
+	}
+
 	if mode == "starttls" {
 		ok, _ := client.Extension("STARTTLS")
 		if !ok {
@@ -271,6 +285,30 @@ func isLoopbackHost(host string) bool {
 	}
 	ip, err := netip.ParseAddr(strings.Trim(host, "[]"))
 	return err == nil && ip.IsLoopback()
+}
+
+// senderDomain is the domain part of a validated bare address; it is a
+// fully-qualified name whenever the sender is one, which makes it a usable
+// EHLO name without extra configuration.
+func senderDomain(from string) string {
+	at := strings.LastIndex(from, "@")
+	if at < 0 {
+		return ""
+	}
+	return strings.Trim(strings.TrimSpace(from[at+1:]), "[]")
+}
+
+func validateHeloName(name string) error {
+	if name == "" || strings.ContainsAny(name, " \t\r\n") {
+		return errors.New("must be a fully-qualified hostname without spaces")
+	}
+	if !strings.Contains(name, ".") || strings.HasPrefix(name, ".") || strings.HasSuffix(name, ".") {
+		return errors.New("must be a fully-qualified hostname, for example mail.example.com")
+	}
+	if len(name) > 253 {
+		return errors.New("must be 253 bytes or fewer")
+	}
+	return nil
 }
 
 // recipient prefers the fixed single-user address and falls back to the
