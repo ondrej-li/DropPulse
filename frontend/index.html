@@ -451,7 +451,8 @@
 
       input[type="text"],
       input[type="url"],
-      input[type="number"] {
+      input[type="number"],
+      select {
         width: 100%;
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -465,7 +466,8 @@
 
       input[type="text"]:focus,
       input[type="url"]:focus,
-      input[type="number"]:focus {
+      input[type="number"]:focus,
+      select:focus {
         outline: none;
         border-color: var(--accent);
         box-shadow: 0 0 0 3px var(--accent-soft);
@@ -663,8 +665,103 @@
       .pill.on { background: var(--on-bg); color: var(--on-text); }
       .pill.off { background: var(--off-bg); color: var(--off-text); }
       .pill.new { background: var(--new-bg); color: var(--new-text); }
+      .pill.danger { background: var(--danger-bg); color: var(--danger); }
       .pill.paused { margin-left: 5px; background: transparent; border: 1px solid var(--line); color: var(--muted); }
       .pill.paused::before { display: none; }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .kpi-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--bg);
+        padding: 12px 14px;
+      }
+
+      .kpi-label {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .kpi-value {
+        margin-top: 4px;
+        font-size: 1.35rem;
+        font-weight: 760;
+        letter-spacing: -0.02em;
+      }
+
+      .kpi-sub {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .admin-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .admin-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .admin-search {
+        width: min(280px, 100%) !important;
+        padding: 7px 10px !important;
+        font-size: 0.84rem !important;
+      }
+
+      .probe-box {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--bg);
+        font-size: 0.82rem;
+      }
+
+      .probe-box pre {
+        margin: 6px 0 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.76rem;
+      }
+
+      .dialog-wide {
+        width: min(820px, calc(100vw - 32px));
+      }
+
+      .divider {
+        margin: 18px 0;
+        border: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .mini-table {
+        min-width: 0;
+        font-size: 0.8rem;
+      }
+
+      .mini-table td,
+      .mini-table th {
+        padding: 8px 6px;
+      }
 
       .actions {
         display: flex;
@@ -1029,6 +1126,10 @@
           </div>
         </div>
         <div class="header-tools">
+          <div id="view-switch" class="theme-switch" role="group" aria-label="Workspace view" hidden>
+            <button type="button" class="theme-choice" data-view-choice="user" aria-pressed="true">My watches</button>
+            <button type="button" class="theme-choice" data-view-choice="admin" aria-pressed="false">Admin</button>
+          </div>
           <div class="theme-switch" role="group" aria-label="Colour theme">
             <button type="button" class="theme-choice" data-theme-choice="auto" aria-pressed="true">Automatic</button>
             <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">Light</button>
@@ -1082,6 +1183,116 @@
             </thead>
             <tbody id="events"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section id="admin-panel" class="card" aria-labelledby="admin-title" hidden>
+        <div class="section-head">
+          <div>
+            <h2 id="admin-title">Admin console</h2>
+            <p id="admin-summary">Manage all watchers, users, manual fetches, and logs.</p>
+          </div>
+          <div class="actions">
+            <button type="button" id="admin-refresh" class="secondary btn-sm">Refresh</button>
+            <button type="button" id="admin-add-watcher" class="btn-sm">+ Add watcher</button>
+          </div>
+        </div>
+
+        <div id="admin-kpis" class="kpi-grid"></div>
+
+        <div class="admin-bar">
+          <div class="theme-switch" role="tablist" aria-label="Admin sections">
+            <button type="button" class="theme-choice" data-admin-tab="watchers" aria-pressed="true">Watchers</button>
+            <button type="button" class="theme-choice" data-admin-tab="users" aria-pressed="false">Users</button>
+            <button type="button" class="theme-choice" data-admin-tab="checks" aria-pressed="false">Check logs</button>
+            <button type="button" class="theme-choice" data-admin-tab="audit" aria-pressed="false">Audit log</button>
+          </div>
+          <div id="admin-watcher-filters" class="admin-filters">
+            <input id="admin-search" class="admin-search" type="text" placeholder="Filter by name, URL or owner…">
+            <div class="theme-switch" role="group" aria-label="Watcher state filter">
+              <button type="button" class="theme-choice" data-admin-filter="all" aria-pressed="true">All</button>
+              <button type="button" class="theme-choice" data-admin-filter="on" aria-pressed="false">ON</button>
+              <button type="button" class="theme-choice" data-admin-filter="backoff" aria-pressed="false">Backoff</button>
+              <button type="button" class="theme-choice" data-admin-filter="blocked" aria-pressed="false">Blocked</button>
+              <button type="button" class="theme-choice" data-admin-filter="paused" aria-pressed="false">Paused</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="admin-tab-watchers">
+          <p id="admin-watchers-empty" class="empty" hidden>No watchers match this filter.</p>
+          <div id="admin-watchers-wrap" class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Status</th>
+                  <th scope="col">Watcher &amp; Owner</th>
+                  <th scope="col">URL</th>
+                  <th scope="col">Schedule</th>
+                  <th scope="col">Stats</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-watchers-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="admin-tab-users" hidden>
+          <p id="admin-users-empty" class="empty" hidden>No users found.</p>
+          <div id="admin-users-wrap" class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Watches</th>
+                  <th scope="col">Sessions</th>
+                  <th scope="col">Last login</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="admin-tab-checks" hidden>
+          <p id="admin-checks-empty" class="empty" hidden>No check logs recorded yet.</p>
+          <div id="admin-checks-wrap" class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">Watcher</th>
+                  <th scope="col">Trigger</th>
+                  <th scope="col">Outcome</th>
+                  <th scope="col">Detail / Error</th>
+                  <th scope="col">Duration</th>
+                </tr>
+              </thead>
+              <tbody id="admin-checks-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="admin-tab-audit" hidden>
+          <p id="admin-audit-empty" class="empty" hidden>No admin actions logged yet.</p>
+          <div id="admin-audit-wrap" class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">Actor</th>
+                  <th scope="col">Action</th>
+                  <th scope="col">Target</th>
+                  <th scope="col">Details</th>
+                </tr>
+              </thead>
+              <tbody id="admin-audit-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -1190,6 +1401,101 @@
         <div class="dialog-actions">
           <button type="button" id="wizard-back" class="secondary" hidden>Back</button>
           <button type="submit" id="wizard-next" disabled>Continue</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="admin-create-dialog" class="dialog" aria-labelledby="admin-create-title">
+      <div class="dialog-head">
+        <h2 id="admin-create-title">Add watcher (Admin)</h2>
+        <button type="button" class="icon-button" data-close-dialog="admin-create-dialog" aria-label="Close add watcher dialog">×</button>
+      </div>
+      <form id="admin-create-form" novalidate>
+        <div class="dialog-body">
+          <div class="stack">
+            <label>Owner account
+              <select id="admin-create-owner"></select>
+            </label>
+            <label>Name
+              <input id="admin-create-name" type="text" maxlength="120" required placeholder="Cinema City Flora — IMAX">
+            </label>
+            <label>HTTPS URL (any valid target or Cinema City film URL)
+              <input id="admin-create-url" type="url" required placeholder="https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX">
+            </label>
+            <label>Check every (seconds)
+              <input id="admin-create-interval" type="number" min="60" max="86400" step="1" value="300" required>
+            </label>
+            <label class="check">
+              <input id="admin-create-enabled" type="checkbox" checked> Watch is active
+            </label>
+          </div>
+          <p id="admin-create-status" class="form-status muted" role="status"></p>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" data-close-dialog="admin-create-dialog">Cancel</button>
+          <button type="submit" id="admin-create-submit">Create watcher</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="admin-inspect-dialog" class="dialog dialog-wide" aria-labelledby="admin-inspect-title">
+      <div class="dialog-head">
+        <div>
+          <p class="step-label" id="admin-inspect-owner"></p>
+          <h2 id="admin-inspect-title">Watcher details</h2>
+        </div>
+        <button type="button" class="icon-button" data-close-dialog="admin-inspect-dialog" aria-label="Close watcher inspector">×</button>
+      </div>
+      <form id="admin-inspect-form" novalidate>
+        <div class="dialog-body">
+          <div class="actions">
+            <button type="button" id="admin-probe-btn" class="secondary btn-sm">Dry-run probe</button>
+            <button type="button" id="admin-fetch-btn" class="btn-sm">Fetch now (apply)</button>
+            <button type="button" id="admin-reset-backoff-btn" class="secondary btn-sm">Reset backoff &amp; resume</button>
+            <button type="button" id="admin-delete-watcher-btn" class="danger btn-sm">Delete watcher</button>
+          </div>
+          <div id="admin-probe-output" class="probe-box" hidden></div>
+
+          <hr class="divider">
+
+          <div class="stack">
+            <label>Name
+              <input id="admin-edit-name" type="text" maxlength="120" required>
+            </label>
+            <label>HTTPS URL
+              <input id="admin-edit-url" type="url" required>
+            </label>
+            <label>Check every (seconds)
+              <input id="admin-edit-interval" type="number" min="60" max="86400" step="1" required>
+            </label>
+            <label class="check">
+              <input id="admin-edit-enabled" type="checkbox"> Watch is active
+            </label>
+          </div>
+          <p id="admin-inspect-status" class="form-status muted" role="status"></p>
+
+          <hr class="divider">
+
+          <h3 class="small">Recent check history</h3>
+          <p id="admin-history-empty" class="muted small" hidden>No checks logged for this watcher yet.</p>
+          <div id="admin-history-wrap" class="table-wrap">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">Trigger</th>
+                  <th scope="col">Outcome</th>
+                  <th scope="col">Detail / Error</th>
+                  <th scope="col">ms</th>
+                </tr>
+              </thead>
+              <tbody id="admin-history-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" data-close-dialog="admin-inspect-dialog">Close</button>
+          <button type="submit" id="admin-edit-submit">Save changes</button>
         </div>
       </form>
     </dialog>
@@ -1386,6 +1692,60 @@
           watchEnabled: document.getElementById("watch-enabled"),
           wizardReview: document.getElementById("wizard-review"),
           emailChannelNote: document.getElementById("email-channel-note"),
+
+          viewSwitch: document.getElementById("view-switch"),
+          adminPanel: document.getElementById("admin-panel"),
+          adminSummary: document.getElementById("admin-summary"),
+          adminKpis: document.getElementById("admin-kpis"),
+          adminRefresh: document.getElementById("admin-refresh"),
+          adminAddWatcher: document.getElementById("admin-add-watcher"),
+          adminWatcherFilters: document.getElementById("admin-watcher-filters"),
+          adminSearch: document.getElementById("admin-search"),
+          adminTabWatchers: document.getElementById("admin-tab-watchers"),
+          adminTabUsers: document.getElementById("admin-tab-users"),
+          adminTabChecks: document.getElementById("admin-tab-checks"),
+          adminTabAudit: document.getElementById("admin-tab-audit"),
+          adminWatchersEmpty: document.getElementById("admin-watchers-empty"),
+          adminWatchersWrap: document.getElementById("admin-watchers-wrap"),
+          adminWatchersBody: document.getElementById("admin-watchers-body"),
+          adminUsersEmpty: document.getElementById("admin-users-empty"),
+          adminUsersWrap: document.getElementById("admin-users-wrap"),
+          adminUsersBody: document.getElementById("admin-users-body"),
+          adminChecksEmpty: document.getElementById("admin-checks-empty"),
+          adminChecksWrap: document.getElementById("admin-checks-wrap"),
+          adminChecksBody: document.getElementById("admin-checks-body"),
+          adminAuditEmpty: document.getElementById("admin-audit-empty"),
+          adminAuditWrap: document.getElementById("admin-audit-wrap"),
+          adminAuditBody: document.getElementById("admin-audit-body"),
+
+          adminCreateDialog: document.getElementById("admin-create-dialog"),
+          adminCreateForm: document.getElementById("admin-create-form"),
+          adminCreateOwner: document.getElementById("admin-create-owner"),
+          adminCreateName: document.getElementById("admin-create-name"),
+          adminCreateUrl: document.getElementById("admin-create-url"),
+          adminCreateInterval: document.getElementById("admin-create-interval"),
+          adminCreateEnabled: document.getElementById("admin-create-enabled"),
+          adminCreateStatus: document.getElementById("admin-create-status"),
+          adminCreateSubmit: document.getElementById("admin-create-submit"),
+
+          adminInspectDialog: document.getElementById("admin-inspect-dialog"),
+          adminInspectForm: document.getElementById("admin-inspect-form"),
+          adminInspectOwner: document.getElementById("admin-inspect-owner"),
+          adminInspectTitle: document.getElementById("admin-inspect-title"),
+          adminProbeBtn: document.getElementById("admin-probe-btn"),
+          adminFetchBtn: document.getElementById("admin-fetch-btn"),
+          adminResetBackoffBtn: document.getElementById("admin-reset-backoff-btn"),
+          adminDeleteWatcherBtn: document.getElementById("admin-delete-watcher-btn"),
+          adminProbeOutput: document.getElementById("admin-probe-output"),
+          adminEditName: document.getElementById("admin-edit-name"),
+          adminEditUrl: document.getElementById("admin-edit-url"),
+          adminEditInterval: document.getElementById("admin-edit-interval"),
+          adminEditEnabled: document.getElementById("admin-edit-enabled"),
+          adminInspectStatus: document.getElementById("admin-inspect-status"),
+          adminEditSubmit: document.getElementById("admin-edit-submit"),
+          adminHistoryEmpty: document.getElementById("admin-history-empty"),
+          adminHistoryWrap: document.getElementById("admin-history-wrap"),
+          adminHistoryBody: document.getElementById("admin-history-body"),
         };
 
         const state = {
@@ -1394,6 +1754,18 @@
           authenticated: false,
           editing: null,
           loading: false,
+          view: "user",
+          admin: {
+            tab: "watchers",
+            filter: "all",
+            overview: null,
+            watchers: [],
+            users: [],
+            checks: [],
+            audit: [],
+            inspectingId: null,
+            inspectChecks: [],
+          },
           wizard: {
             step: 1,
             template: null,
@@ -1534,11 +1906,16 @@
           state.me = null;
           state.events = [];
           state.editing = null;
+          state.view = "user";
           if (els.editDialog.open) els.editDialog.close();
           if (els.wizard.open) els.wizard.close();
+          if (els.adminCreateDialog.open) els.adminCreateDialog.close();
+          if (els.adminInspectDialog.open) els.adminInspectDialog.close();
 
           els.landing.hidden = false;
           els.eventsPanel.hidden = true;
+          els.adminPanel.hidden = true;
+          els.viewSwitch.hidden = true;
           els.account.hidden = true;
           els.modeBadge.hidden = false;
           els.modeBadge.textContent = "private preview";
@@ -1665,6 +2042,9 @@
             const list = await api("/api/v1/events");
             state.events = list && Array.isArray(list.events) ? list.events : [];
             render();
+            if (isAdminUser() && state.view === "admin") {
+              await loadAdmin();
+            }
           } catch (err) {
             if (err.status === 401) {
               const isError = Boolean(authErrorMessage);
@@ -1689,14 +2069,38 @@
           }
         }
 
+        function isAdminUser() {
+          return Boolean(state.me && state.me.user && state.me.user.role === "admin");
+        }
+
+        function setView(view) {
+          if (view === "admin" && !isAdminUser()) view = "user";
+          state.view = view;
+          els.eventsPanel.hidden = view !== "user";
+          els.adminPanel.hidden = view !== "admin";
+          for (const button of document.querySelectorAll("[data-view-choice]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.viewChoice === view));
+          }
+          if (view === "admin") {
+            loadAdmin();
+          }
+        }
+
         function showDashboard() {
           const me = state.me;
           if (!me) return;
           const local = Boolean(me.single_user);
+          const admin = isAdminUser();
+          if (!admin && state.view === "admin") state.view = "user";
           els.landing.hidden = true;
-          els.eventsPanel.hidden = false;
+          els.viewSwitch.hidden = !admin;
+          els.eventsPanel.hidden = state.view !== "user";
+          els.adminPanel.hidden = !admin || state.view !== "admin";
+          for (const button of document.querySelectorAll("[data-view-choice]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.viewChoice === state.view));
+          }
           els.modeBadge.hidden = false;
-          els.modeBadge.textContent = local ? "localhost only" : "signed in";
+          els.modeBadge.textContent = local ? "localhost only" : (admin ? "admin" : "signed in");
           els.subtitle.textContent = local
             ? "Ticket availability, single-user proof of concept."
             : "Ticket availability, without the refresh.";
@@ -2512,6 +2916,625 @@
         });
 
         els.signOut.addEventListener("click", signOut);
+
+        // --- Admin console ---
+
+        async function loadAdmin() {
+          if (!isAdminUser()) return;
+          try {
+            const [ov, watchersData, usersData, checksData, auditData] = await Promise.all([
+              api("/api/v1/admin/overview"),
+              api("/api/v1/admin/watchers"),
+              api("/api/v1/admin/users"),
+              api("/api/v1/admin/logs/checks?limit=100"),
+              api("/api/v1/admin/logs/audit?limit=100"),
+            ]);
+            state.admin.overview = ov;
+            state.admin.watchers = watchersData && Array.isArray(watchersData.watchers) ? watchersData.watchers : [];
+            state.admin.users = usersData && Array.isArray(usersData.users) ? usersData.users : [];
+            state.admin.checks = checksData && Array.isArray(checksData.checks) ? checksData.checks : [];
+            state.admin.audit = auditData && Array.isArray(auditData.entries) ? auditData.entries : [];
+            renderAdmin();
+          } catch (err) {
+            if (!authExpired(err)) showNotice(err.message, true);
+          }
+        }
+
+        function setAdminTab(tab) {
+          state.admin.tab = tab;
+          els.adminTabWatchers.hidden = tab !== "watchers";
+          els.adminTabUsers.hidden = tab !== "users";
+          els.adminTabChecks.hidden = tab !== "checks";
+          els.adminTabAudit.hidden = tab !== "audit";
+          els.adminWatcherFilters.hidden = tab !== "watchers";
+          for (const btn of document.querySelectorAll("[data-admin-tab]")) {
+            btn.setAttribute("aria-pressed", String(btn.dataset.adminTab === tab));
+          }
+        }
+
+        function renderAdmin() {
+          renderAdminKpis();
+          renderAdminWatchers();
+          renderAdminUsers();
+          renderAdminChecks();
+          renderAdminAudit();
+        }
+
+        function kpiCard(label, value, sub) {
+          const card = document.createElement("div");
+          card.className = "kpi-card";
+          const l = document.createElement("div");
+          l.className = "kpi-label";
+          l.textContent = label;
+          const v = document.createElement("div");
+          v.className = "kpi-value";
+          v.textContent = String(value);
+          const s = document.createElement("div");
+          s.className = "kpi-sub";
+          s.textContent = sub;
+          card.append(l, v, s);
+          return card;
+        }
+
+        function renderAdminKpis() {
+          const ov = state.admin.overview;
+          if (!ov) return;
+          els.adminKpis.replaceChildren(
+            kpiCard("Watchers", ov.enabled_watchers + " / " + ov.total_watchers, ov.on_watchers + " ON"),
+            kpiCard("Backoff / Blocked", ov.backing_off_watchers + " / " + ov.blocked_watchers, ov.auto_paused_watchers + " auto-paused"),
+            kpiCard("Checks (24h)", ov.checks_last_24h, ov.errors_last_24h + " err · " + ov.blocks_last_24h + " blocked"),
+            kpiCard("Users", ov.active_users + " / " + ov.total_users, ov.suspended_users + " banned"),
+            kpiCard("Mail", ov.mail_transport || "disabled", "notification transport"),
+          );
+        }
+
+        function filteredAdminWatchers() {
+          const q = (els.adminSearch.value || "").trim().toLowerCase();
+          const filter = state.admin.filter;
+          return state.admin.watchers.filter((w) => {
+            if (filter === "on" && !w.is_on) return false;
+            if (filter === "backoff" && !(w.enabled && w.consecutive_failures > 0)) return false;
+            if (filter === "blocked" && w.last_outcome !== "blocked" && !w.paused_reason) return false;
+            if (filter === "paused" && w.enabled) return false;
+            if (!q) return true;
+            const hay = [w.name, w.url, w.owner_email, w.owner_display_name, w.owner_username].join(" ").toLowerCase();
+            return hay.includes(q);
+          });
+        }
+
+        function renderAdminWatchers() {
+          const list = filteredAdminWatchers();
+          els.adminWatchersEmpty.hidden = list.length > 0;
+          els.adminWatchersWrap.hidden = list.length === 0;
+          els.adminWatchersBody.replaceChildren(...list.map(adminWatcherRow));
+        }
+
+        function adminWatcherRow(w) {
+          const row = document.createElement("tr");
+
+          const statusCell = document.createElement("td");
+          const known = Boolean(w.last_checked_at);
+          const pill = document.createElement("span");
+          pill.className = "pill " + (w.is_on ? "on" : known ? "off" : "new");
+          pill.textContent = w.is_on ? "ON" : known ? "OFF" : "NEW";
+          statusCell.append(pill);
+          if (!w.enabled) {
+            const p = document.createElement("span");
+            p.className = "pill paused";
+            p.textContent = w.paused_reason ? "AUTO-PAUSED" : "PAUSED";
+            statusCell.append(p);
+          } else if (w.last_outcome === "blocked") {
+            const b = document.createElement("span");
+            b.className = "pill danger";
+            b.textContent = "BLOCKED";
+            statusCell.append(b);
+          }
+          row.append(statusCell);
+
+          const nameCell = document.createElement("td");
+          const title = document.createElement("div");
+          title.className = "name";
+          title.textContent = w.name;
+          const owner = document.createElement("div");
+          owner.className = "meta";
+          owner.textContent = (w.owner_email || w.owner_username || w.owner_id) + " (" + w.owner_role + ")";
+          nameCell.append(title, owner);
+          if (w.last_error) {
+            const e = document.createElement("div");
+            e.className = "error-text";
+            e.textContent = w.last_error;
+            nameCell.append(e);
+          } else if (w.last_detail) {
+            const d = document.createElement("div");
+            d.className = "meta";
+            d.textContent = w.last_detail;
+            nameCell.append(d);
+          }
+          row.append(nameCell);
+
+          const urlCell = document.createElement("td");
+          const u = document.createElement("div");
+          u.className = "url";
+          u.textContent = w.url;
+          u.title = w.url;
+          urlCell.append(u);
+          row.append(urlCell);
+
+          const schedCell = document.createElement("td");
+          const iv = document.createElement("div");
+          iv.textContent = every(w.check_interval_seconds);
+          schedCell.append(iv);
+          if (w.next_check_at && w.enabled) {
+            const nx = document.createElement("div");
+            nx.className = "meta";
+            nx.textContent = (w.consecutive_failures > 0 ? "Backoff · " : "Next ") + relative(w.next_check_at);
+            nx.title = absolute(w.next_check_at);
+            schedCell.append(nx);
+          }
+          if (w.last_checked_at) {
+            const lc = document.createElement("div");
+            lc.className = "meta";
+            lc.textContent = "Last " + relative(w.last_checked_at);
+            lc.title = absolute(w.last_checked_at);
+            schedCell.append(lc);
+          }
+          row.append(schedCell);
+
+          const statsCell = document.createElement("td");
+          const counts = document.createElement("div");
+          counts.textContent = w.check_count + " checks";
+          const errs = document.createElement("div");
+          errs.className = w.error_count > 0 ? "meta" : "meta";
+          errs.textContent = w.error_count + " err" + (w.last_duration_ms != null ? " · " + w.last_duration_ms + " ms" : "");
+          statsCell.append(counts, errs);
+          row.append(statsCell);
+
+          const actCell = document.createElement("td");
+          const acts = document.createElement("div");
+          acts.className = "actions";
+          acts.append(
+            actionButton("Fetch now", "admin-fetch", w.id, "secondary"),
+            actionButton("Inspect", "admin-inspect", w.id, "secondary"),
+          );
+          actCell.append(acts);
+          row.append(actCell);
+
+          return row;
+        }
+
+        function renderAdminUsers() {
+          const users = state.admin.users;
+          els.adminUsersEmpty.hidden = users.length > 0;
+          els.adminUsersWrap.hidden = users.length === 0;
+          els.adminUsersBody.replaceChildren(...users.map(adminUserRow));
+        }
+
+        function adminUserRow(u) {
+          const row = document.createElement("tr");
+
+          const userCell = document.createElement("td");
+          const name = document.createElement("div");
+          name.className = "name";
+          name.textContent = u.email || u.display_name || u.username || u.id;
+          const sub = document.createElement("div");
+          sub.className = "meta";
+          sub.textContent = [u.display_name, u.username ? "@" + u.username : "", u.email_verified ? "verified" : ""].filter(Boolean).join(" · ") || u.id;
+          userCell.append(name, sub);
+          row.append(userCell);
+
+          const roleCell = document.createElement("td");
+          const rolePill = document.createElement("span");
+          rolePill.className = "pill " + (u.role === "admin" ? "on" : "off");
+          rolePill.textContent = u.role.toUpperCase();
+          roleCell.append(rolePill);
+          row.append(roleCell);
+
+          const statusCell = document.createElement("td");
+          const stPill = document.createElement("span");
+          stPill.className = "pill " + (u.status === "active" ? "on" : "danger");
+          stPill.textContent = u.status === "suspended" ? "BANNED" : u.status.toUpperCase();
+          statusCell.append(stPill);
+          row.append(statusCell);
+
+          const watchCell = document.createElement("td");
+          watchCell.textContent = u.active_watches + " / " + u.total_watches;
+          row.append(watchCell);
+
+          const sessCell = document.createElement("td");
+          sessCell.textContent = String(u.active_sessions);
+          row.append(sessCell);
+
+          const loginCell = document.createElement("td");
+          loginCell.textContent = u.last_login_at ? relative(u.last_login_at) : "never";
+          if (u.last_login_at) loginCell.title = absolute(u.last_login_at);
+          row.append(loginCell);
+
+          const actCell = document.createElement("td");
+          const acts = document.createElement("div");
+          acts.className = "actions";
+          if (u.role === "admin") {
+            const tag = document.createElement("span");
+            tag.className = "meta";
+            tag.textContent = "Protected";
+            acts.append(tag);
+          } else {
+            if (u.status === "suspended") {
+              acts.append(actionButton("Unban", "admin-unban", u.id, "secondary"));
+            } else {
+              acts.append(actionButton("Ban", "admin-ban", u.id, "secondary"));
+            }
+            acts.append(actionButton("Remove", "admin-remove-user", u.id, "danger"));
+          }
+          actCell.append(acts);
+          row.append(actCell);
+
+          return row;
+        }
+
+        function renderAdminChecks() {
+          const list = state.admin.checks;
+          els.adminChecksEmpty.hidden = list.length > 0;
+          els.adminChecksWrap.hidden = list.length === 0;
+          els.adminChecksBody.replaceChildren(...list.map((c) => checkLogRow(c, true)));
+        }
+
+        function checkLogRow(c, includeWatcher) {
+          const row = document.createElement("tr");
+          const t = document.createElement("td");
+          t.textContent = relative(c.checked_at);
+          t.title = absolute(c.checked_at);
+          row.append(t);
+
+          if (includeWatcher) {
+            const w = document.createElement("td");
+            w.textContent = c.event_name || c.event_id;
+            w.title = c.event_url || "";
+            row.append(w);
+          }
+
+          const trig = document.createElement("td");
+          trig.textContent = c.trigger;
+          row.append(trig);
+
+          const out = document.createElement("td");
+          const pill = document.createElement("span");
+          pill.className = "pill " + (c.outcome === "ok" ? (c.is_on ? "on" : "off") : "danger");
+          pill.textContent = c.outcome === "ok" ? (c.is_on ? "OK · ON" : "OK · OFF") : c.outcome.toUpperCase();
+          out.append(pill);
+          row.append(out);
+
+          const det = document.createElement("td");
+          if (c.error) {
+            det.className = "error-text";
+            det.textContent = c.error;
+          } else if (c.detail) {
+            det.textContent = c.detail;
+          } else if (c.status_code != null) {
+            det.textContent = "HTTP " + c.status_code;
+          } else {
+            det.className = "muted";
+            det.textContent = "—";
+          }
+          row.append(det);
+
+          const dur = document.createElement("td");
+          dur.textContent = c.duration_ms + " ms";
+          row.append(dur);
+          return row;
+        }
+
+        function renderAdminAudit() {
+          const list = state.admin.audit;
+          els.adminAuditEmpty.hidden = list.length > 0;
+          els.adminAuditWrap.hidden = list.length === 0;
+          els.adminAuditBody.replaceChildren(...list.map((a) => {
+            const row = document.createElement("tr");
+            const t = document.createElement("td");
+            t.textContent = relative(a.created_at);
+            t.title = absolute(a.created_at);
+            const actor = document.createElement("td");
+            actor.textContent = a.actor_email || a.actor_name || a.actor_id || "system";
+            const action = document.createElement("td");
+            action.textContent = a.action;
+            const target = document.createElement("td");
+            target.className = "meta";
+            target.textContent = a.target_id || "—";
+            const meta = document.createElement("td");
+            meta.className = "meta";
+            meta.textContent = a.metadata ? JSON.stringify(a.metadata) : "—";
+            row.append(t, actor, action, target, meta);
+            return row;
+          }));
+        }
+
+        function openAdminCreateDialog() {
+          els.adminCreateForm.reset();
+          els.adminCreateInterval.value = "300";
+          els.adminCreateEnabled.checked = true;
+          setStatus(els.adminCreateStatus, "");
+          els.adminCreateOwner.replaceChildren();
+          const currentId = state.me && state.me.user ? state.me.user.id : "";
+          const users = state.admin.users.length ? state.admin.users : (state.me && state.me.user ? [state.me.user] : []);
+          for (const u of users) {
+            const opt = document.createElement("option");
+            opt.value = u.id;
+            opt.textContent = (u.email || u.username || u.display_name || u.id) + " (" + u.role + ")";
+            if (u.id === currentId) opt.selected = true;
+            els.adminCreateOwner.append(opt);
+          }
+          els.adminCreateDialog.showModal();
+          requestAnimationFrame(() => els.adminCreateName.focus());
+        }
+
+        async function openAdminInspect(id) {
+          state.admin.inspectingId = id;
+          els.adminProbeOutput.hidden = true;
+          els.adminProbeOutput.replaceChildren();
+          setStatus(els.adminInspectStatus, "Loading watcher details…");
+          els.adminInspectDialog.showModal();
+          try {
+            const data = await api("/api/v1/admin/watchers/" + encodeURIComponent(id) + "?limit=50");
+            const w = data.watcher;
+            state.admin.inspectChecks = Array.isArray(data.checks) ? data.checks : [];
+            els.adminInspectOwner.textContent = "Owner: " + (w.owner_email || w.owner_username || w.owner_id) + " (" + w.owner_role + ")";
+            els.adminInspectTitle.textContent = w.name;
+            els.adminEditName.value = w.name;
+            els.adminEditUrl.value = w.url;
+            els.adminEditInterval.value = String(w.check_interval_seconds);
+            els.adminEditEnabled.checked = w.enabled;
+            setStatus(els.adminInspectStatus, w.paused_reason || "");
+            els.adminHistoryEmpty.hidden = state.admin.inspectChecks.length > 0;
+            els.adminHistoryWrap.hidden = state.admin.inspectChecks.length === 0;
+            els.adminHistoryBody.replaceChildren(...state.admin.inspectChecks.map((c) => checkLogRow(c, false)));
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminInspectStatus, err.message, true);
+          }
+        }
+
+        function renderProbeOutput(titleText, payload) {
+          els.adminProbeOutput.hidden = false;
+          const strong = document.createElement("strong");
+          strong.textContent = titleText;
+          const pre = document.createElement("pre");
+          pre.textContent = JSON.stringify(payload, null, 2);
+          els.adminProbeOutput.replaceChildren(strong, pre);
+        }
+
+        for (const btn of document.querySelectorAll("[data-view-choice]")) {
+          btn.addEventListener("click", () => setView(btn.dataset.viewChoice));
+        }
+
+        for (const btn of document.querySelectorAll("[data-admin-tab]")) {
+          btn.addEventListener("click", () => setAdminTab(btn.dataset.adminTab));
+        }
+
+        for (const btn of document.querySelectorAll("[data-admin-filter]")) {
+          btn.addEventListener("click", () => {
+            state.admin.filter = btn.dataset.adminFilter;
+            for (const b of document.querySelectorAll("[data-admin-filter]")) {
+              b.setAttribute("aria-pressed", String(b.dataset.adminFilter === state.admin.filter));
+            }
+            renderAdminWatchers();
+          });
+        }
+
+        els.adminSearch.addEventListener("input", renderAdminWatchers);
+        els.adminRefresh.addEventListener("click", () => loadAdmin());
+        els.adminAddWatcher.addEventListener("click", openAdminCreateDialog);
+
+        els.adminWatchersBody.addEventListener("click", async (event) => {
+          const button = event.target.closest("button[data-action]");
+          if (!button) return;
+          const id = button.dataset.id;
+          if (button.dataset.action === "admin-inspect") {
+            openAdminInspect(id);
+            return;
+          }
+          if (button.dataset.action === "admin-fetch") {
+            button.disabled = true;
+            button.textContent = "Fetching…";
+            try {
+              await api("/api/v1/admin/watchers/" + encodeURIComponent(id) + "/fetch", {
+                method: "POST",
+                body: JSON.stringify({ dry_run: false }),
+              });
+              showNotice("Out-of-order fetch completed.");
+              await loadAdmin();
+            } catch (err) {
+              if (!authExpired(err)) showNotice(err.message, true);
+            } finally {
+              button.disabled = false;
+              button.textContent = "Fetch now";
+            }
+          }
+        });
+
+        els.adminUsersBody.addEventListener("click", async (event) => {
+          const button = event.target.closest("button[data-action]");
+          if (!button) return;
+          const id = button.dataset.id;
+          const user = state.admin.users.find((u) => u.id === id);
+          const label = user ? (user.email || user.username || id) : id;
+
+          if (button.dataset.action === "admin-ban") {
+            if (!window.confirm('Ban "' + label + '"? Their active sessions will be revoked immediately.')) return;
+            button.disabled = true;
+            try {
+              await api("/api/v1/admin/users/" + encodeURIComponent(id) + "/ban", { method: "POST" });
+              showNotice("User banned.");
+              await loadAdmin();
+            } catch (err) {
+              if (!authExpired(err)) showNotice(err.message, true);
+              button.disabled = false;
+            }
+            return;
+          }
+
+          if (button.dataset.action === "admin-unban") {
+            button.disabled = true;
+            try {
+              await api("/api/v1/admin/users/" + encodeURIComponent(id) + "/unban", { method: "POST" });
+              showNotice("User unbanned.");
+              await loadAdmin();
+            } catch (err) {
+              if (!authExpired(err)) showNotice(err.message, true);
+              button.disabled = false;
+            }
+            return;
+          }
+
+          if (button.dataset.action === "admin-remove-user") {
+            if (!window.confirm('Permanently remove "' + label + '" and all of their watches? This cannot be undone.')) return;
+            button.disabled = true;
+            try {
+              await api("/api/v1/admin/users/" + encodeURIComponent(id), { method: "DELETE" });
+              showNotice("User removed.");
+              await loadAdmin();
+            } catch (err) {
+              if (!authExpired(err)) showNotice(err.message, true);
+              button.disabled = false;
+            }
+          }
+        });
+
+        els.adminCreateForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const payload = {
+            user_id: els.adminCreateOwner.value,
+            name: els.adminCreateName.value.trim(),
+            url: els.adminCreateUrl.value.trim(),
+            check_interval_seconds: Number(els.adminCreateInterval.value),
+            enabled: els.adminCreateEnabled.checked,
+          };
+          if (!payload.name || !/^https:\/\//i.test(payload.url)) {
+            setStatus(els.adminCreateStatus, "Name and an https:// URL are required.", true);
+            return;
+          }
+          els.adminCreateSubmit.disabled = true;
+          try {
+            await api("/api/v1/admin/watchers", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+            els.adminCreateDialog.close();
+            showNotice("Watcher created.");
+            await loadAdmin();
+            await load();
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminCreateStatus, err.message, true);
+          } finally {
+            els.adminCreateSubmit.disabled = false;
+          }
+        });
+
+        els.adminProbeBtn.addEventListener("click", async () => {
+          const id = state.admin.inspectingId;
+          if (!id) return;
+          els.adminProbeBtn.disabled = true;
+          els.adminProbeBtn.textContent = "Probing…";
+          try {
+            const res = await api("/api/v1/admin/watchers/" + encodeURIComponent(id) + "/fetch", {
+              method: "POST",
+              body: JSON.stringify({ dry_run: true }),
+            });
+            renderProbeOutput("Dry-run probe result (no state mutated, no email sent)", res.result);
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminInspectStatus, err.message, true);
+          } finally {
+            els.adminProbeBtn.disabled = false;
+            els.adminProbeBtn.textContent = "Dry-run probe";
+          }
+        });
+
+        els.adminFetchBtn.addEventListener("click", async () => {
+          const id = state.admin.inspectingId;
+          if (!id) return;
+          els.adminFetchBtn.disabled = true;
+          els.adminFetchBtn.textContent = "Fetching…";
+          try {
+            const res = await api("/api/v1/admin/watchers/" + encodeURIComponent(id) + "/fetch", {
+              method: "POST",
+              body: JSON.stringify({ dry_run: false }),
+            });
+            renderProbeOutput("Live out-of-order fetch applied", {
+              is_on: res.watcher.is_on,
+              last_outcome: res.watcher.last_outcome,
+              last_detail: res.watcher.last_detail,
+              last_error: res.watcher.last_error,
+              last_duration_ms: res.watcher.last_duration_ms,
+            });
+            await loadAdmin();
+            await openAdminInspect(id);
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminInspectStatus, err.message, true);
+          } finally {
+            els.adminFetchBtn.disabled = false;
+            els.adminFetchBtn.textContent = "Fetch now (apply)";
+          }
+        });
+
+        els.adminResetBackoffBtn.addEventListener("click", async () => {
+          const id = state.admin.inspectingId;
+          if (!id) return;
+          els.adminResetBackoffBtn.disabled = true;
+          try {
+            await api("/api/v1/admin/watchers/" + encodeURIComponent(id) + "/reset-backoff", {
+              method: "POST",
+              body: JSON.stringify({ enable: true }),
+            });
+            showNotice("Backoff cleared and watcher resumed.");
+            await loadAdmin();
+            await openAdminInspect(id);
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminInspectStatus, err.message, true);
+          } finally {
+            els.adminResetBackoffBtn.disabled = false;
+          }
+        });
+
+        els.adminDeleteWatcherBtn.addEventListener("click", async () => {
+          const id = state.admin.inspectingId;
+          if (!id) return;
+          if (!window.confirm("Delete this watcher permanently?")) return;
+          els.adminDeleteWatcherBtn.disabled = true;
+          try {
+            await api("/api/v1/admin/watchers/" + encodeURIComponent(id), { method: "DELETE" });
+            els.adminInspectDialog.close();
+            showNotice("Watcher deleted.");
+            await loadAdmin();
+            await load();
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminInspectStatus, err.message, true);
+          } finally {
+            els.adminDeleteWatcherBtn.disabled = false;
+          }
+        });
+
+        els.adminInspectForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const id = state.admin.inspectingId;
+          if (!id) return;
+          const payload = {
+            name: els.adminEditName.value.trim(),
+            url: els.adminEditUrl.value.trim(),
+            check_interval_seconds: Number(els.adminEditInterval.value),
+            enabled: els.adminEditEnabled.checked,
+          };
+          els.adminEditSubmit.disabled = true;
+          try {
+            await api("/api/v1/admin/watchers/" + encodeURIComponent(id), {
+              method: "PUT",
+              body: JSON.stringify(payload),
+            });
+            showNotice("Watcher updated.");
+            await loadAdmin();
+            await openAdminInspect(id);
+          } catch (err) {
+            if (!authExpired(err)) setStatus(els.adminInspectStatus, err.message, true);
+          } finally {
+            els.adminEditSubmit.disabled = false;
+          }
+        });
 
         readAuthError();
         initTheme();

@@ -279,6 +279,24 @@ func principalFrom(ctx context.Context) (domain.Principal, bool) {
 	return principal, ok
 }
 
+// requireAdmin enforces that the already-authenticated principal holds the
+// platform administrator role. Other account types (user, vendor, agent, ai)
+// are refused with 403.
+func (s *Server) requireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		principal, ok := principalFrom(r.Context())
+		if !ok {
+			s.unauthenticated(w, r)
+			return
+		}
+		if principal.User.Role != domain.RoleAdmin {
+			writeError(w, http.StatusForbidden, "admin_required", "administrator access is required")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

@@ -55,8 +55,18 @@ type Event struct {
 	NotifiedOn bool `json:"-"`
 }
 
+// CheckTrigger identifies what initiated a check.
+type CheckTrigger string
+
+const (
+	TriggerScheduled   CheckTrigger = "scheduled"
+	TriggerManual      CheckTrigger = "manual"
+	TriggerAdminManual CheckTrigger = "admin_manual"
+)
+
 // CheckRecord carries the normalised result of one check into storage.
 type CheckRecord struct {
+	Trigger    CheckTrigger
 	Outcome    CheckOutcome
 	StatusCode *int
 	Available  *bool

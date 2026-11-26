@@ -140,13 +140,69 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 	return nil
 }
 
+// ValidateInput normalises and validates an event create/update payload.
+func ValidateInput(input domain.EventInput) (domain.EventInput, error) {
+	return validateInput(input)
+}
+
 // CheckNow checks one event immediately, outside the scheduler.
 func (s *Service) CheckNow(ctx context.Context, userID, id string) (domain.Event, error) {
 	event, err := s.repo.GetEvent(ctx, userID, id)
 	if err != nil {
 		return domain.Event{}, err
 	}
-	return s.check(ctx, event.ID, false)
+	return s.check(ctx, event.ID, false, domain.TriggerManual)
+}
+
+// AdminCheckNow performs an out-of-order fetch for any event by ID, bypassing
+// backoff schedules and per-host spacing while remaining serialised per event.
+func (s *Service) AdminCheckNow(ctx context.Context, id string) (domain.Event, error) {
+	if _, err := s.repo.GetEventByID(ctx, id); err != nil {
+		return domain.Event{}, err
+	}
+	return s.check(ctx, id, false, domain.TriggerAdminManual)
+}
+
+// DryRunCheck executes a live check against an event's target URL without
+// mutating stored state, backoff counters, or sending user notifications.
+func (s *Service) DryRunCheck(ctx context.Context, id string) (domain.DryRunResult, error) {
+	event, err := s.repo.GetEventByID(ctx, id)
+	if err != nil {
+		return domain.DryRunResult{}, err
+	}
+	result := s.checker.Check(ctx, event.URL)
+	outcome := result.Outcome
+	if outcome == "" {
+		if result.Err != nil {
+			outcome = domain.OutcomeError
+		} else {
+			outcome = domain.OutcomeOK
+		}
+	}
+	isOn := false
+	if outcome == domain.OutcomeOK {
+		isOn = result.StatusCode != nil && *result.StatusCode == 200
+		if result.Available != nil {
+			isOn = *result.Available
+		}
+	}
+	out := domain.DryRunResult{
+		Outcome:           outcome,
+		IsOn:              isOn,
+		Available:         result.Available,
+		StatusCode:        result.StatusCode,
+		Detail:            domain.TruncateError(result.Detail),
+		RetryAfterSeconds: int(result.RetryAfter.Seconds()),
+		DurationMs:        int(result.Duration.Milliseconds()),
+		CheckedAt:         result.CheckedAt,
+	}
+	if result.Err != nil {
+		out.Error = domain.TruncateError(result.Err.Error())
+	}
+	if out.CheckedAt.IsZero() {
+		out.CheckedAt = time.Now().UTC()
+	}
+	return out, nil
 }
 
 // Run performs due checks until ctx is cancelled. The tick is short relative
@@ -193,7 +249,7 @@ func (s *Service) runDue(ctx context.Context) {
 				<-sem
 				wg.Done()
 			}()
-			if _, err := s.check(ctx, eventID, true); err != nil {
+			if _, err := s.check(ctx, eventID, true, domain.TriggerScheduled); err != nil {
 				if ctx.Err() == nil && !errors.Is(err, store.ErrNotFound) {
 					s.logger.Warn("scheduled event check", "event_id", eventID, "err", err)
 				}
@@ -207,7 +263,7 @@ func (s *Service) runDue(ctx context.Context) {
 // backoff/auto-pause rules, and sends one email when the event has just become
 // available (or been auto-paused after repeated blocks). A failed email leaves
 // notified_on false, so the next check retries while the event remains on.
-func (s *Service) check(ctx context.Context, eventID string, paced bool) (domain.Event, error) {
+func (s *Service) check(ctx context.Context, eventID string, paced bool, trigger domain.CheckTrigger) (domain.Event, error) {
 	lock := s.eventLock(eventID)
 	lock.Lock()
 	defer lock.Unlock()
@@ -232,6 +288,7 @@ func (s *Service) check(ctx context.Context, eventID string, paced bool) (domain
 		}
 	}
 	rec := domain.CheckRecord{
+		Trigger:    trigger,
 		Outcome:    outcome,
 		StatusCode: result.StatusCode,
 		Available:  result.Available,

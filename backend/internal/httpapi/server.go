@@ -21,13 +21,14 @@ import (
 
 // Server contains the HTTP dependencies. Handlers never reach for globals.
 type Server struct {
-	cfg     config.Config
-	store   *store.Store
-	auth    *auth.Service
-	events  *events.Service
-	logger  *slog.Logger
-	limiter *Limiter
-	now     func() time.Time
+	cfg        config.Config
+	store      *store.Store
+	adminStore AdminStore
+	auth       *auth.Service
+	events     *events.Service
+	logger     *slog.Logger
+	limiter    *Limiter
+	now        func() time.Time
 
 	admin             domain.User
 	frontend          []byte
@@ -52,6 +53,9 @@ func New(cfg config.Config, st *store.Store, authSvc *auth.Service, eventsSvc *e
 		logger:  logger,
 		limiter: NewLimiter(time.Now),
 		now:     time.Now,
+	}
+	if st != nil {
+		s.adminStore = st
 	}
 	if cfg.SingleUserMode {
 		s.admin = eventsSvc.Admin()
@@ -112,11 +116,14 @@ func (s *Server) Handler() http.Handler {
 	return s.requestID(s.accessLog(s.recoverer(s.securityHeaders(s.cors(mux)))))
 }
 
-// mountUserRoutes attaches the account and watch routes behind the mode's
-// authentication boundary: local loopback checks or a real session.
+// mountUserRoutes attaches the account, watch, and admin routes behind the
+// mode's authentication boundary: local loopback checks or a real session.
 func (s *Server) mountUserRoutes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
 	mount := func(pattern string, handler http.HandlerFunc) {
 		mux.Handle(pattern, wrap(handler))
+	}
+	mountAdmin := func(pattern string, handler http.HandlerFunc) {
+		mux.Handle(pattern, wrap(s.requireAdmin(handler)))
 	}
 	mount("GET /api/v1/me", s.handleMe)
 	mount("GET /api/v1/events", s.handleListEvents)
@@ -125,6 +132,21 @@ func (s *Server) mountUserRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	mount("PUT /api/v1/events/{id}", s.handleUpdateEvent)
 	mount("DELETE /api/v1/events/{id}", s.handleDeleteEvent)
 	mount("POST /api/v1/events/{id}/check", s.handleCheckEvent)
+
+	mountAdmin("GET /api/v1/admin/overview", s.handleAdminOverview)
+	mountAdmin("GET /api/v1/admin/watchers", s.handleAdminListWatchers)
+	mountAdmin("POST /api/v1/admin/watchers", s.handleAdminCreateWatcher)
+	mountAdmin("GET /api/v1/admin/watchers/{id}", s.handleAdminGetWatcher)
+	mountAdmin("PUT /api/v1/admin/watchers/{id}", s.handleAdminUpdateWatcher)
+	mountAdmin("DELETE /api/v1/admin/watchers/{id}", s.handleAdminDeleteWatcher)
+	mountAdmin("POST /api/v1/admin/watchers/{id}/fetch", s.handleAdminFetchWatcher)
+	mountAdmin("POST /api/v1/admin/watchers/{id}/reset-backoff", s.handleAdminResetBackoff)
+	mountAdmin("GET /api/v1/admin/users", s.handleAdminListUsers)
+	mountAdmin("POST /api/v1/admin/users/{id}/ban", s.handleAdminBanUser)
+	mountAdmin("POST /api/v1/admin/users/{id}/unban", s.handleAdminUnbanUser)
+	mountAdmin("DELETE /api/v1/admin/users/{id}", s.handleAdminRemoveUser)
+	mountAdmin("GET /api/v1/admin/logs/checks", s.handleAdminCheckLogs)
+	mountAdmin("GET /api/v1/admin/logs/audit", s.handleAdminAuditLogs)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {

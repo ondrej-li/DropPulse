@@ -393,6 +393,26 @@ func (s *Store) RecordCheck(ctx context.Context, eventID string, rec domain.Chec
 	if err != nil {
 		return domain.Event{}, false, fmt.Errorf("record event check: %w", err)
 	}
+
+	trigger := string(rec.Trigger)
+	switch rec.Trigger {
+	case domain.TriggerScheduled, domain.TriggerManual, domain.TriggerAdminManual:
+	default:
+		trigger = string(domain.TriggerScheduled)
+	}
+	dur := rec.DurationMs
+	if dur < 0 {
+		dur = 0
+	}
+	if _, err := tx.Exec(ctx, `
+		insert into event_checks
+			(event_id, trigger, outcome, is_on, status_code, detail, error, duration_ms)
+		values ($1::uuid, $2, $3, $4, $5, $6, $7, $8)`,
+		eventID, trigger, string(tr.Outcome), tr.IsOn, status, detail, errText, dur,
+	); err != nil {
+		return domain.Event{}, false, fmt.Errorf("insert event check log: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return domain.Event{}, false, fmt.Errorf("commit event check: %w", err)
 	}

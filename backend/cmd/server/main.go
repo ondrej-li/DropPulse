@@ -196,10 +196,17 @@ func purgeExpiredFlows(ctx context.Context, st *store.Store, logger *slog.Logger
 			if !errors.Is(err, context.Canceled) {
 				logger.Warn("purge expired OAuth flows", "err", err)
 			}
-			return
-		}
-		if n > 0 {
+		} else if n > 0 {
 			logger.Info("purged expired OAuth flows", "count", n)
+		}
+
+		pruned, err := st.PurgeOldEventChecks(ctx, 90*24*time.Hour)
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				logger.Warn("purge old event checks", "err", err)
+			}
+		} else if pruned > 0 {
+			logger.Info("purged old event checks", "count", pruned)
 		}
 	}
 	purge()
