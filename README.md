@@ -216,8 +216,11 @@ with zero external database (`DATABASE_URL=memory://`):
 # Start local test server on http://127.0.0.1:8080/
 ./scripts/local-dev.sh
 
-# Or run the automated headless end-to-end smoke suite:
+# Run the automated API/CLI smoke suite:
 ./scripts/smoke-local.sh
+
+# Run the headless Chromium UI end-to-end suite (stdlib Python + CDP):
+./scripts/e2e-browser.py
 ```
 
 When `LOCAL_TEST_AUTH=true` is active on loopback:

@@ -1945,8 +1945,9 @@
             cinestarState: null,
           },
           floraShows: null,
-          floraShowsLoading: false,
+          floraShowsPromise: null,
           cinestarShowsByCinema: {},
+          cinestarShowsPromises: {},
         };
 
         function readThemePreference() {
@@ -2719,35 +2720,43 @@
           els.templateSelected.hidden = false;
         }
 
-        async function ensureFloraShows() {
-          if (Array.isArray(state.floraShows)) return state.floraShows;
-          if (state.floraShowsLoading) return null;
-          state.floraShowsLoading = true;
-          try {
-            const data = await api("/api/v1/providers/cinemacity/shows?cinema=1052&attr=imax");
-            state.floraShows = data && Array.isArray(data.shows) ? data.shows : [];
-            return state.floraShows;
-          } catch (_) {
-            state.floraShows = null;
-            return null;
-          } finally {
-            state.floraShowsLoading = false;
-          }
+        function ensureFloraShows() {
+          if (Array.isArray(state.floraShows)) return Promise.resolve(state.floraShows);
+          if (state.floraShowsPromise) return state.floraShowsPromise;
+          state.floraShowsPromise = api("/api/v1/providers/cinemacity/shows?cinema=1052&attr=imax")
+            .then((data) => {
+              state.floraShows = data && Array.isArray(data.shows) ? data.shows : [];
+              return state.floraShows;
+            })
+            .catch(() => {
+              state.floraShows = null;
+              return null;
+            })
+            .finally(() => {
+              state.floraShowsPromise = null;
+            });
+          return state.floraShowsPromise;
         }
 
-        async function ensureCineStarShows(cinemaSlug) {
+        function ensureCineStarShows(cinemaSlug) {
           const slug = (cinemaSlug || "praha5").toLowerCase();
           if (Array.isArray(state.cinestarShowsByCinema[slug])) {
-            return state.cinestarShowsByCinema[slug];
+            return Promise.resolve(state.cinestarShowsByCinema[slug]);
           }
-          try {
-            const data = await api("/api/v1/providers/cinestar/shows?cinema=" + encodeURIComponent(slug));
-            const shows = data && Array.isArray(data.shows) ? data.shows : [];
-            state.cinestarShowsByCinema[slug] = shows;
-            return shows;
-          } catch (_) {
-            return null;
+          if (state.cinestarShowsPromises[slug]) {
+            return state.cinestarShowsPromises[slug];
           }
+          state.cinestarShowsPromises[slug] = api("/api/v1/providers/cinestar/shows?cinema=" + encodeURIComponent(slug))
+            .then((data) => {
+              const shows = data && Array.isArray(data.shows) ? data.shows : [];
+              state.cinestarShowsByCinema[slug] = shows;
+              return shows;
+            })
+            .catch(() => null)
+            .finally(() => {
+              delete state.cinestarShowsPromises[slug];
+            });
+          return state.cinestarShowsPromises[slug];
         }
 
         function appendGroupedShowOptions(selectEl, shows, selectedUrl) {
@@ -2931,11 +2940,15 @@
             const loadingOpt = document.createElement("option");
             loadingOpt.value = "";
             loadingOpt.disabled = true;
-            loadingOpt.selected = true;
+            loadingOpt.selected = saved.showUrl !== "__custom__";
             loadingOpt.textContent = "Loading Cinema City Flora shows…";
-            showSelect.append(loadingOpt);
+            const loadingCustomOpt = document.createElement("option");
+            loadingCustomOpt.value = "__custom__";
+            loadingCustomOpt.selected = saved.showUrl === "__custom__";
+            loadingCustomOpt.textContent = "Other / upcoming film URL (e.g. Dune: Part Three)…";
+            showSelect.append(loadingOpt, loadingCustomOpt);
             ensureFloraShows().then((shows) => {
-              if (!els.wizard.open) return;
+              if (!els.wizard.open || !showSelect.isConnected) return;
               populateShows(shows || [], shows === null);
             });
           }
@@ -3100,12 +3113,16 @@
             const loadingOpt = document.createElement("option");
             loadingOpt.value = "";
             loadingOpt.disabled = true;
-            loadingOpt.selected = true;
+            loadingOpt.selected = saved.showUrl !== "__custom__";
             loadingOpt.textContent = "Loading CineStar programme…";
-            showSelect.append(loadingOpt);
+            const loadingCustomOpt = document.createElement("option");
+            loadingCustomOpt.value = "__custom__";
+            loadingCustomOpt.selected = saved.showUrl === "__custom__";
+            loadingCustomOpt.textContent = "Other / upcoming CineStar film URL…";
+            showSelect.append(loadingOpt, loadingCustomOpt);
             const targetCinema = saved.cinema;
             ensureCineStarShows(targetCinema).then((shows) => {
-              if (!els.wizard.open || saved.cinema !== targetCinema) return;
+              if (!els.wizard.open || !showSelect.isConnected || saved.cinema !== targetCinema) return;
               populateShows(shows || [], shows === null);
             });
           };
@@ -3706,7 +3723,9 @@
 
         els.addEvent.addEventListener("click", openWizard);
 
-        els.wizard.addEventListener("close", resetWizard);
+        els.wizard.addEventListener("close", () => {
+          if (!els.wizard.open) resetWizard();
+        });
 
         els.wizardForm.addEventListener("submit", (event) => {
           event.preventDefault();
@@ -3768,7 +3787,9 @@
           button.addEventListener("click", () => closeDialog(button));
         }
 
-        els.editDialog.addEventListener("close", resetEdit);
+        els.editDialog.addEventListener("close", () => {
+          if (!els.editDialog.open) resetEdit();
+        });
 
         els.editForm.addEventListener("submit", async (event) => {
           event.preventDefault();
