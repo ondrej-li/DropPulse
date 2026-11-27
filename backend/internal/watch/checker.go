@@ -23,13 +23,16 @@ import (
 	"time"
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers"
 	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinemacity"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinestar"
 )
 
 // Result is one check. StatusCode is nil when the request did not produce an
 // HTTP response at all. Available is set by a provider check; nil means the
 // result is the generic HTTP status result.
 type Result struct {
+	CheckKind  domain.CheckKind
 	Outcome    domain.CheckOutcome
 	StatusCode *int
 	Available  *bool
@@ -48,15 +51,22 @@ type cachedFilms struct {
 	expiresAt time.Time
 }
 
+type cachedCineStarFilms struct {
+	films     []cinestar.Film
+	expiresAt time.Time
+}
+
 // Checker performs the HTTPS status check. It is safe for concurrent use.
 type Checker struct {
-	client *http.Client
-	lookup lookupFunc
-	dial   dialFunc
-	now    func() time.Time
+	client   *http.Client
+	registry *providers.Registry
+	lookup   lookupFunc
+	dial     dialFunc
+	now      func() time.Time
 
-	cacheMu   sync.Mutex
-	filmCache map[string]cachedFilms
+	cacheMu       sync.Mutex
+	filmCache     map[string]cachedFilms
+	cinestarCache map[string]cachedCineStarFilms
 }
 
 // NewChecker builds a checker with a hard per-request timeout.
@@ -65,8 +75,10 @@ func NewChecker(timeout time.Duration) *Checker {
 		timeout = 10 * time.Second
 	}
 	c := &Checker{
-		now:       time.Now,
-		filmCache: make(map[string]cachedFilms),
+		registry:      providers.DefaultRegistry(),
+		now:           time.Now,
+		filmCache:     make(map[string]cachedFilms),
+		cinestarCache: make(map[string]cachedCineStarFilms),
 	}
 	c.lookup = net.DefaultResolver.LookupNetIP
 	dialer := &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
@@ -96,8 +108,9 @@ func NewChecker(timeout time.Duration) *Checker {
 }
 
 // Check performs one availability check. A built-in provider target is
-// interpreted by that provider; every other target is on exactly when it
-// returns HTTP 200.
+// interpreted by that provider (seat availability for Kind 1, schedule
+// availability for Kind 2); every other target is on exactly when it returns
+// HTTP 200.
 func (c *Checker) Check(ctx context.Context, target string) Result {
 	start := c.now()
 	result := Result{CheckedAt: start}
@@ -114,27 +127,35 @@ func (c *Checker) Check(ctx context.Context, target string) Result {
 		result.Err = err
 		return result
 	}
-	if providerTarget, matched, matchErr := cinemacity.Match(normalised); matched {
+	reg := c.registry
+	if reg == nil {
+		reg = providers.DefaultRegistry()
+	}
+	if prov, kind, matched, matchErr := reg.Match(normalised); matched {
+		result.CheckKind = kind
 		if matchErr != nil {
 			result.Outcome = domain.OutcomeError
 			result.Err = matchErr
 			return result
 		}
-		res, checkErr := cinemacity.CheckDetailed(ctx, c.client, providerTarget)
+		res, checkErr := prov.Check(ctx, c.client, normalised)
 		if checkErr != nil {
-			var blocked *cinemacity.BlockedError
+			var blocked providers.Blocked
 			if errors.As(checkErr, &blocked) {
+				statusCode, retryAfter := blocked.BlockedInfo()
 				result.Outcome = domain.OutcomeBlocked
-				result.RetryAfter = blocked.RetryAfter
-				if blocked.StatusCode > 0 {
-					code := blocked.StatusCode
-					result.StatusCode = &code
+				result.RetryAfter = retryAfter
+				if statusCode > 0 {
+					result.StatusCode = &statusCode
 				}
 			} else {
 				result.Outcome = domain.OutcomeError
 			}
 			result.Err = checkErr
 			return result
+		}
+		if res.Kind != "" {
+			result.CheckKind = res.Kind
 		}
 		result.Outcome = domain.OutcomeOK
 		available := res.Available
@@ -143,6 +164,7 @@ func (c *Checker) Check(ctx context.Context, target string) Result {
 		return result
 	}
 
+	result.CheckKind = domain.CheckKindHTTPStatus
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, normalised, nil)
 	if err != nil {
 		result.Outcome = domain.OutcomeError
@@ -218,19 +240,19 @@ func parseRetryAfterHeader(raw string, now time.Time) time.Duration {
 	return 0
 }
 
-// ValidateProviderTarget applies a built-in provider's URL rules. URLs from
+// ValidateProviderTarget applies built-in providers' URL rules. URLs from
 // other hosts are left to ValidateTargetURL.
 func ValidateProviderTarget(raw string) error {
-	if _, matched, err := cinemacity.Match(raw); matched {
-		return err
-	}
-	return nil
+	return providers.ValidateTarget(raw)
 }
 
-const cinemaCityFilmCacheTTL = 10 * time.Minute
+const (
+	cinemaCityFilmCacheTTL = 10 * time.Minute
+	cineStarFilmCacheTTL   = 15 * time.Minute
+)
 
-// ListCinemaCityFilms returns the scheduled Cinema City films for a cinema and
-// format attribute, caching successful lookups briefly in memory.
+// ListCinemaCityFilms returns the scheduled and coming-soon Cinema City films
+// for a cinema and format attribute, caching successful lookups briefly.
 func (c *Checker) ListCinemaCityFilms(ctx context.Context, cinemaID, attr string) ([]cinemacity.Film, error) {
 	cinemaID = strings.TrimSpace(cinemaID)
 	if cinemaID == "" {
@@ -263,6 +285,43 @@ func (c *Checker) ListCinemaCityFilms(ctx context.Context, cinemaID, attr string
 	c.filmCache[key] = cachedFilms{
 		films:     copied,
 		expiresAt: c.now().Add(cinemaCityFilmCacheTTL),
+	}
+	c.cacheMu.Unlock()
+	return films, nil
+}
+
+// ListCineStarFilms returns the scheduled and upcoming CineStar films for a
+// cinema slug, caching successful lookups in memory.
+func (c *Checker) ListCineStarFilms(ctx context.Context, cinemaSlug string) ([]cinestar.Film, error) {
+	cinemaSlug = strings.ToLower(strings.TrimSpace(cinemaSlug))
+	if cinemaSlug == "" {
+		cinemaSlug = "praha5"
+	}
+	now := c.now()
+
+	c.cacheMu.Lock()
+	if entry, ok := c.cinestarCache[cinemaSlug]; ok && now.Before(entry.expiresAt) {
+		copied := make([]cinestar.Film, len(entry.films))
+		copy(copied, entry.films)
+		c.cacheMu.Unlock()
+		return copied, nil
+	}
+	c.cacheMu.Unlock()
+
+	films, err := cinestar.ListFilms(ctx, c.client, cinemaSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	c.cacheMu.Lock()
+	if c.cinestarCache == nil {
+		c.cinestarCache = make(map[string]cachedCineStarFilms)
+	}
+	copied := make([]cinestar.Film, len(films))
+	copy(copied, films)
+	c.cinestarCache[cinemaSlug] = cachedCineStarFilms{
+		films:     copied,
+		expiresAt: c.now().Add(cineStarFilmCacheTTL),
 	}
 	c.cacheMu.Unlock()
 	return films, nil

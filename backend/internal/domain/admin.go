@@ -70,6 +70,7 @@ type AdminOverview struct {
 
 // DryRunResult is the live output of a non-mutating admin probe.
 type DryRunResult struct {
+	CheckKind         CheckKind    `json:"check_kind,omitempty"`
 	Outcome           CheckOutcome `json:"outcome"`
 	IsOn              bool         `json:"is_on"`
 	Available         *bool        `json:"available,omitempty"`

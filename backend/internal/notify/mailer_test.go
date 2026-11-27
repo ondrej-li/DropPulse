@@ -51,12 +51,20 @@ func TestBuildMessageForProviderAvailability(t *testing.T) {
 		to:   "alerts@example.com",
 		now:  time.Now,
 	}
-	message := string(m.buildMessage(domain.Event{
+	seatsMsg := string(m.buildMessage(domain.Event{
 		Name: "Dune at Flora IMAX",
 		URL:  "https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX",
 	}, "http://localhost:8090"))
-	if !strings.Contains(message, "Status: availability confirmed") {
-		t.Fatalf("provider message did not describe availability:\n%s", message)
+	if !strings.Contains(seatsMsg, "Status: seats available") {
+		t.Fatalf("seat provider message did not describe seat availability:\n%s", seatsMsg)
+	}
+
+	schedMsg := string(m.buildMessage(domain.Event{
+		Name: "Dune at CineStar Anděl",
+		URL:  "https://cinestar.cz/cz/praha5/filmy/movie/10100-duna-cast-treti?date=2026-12-21",
+	}, "http://localhost:8090"))
+	if !strings.Contains(schedMsg, "Status: show scheduled") {
+		t.Fatalf("schedule provider message did not describe show availability:\n%s", schedMsg)
 	}
 }
 
@@ -194,7 +202,7 @@ func TestBuildMessageIncludesDetailAndPausedFormat(t *testing.T) {
 		LastDetail: "IMAX VOLVO · 2026-12-18 19:30 · ~5% open",
 	}, "https://dp.example/app/"))
 	for _, want := range []string{
-		"Status: availability confirmed — IMAX VOLVO · 2026-12-18 19:30 · ~5% open",
+		"Status: seats available — IMAX VOLVO · 2026-12-18 19:30 · ~5% open",
 		"Open DropPulse: https://dp.example/app/",
 	} {
 		if !strings.Contains(onMsg, want) {

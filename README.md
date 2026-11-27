@@ -77,6 +77,7 @@ Configuration is read from the environment and validated at start-up:
 | `AUTH_RATE_LIMIT_PER_MINUTE`, `API_RATE_LIMIT_PER_MINUTE` | In-process rate limits |
 | `SINGLE_USER_MODE` | Serve the frontend and events API without a login; requires a loopback `BIND_ADDR` |
 | `SINGLE_USER_NAME` | Username of the fixed local account (default `admin`) |
+| `LOCAL_TEST_AUTH` | Loopback-only headless test mode: skips OAuth and lets callers act as any user/role via `X-Test-User` / `X-Test-Role` or `/api/v1/dev/impersonate`. Refused when `APP_ENV=production`, on non-loopback `BIND_ADDR`, on `https` `PUBLIC_API_URL`, or when proxy headers are present |
 | `FRONTEND_FILE` | Path to the single HTML app served at `/` (and `/app/` in multi-user mode); required in single-user mode |
 | `NOTIFICATION_EMAIL` | Fixed recipient for availability email; requires single-user mode and `SMTP_FROM` |
 | `SMTP_FROM` | Envelope/From address for notifications. In multi-user mode it enables mail to each account's verified address |
@@ -182,16 +183,49 @@ reserved destinations. It resolves a hostname once and dials the resulting publi
 IP directly, so DNS rebinding cannot redirect the request.
 
 A URL on a built-in provider host is interpreted by that provider instead of
-being checked for HTTP 200. The first provider is `cinemacity.cz`: a film page
-URL such as
-`https://www.cinemacity.cz/films/<slug>/<film-id>?cinema=<cinema-id>&auditorium=IMAX`
-is checked against Cinema City's public programme API. The watch is on when at
-least one matching show is not sold out and has seats available. The optional
-`date=YYYY-MM-DD` narrows the check to one date and `auditorium` matches either
-the full room name or its short name. The film page itself is never fetched, and
-the provider uses the same guarded client, redirect policy and response-size
-limit as the generic checker. An upstream failure is recorded as an error, never
-as a sold-out result.
+being checked for HTTP 200. DropPulse distinguishes two provider kinds:
+
+1. **Seat-availability providers (`CapabilitySeats` — `cinemacity.cz`):**
+   Exposes buyable seat availability directly in its public `quickbook` JSON
+   without session or queue circumvention. A film URL such as
+   `https://www.cinemacity.cz/films/<slug>/<film-id>?cinema=1052&auditorium=IMAX`
+   turns on when at least one upcoming matching show is not sold out, has
+   `availabilityRatio > 0`, and does not have `blockOnlineSales` set. Optional
+   `date=YYYY-MM-DD` narrows the check to a single date (e.g. `2026-12-21`), and
+   optional `mode=schedule` switches the watch to schedule-presence mode so it
+   alerts as soon as a showtime is published.
+2. **Schedule-only providers (`CapabilityScheduleOnly` — `cinestar.cz`):**
+   Does not expose seat counts without checkout tokens / waiting rooms, so
+   DropPulse monitors only whether matching screenings are published on the
+   public SSR programme (`#__NUXT_DATA__` on `/cz/<cinema-slug>/program`). A URL
+   such as `https://cinestar.cz/cz/praha5/filmy/movie/10100-duna-cast-treti?date=2026-12-21&tag=GOLD+CLASS`
+   turns on when a matching screening appears on the schedule; `mode=seats` is
+   rejected.
+
+Every provider uses the same SSRF-guarded client, redirect policy and
+response-size bounds as the generic checker. An upstream failure is recorded as
+an error, never as a sold-out or unscheduled result.
+
+### Headless local testing (multi-user & multi-role)
+
+To test user isolation, roles (`admin`, `user`, `vendor`, `agent`, `ai`), and
+the admin console locally without OAuth credentials — either with PostgreSQL or
+with zero external database (`DATABASE_URL=memory://`):
+
+```sh
+# Start local test server on http://127.0.0.1:8080/
+./scripts/local-dev.sh
+
+# Or run the automated headless end-to-end smoke suite:
+./scripts/smoke-local.sh
+```
+
+When `LOCAL_TEST_AUTH=true` is active on loopback:
+- **Stateless CLI / API requests:** pass `-H 'X-Test-User: alice' -H 'X-Test-Role: user'`
+  (default when omitted is `admin`).
+- **Headless browsers / local UI:** navigate to `http://127.0.0.1:8080/?as=alice&role=user`,
+  use the header persona dropdown, or `POST /api/v1/dev/impersonate` with
+  `{"user":"alice","role":"user"}`.
 
 The watch routes are mounted in both modes. In single-user mode they act on the
 fixed local account; otherwise every one of them requires a session and is

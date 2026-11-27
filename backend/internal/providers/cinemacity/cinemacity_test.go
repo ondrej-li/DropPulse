@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 )
 
 func init() {
@@ -486,5 +488,76 @@ func TestListFilmsBuildsCanonicalIMAXWatchURLs(t *testing.T) {
 	}
 	if _, matched, err := Match(films[0].URL); !matched || err != nil {
 		t.Fatalf("generated URL rejected by Match: matched=%v err=%v", matched, err)
+	}
+}
+
+func TestBlockOnlineSalesAndScheduleMode(t *testing.T) {
+	oldNow := nowFunc
+	nowFunc = func() time.Time { return time.Date(2026, 12, 1, 10, 0, 0, 0, prague) }
+	defer func() { nowFunc = oldNow }()
+
+	lockedPayload := `{"body":{"events":[
+		{"filmId":"8105s2r","cinemaId":"1052","auditorium":"IMAX VOLVO","auditoriumTinyName":"IMAX","eventDateTime":"2026-12-21T19:30:00","soldOut":false,"availabilityRatio":1.0,"compositeBookingLink":{"blockOnlineSales":true}}
+	]}}`
+	doer := &fakeDoer{respond: func(*http.Request) (*http.Response, error) {
+		return jsonResponse(lockedPayload), nil
+	}}
+
+	// 1. Default seat mode treats blockOnlineSales=true as OFF with clear detail.
+	seatTarget, matched, err := Match("https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX&date=2026-12-21")
+	if !matched || err != nil {
+		t.Fatalf("Match seats: matched=%v err=%v", matched, err)
+	}
+	seatRes, err := CheckDetailed(context.Background(), doer, seatTarget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seatRes.Available || seatRes.Kind != domain.CheckKindSeats || !strings.Contains(seatRes.Detail, "online sales not open yet") {
+		t.Fatalf("seat mode with locked sales = %+v", seatRes)
+	}
+
+	// 2. Schedule mode (&mode=schedule) turns ON as soon as the show is listed on 2026-12-21.
+	schedTarget, matched, err := Match("https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX&date=2026-12-21&mode=schedule")
+	if !matched || err != nil {
+		t.Fatalf("Match schedule: matched=%v err=%v", matched, err)
+	}
+	schedRes, err := CheckDetailed(context.Background(), doer, schedTarget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !schedRes.Available || schedRes.Kind != domain.CheckKindSchedule || !strings.Contains(schedRes.Detail, "Scheduled") {
+		t.Fatalf("schedule mode = %+v", schedRes)
+	}
+}
+
+func TestListFilmsMergesComingSoonTrailers(t *testing.T) {
+	doer := &fakeDoer{respond: func(req *http.Request) (*http.Response, error) {
+		switch {
+		case strings.Contains(req.URL.Path, "/films/until/"):
+			return jsonResponse(`{"body":{"films":[
+				{"id":"7803s2r","name":"Hunger Games: Úsvit sklizně","length":159,"link":"https://www.cinemacity.cz/films/hunger-games-usvit-sklizne/7803s2r","releaseDate":"2026-11-19T00:00:00"}
+			]}}`), nil
+		case strings.Contains(req.URL.Path, "/trailers/byCinemaId/1052"):
+			return jsonResponse(`{"body":[
+				{"filmId":"7803s2r","filmName":"Hunger Games Duplicate","filmLink":"https://www.cinemacity.cz/films/hunger-games-usvit-sklizne/7803s2r"},
+				{"filmId":"8105s2r","filmName":"Duna: Část třetí","filmLink":"https://www.cinemacity.cz/films/duna-cast-treti/8105s2r"}
+			]}`), nil
+		default:
+			return nil, fmt.Errorf("unexpected request %s", req.URL)
+		}
+	}}
+
+	films, err := ListFilms(context.Background(), doer, "1052", "imax")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(films) != 2 {
+		t.Fatalf("got %d films, want 2: %+v", len(films), films)
+	}
+	if !films[0].Scheduled || films[0].ID != "7803s2r" {
+		t.Fatalf("expected scheduled film first: %+v", films[0])
+	}
+	if films[1].Scheduled || films[1].ID != "8105s2r" || films[1].Name != "Duna: Část třetí" {
+		t.Fatalf("expected unscheduled coming-soon film second: %+v", films[1])
 	}
 }

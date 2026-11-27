@@ -24,6 +24,7 @@ type Server struct {
 	cfg        config.Config
 	store      *store.Store
 	adminStore AdminStore
+	testUsers  TestUserStore
 	auth       *auth.Service
 	events     *events.Service
 	logger     *slog.Logger
@@ -56,6 +57,7 @@ func New(cfg config.Config, st *store.Store, authSvc *auth.Service, eventsSvc *e
 	}
 	if st != nil {
 		s.adminStore = st
+		s.testUsers = st
 	}
 	if cfg.SingleUserMode {
 		s.admin = eventsSvc.Admin()
@@ -87,6 +89,13 @@ func New(cfg config.Config, st *store.Store, authSvc *auth.Service, eventsSvc *e
 	return s, nil
 }
 
+// SetStores overrides the admin and test-user stores (used by memory-backed
+// local headless test mode and unit tests).
+func (s *Server) SetStores(adminStore AdminStore, testUsers TestUserStore) {
+	s.adminStore = adminStore
+	s.testUsers = testUsers
+}
+
 // Handler returns the fully wrapped HTTP handler.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -95,6 +104,17 @@ func (s *Server) Handler() http.Handler {
 	if s.cfg.SingleUserMode {
 		s.mountUserRoutes(mux, s.singleUser)
 		mux.HandleFunc("GET /{$}", s.handleFrontend)
+	} else if s.cfg.LocalTestAuth {
+		mux.HandleFunc("GET /api/v1/auth/providers", s.handleAuthProviders)
+		mux.Handle("POST /api/v1/auth/logout", s.localTestAuth(http.HandlerFunc(s.handleDevClearImpersonate)))
+		mux.Handle("GET /api/v1/dev/users", s.localTestAuth(http.HandlerFunc(s.handleDevListUsers)))
+		mux.Handle("POST /api/v1/dev/impersonate", s.localTestAuth(http.HandlerFunc(s.handleDevImpersonate)))
+		mux.Handle("DELETE /api/v1/dev/impersonate", s.localTestAuth(http.HandlerFunc(s.handleDevClearImpersonate)))
+		s.mountUserRoutes(mux, s.localTestAuth)
+		if len(s.frontend) > 0 {
+			mux.HandleFunc("GET /{$}", s.handleFrontend)
+			mux.HandleFunc("GET /app/{$}", s.handleFrontend)
+		}
 	} else {
 		mux.HandleFunc("GET /api/v1/auth/providers", s.handleAuthProviders)
 		mux.HandleFunc("GET /api/v1/auth/{provider}/start", s.handleAuthStart)
@@ -133,6 +153,7 @@ func (s *Server) mountUserRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	mount("DELETE /api/v1/events/{id}", s.handleDeleteEvent)
 	mount("POST /api/v1/events/{id}/check", s.handleCheckEvent)
 	mount("GET /api/v1/providers/cinemacity/shows", s.handleCinemaCityShows)
+	mount("GET /api/v1/providers/cinestar/shows", s.handleCineStarShows)
 
 	mountAdmin("GET /api/v1/admin/overview", s.handleAdminOverview)
 	mountAdmin("GET /api/v1/admin/watchers", s.handleAdminListWatchers)

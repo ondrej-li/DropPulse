@@ -6,6 +6,7 @@ import (
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 	"github.com/ondrej-li/DropPulse/backend/internal/events"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinestar"
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
 )
 
@@ -130,6 +131,31 @@ func (s *Server) handleCinemaCityShows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"shows": shows})
+}
+
+func (s *Server) handleCineStarShows(w http.ResponseWriter, r *http.Request) {
+	if _, ok := principalFrom(r.Context()); !ok {
+		s.unauthenticated(w, r)
+		return
+	}
+	cinemaSlug := r.URL.Query().Get("cinema")
+	if cinemaSlug == "" {
+		cinemaSlug = "praha5"
+	}
+	if !cinestar.ValidCinemaSlug(cinemaSlug) {
+		writeError(w, http.StatusBadRequest, "invalid_cinema", "CineStar cinema slug is not recognised")
+		return
+	}
+	shows, err := s.events.ListCineStarShows(r.Context(), cinemaSlug)
+	if err != nil {
+		s.logger.Warn("fetch CineStar shows", "cinema", cinemaSlug, "err", err, "request_id", requestIDFrom(r.Context()))
+		writeError(w, http.StatusBadGateway, "upstream_unavailable", "CineStar programme could not be loaded right now")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"shows":   shows,
+		"cinemas": cinestar.Cinemas(),
+	})
 }
 
 func (request eventRequest) input() domain.EventInput {

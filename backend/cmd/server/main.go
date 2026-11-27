@@ -20,6 +20,7 @@ import (
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 	"github.com/ondrej-li/DropPulse/backend/internal/events"
 	"github.com/ondrej-li/DropPulse/backend/internal/httpapi"
+	"github.com/ondrej-li/DropPulse/backend/internal/memstore"
 	"github.com/ondrej-li/DropPulse/backend/internal/notify"
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
 	"github.com/ondrej-li/DropPulse/backend/internal/watch"
@@ -44,27 +45,44 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := db.Open(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-
-	if cfg.RunMigrations {
-		if err := db.Migrate(ctx, pool, logger); err != nil {
-			return fmt.Errorf("migrate database: %w", err)
-		}
+	var (
+		st        *store.Store
+		repo      events.Repository
+		adminSt   httpapi.AdminStore
+		testUsers httpapi.TestUserStore
+	)
+	if cfg.UsesMemoryStore() {
+		mem := memstore.New()
+		repo = mem
+		adminSt = mem
+		testUsers = mem
+		logger.Warn("using ephemeral in-memory store for local headless testing")
 	} else {
-		logger.Warn("database migrations are disabled")
+		pool, openErr := db.Open(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
+		if openErr != nil {
+			return openErr
+		}
+		defer pool.Close()
+
+		if cfg.RunMigrations {
+			if err := db.Migrate(ctx, pool, logger); err != nil {
+				return fmt.Errorf("migrate database: %w", err)
+			}
+		} else {
+			logger.Warn("database migrations are disabled")
+		}
+		st = store.New(pool)
+		repo = st
+		adminSt = st
+		testUsers = st
 	}
 
-	st := store.New(pool)
 	oauthClient := &http.Client{Timeout: 10 * time.Second}
 	providers, err := auth.NewProviders(cfg, oauthClient)
 	if err != nil {
 		return fmt.Errorf("configure OAuth providers: %w", err)
 	}
-	if len(providers) == 0 && !cfg.SingleUserMode {
+	if len(providers) == 0 && !cfg.SingleUserMode && !cfg.LocalTestAuth {
 		logger.Warn("no OAuth providers configured; all sign-in attempts will fail")
 	}
 	authService := auth.NewService(cfg, st, providers)
@@ -78,6 +96,9 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("ensure local admin: %w", err)
 		}
+	}
+	if cfg.LocalTestAuth {
+		logger.Warn("LOCAL_TEST_AUTH is enabled; loopback requests may skip OAuth and impersonate any user/role")
 	}
 
 	// A fixed recipient is a single-user convenience. Multi-user notices go to
@@ -119,7 +140,7 @@ func run() error {
 	}
 
 	eventsSvc := events.NewService(
-		st,
+		repo,
 		watch.NewChecker(10*time.Second),
 		mailer,
 		logger,
@@ -151,6 +172,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	api.SetStores(adminSt, testUsers)
 
 	srv := &http.Server{
 		Addr:              net.JoinHostPort(cfg.BindAddr, cfg.Port),
@@ -163,7 +185,9 @@ func run() error {
 		ErrorLog:          slog.NewLogLogger(handler, slog.LevelError),
 	}
 
-	go purgeExpiredFlows(ctx, st, logger)
+	if st != nil {
+		go purgeExpiredFlows(ctx, st, logger)
+	}
 	go eventsSvc.Run(ctx)
 	errCh := make(chan error, 1)
 	go func() {

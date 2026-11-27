@@ -105,6 +105,18 @@
          override the hidden attribute's user-agent display: none. */
       [hidden] { display: none !important; }
 
+      .visually-hidden:where(:not(:focus-within, :active)) {
+        position: absolute !important;
+        clip-path: inset(50%) !important;
+        overflow: hidden !important;
+        width: 1px !important;
+        height: 1px !important;
+        margin: -1px !important;
+        padding: 0 !important;
+        border: 0 !important;
+        white-space: nowrap !important;
+      }
+
       html { min-height: 100%; }
 
       body {
@@ -713,6 +725,52 @@
       .pill.paused { margin-left: 5px; background: transparent; border: 1px solid var(--line); color: var(--muted); }
       .pill.paused::before { display: none; }
 
+      .kind-badge {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 1px 6px;
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: var(--bg);
+        vertical-align: middle;
+      }
+
+      .kind-badge.seats {
+        border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .dev-persona-select {
+        width: auto !important;
+        max-width: 220px;
+        padding: 5px 10px !important;
+        font-size: 0.78rem !important;
+        border-radius: 9px !important;
+      }
+
+      .template-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .provider-note {
+        margin: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+        background: var(--accent-soft);
+        color: var(--text);
+        font-size: 0.81rem;
+      }
+
       .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1179,6 +1237,10 @@
             <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">Light</button>
             <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="false">Dark</button>
           </div>
+          <div id="dev-persona" class="account" hidden>
+            <label for="dev-persona-select" class="visually-hidden">Active local test persona</label>
+            <select id="dev-persona-select" name="dev_persona" class="dev-persona-select" title="Switch local test user / role"></select>
+          </div>
           <div id="account" class="account" hidden>
             <span id="account-email" class="account-email"></span>
             <button type="button" id="sign-out" class="secondary btn-sm">Sign out</button>
@@ -1251,8 +1313,10 @@
             <button type="button" class="theme-choice" data-admin-tab="checks" aria-pressed="false">Check logs</button>
             <button type="button" class="theme-choice" data-admin-tab="audit" aria-pressed="false">Audit log</button>
           </div>
-          <div id="admin-watcher-filters" class="admin-filters">
-            <input id="admin-search" class="admin-search" type="text" placeholder="Filter by name, URL or owner…">
+          <search id="admin-watcher-filters" class="admin-filters" aria-label="Filter watchers">
+            <input id="admin-search" name="admin_search" class="admin-search" type="text"
+              autocorrect="off" autocapitalize="none" spellcheck="false"
+              placeholder="Filter by name, URL or owner…">
             <div class="theme-switch" role="group" aria-label="Watcher state filter">
               <button type="button" class="theme-choice" data-admin-filter="all" aria-pressed="true">All</button>
               <button type="button" class="theme-choice" data-admin-filter="on" aria-pressed="false">ON</button>
@@ -1260,7 +1324,7 @@
               <button type="button" class="theme-choice" data-admin-filter="blocked" aria-pressed="false">Blocked</button>
               <button type="button" class="theme-choice" data-admin-filter="paused" aria-pressed="false">Paused</button>
             </div>
-          </div>
+          </search>
         </div>
 
         <div id="admin-tab-watchers">
@@ -1358,7 +1422,7 @@
               <input id="edit-name" type="text" maxlength="120" required>
             </label>
             <label>HTTPS URL
-              <input id="edit-url" type="url" required>
+              <input id="edit-url" name="url" type="url" autocorrect="off" autocapitalize="none" spellcheck="false" required>
             </label>
             <label>Check every (seconds)
               <input id="edit-interval" type="number" min="60" max="86400" step="1" required>
@@ -1396,7 +1460,8 @@
             <p class="muted small">Pick the provider this watch is for. A template defines what is checked and which URL it uses. Free-form watches are not available yet.</p>
             <div class="template-picker">
               <label for="template-search">Provider template
-                <input id="template-search" type="text" autocomplete="off" spellcheck="false"
+                <input id="template-search" name="template_search" type="text" autocomplete="off"
+                  autocorrect="off" autocapitalize="none" spellcheck="false"
                   placeholder="Search by provider or template"
                   role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
                   aria-controls="template-list" aria-expanded="false">
@@ -1463,8 +1528,8 @@
             <label>Name
               <input id="admin-create-name" type="text" maxlength="120" required placeholder="Cinema City Flora — IMAX">
             </label>
-            <label>HTTPS URL (any valid target or Cinema City film URL)
-              <input id="admin-create-url" type="url" required placeholder="https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX">
+            <label>HTTPS URL (any valid target, Cinema City film URL, or CineStar film URL)
+              <input id="admin-create-url" name="url" type="url" autocorrect="off" autocapitalize="none" spellcheck="false" required placeholder="https://www.cinemacity.cz/films/duna-cast-treti/8105s2r?cinema=1052&auditorium=IMAX">
             </label>
             <label>Check every (seconds)
               <input id="admin-create-interval" type="number" min="60" max="86400" step="1" value="3600" required>
@@ -1507,7 +1572,7 @@
               <input id="admin-edit-name" type="text" maxlength="120" required>
             </label>
             <label>HTTPS URL
-              <input id="admin-edit-url" type="url" required>
+              <input id="admin-edit-url" name="url" type="url" autocorrect="off" autocapitalize="none" spellcheck="false" required>
             </label>
             <label>Check every (seconds)
               <input id="admin-edit-interval" type="number" min="60" max="86400" step="1" required>
@@ -1555,6 +1620,7 @@
           if (auditorium) params.set("auditorium", auditorium);
           const date = (values.date || "").trim();
           if (date) params.set("date", date);
+          if (values.mode === "schedule") params.set("mode", "schedule");
           return "https://www.cinemacity.cz" + basePath + "?" + params.toString();
         }
 
@@ -1579,6 +1645,54 @@
           return "/films/" + encodeURIComponent(slug) + "/" + encodeURIComponent(id);
         }
 
+        const CINESTAR_CINEMAS = Object.freeze([
+          Object.freeze({ slug: "praha5", name: "Praha — Anděl" }),
+          Object.freeze({ slug: "praha9", name: "Praha — Černý Most" }),
+          Object.freeze({ slug: "hradec", name: "Hradec Králové" }),
+          Object.freeze({ slug: "plzen", name: "Plzeň" }),
+          Object.freeze({ slug: "ostrava", name: "Ostrava" }),
+          Object.freeze({ slug: "olomouc", name: "Olomouc" }),
+          Object.freeze({ slug: "liberec", name: "Liberec" }),
+          Object.freeze({ slug: "pardubice", name: "Pardubice" }),
+          Object.freeze({ slug: "budejovice-igy", name: "České Budějovice — IGY Centrum" }),
+          Object.freeze({ slug: "budejovice", name: "České Budějovice — Čtyři Dvory" }),
+          Object.freeze({ slug: "jihlava", name: "Jihlava" }),
+          Object.freeze({ slug: "boleslav", name: "Mladá Boleslav" }),
+          Object.freeze({ slug: "opava", name: "Opava" }),
+        ]);
+
+        function extractCineStarMovieSegment(raw) {
+          let parsed;
+          try {
+            parsed = new URL(raw);
+          } catch (_) {
+            return null;
+          }
+          const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+          if (parsed.protocol !== "https:" || (host !== "cinestar.cz" && host !== "www.cinestar.cz")) {
+            return null;
+          }
+          const segments = parsed.pathname.split("/").filter(Boolean);
+          let movieSeg = "";
+          if (segments.length >= 5 && (segments[0] === "cz" || segments[0] === "en") &&
+              (segments[2] === "filmy" || segments[2] === "movies") && segments[3] === "movie") {
+            movieSeg = segments[4];
+          } else if (segments.length >= 3 && (segments[0] === "filmy" || segments[0] === "movies") && segments[1] === "movie") {
+            movieSeg = segments[2];
+          }
+          if (!/^[0-9]{1,12}(?:-[A-Za-z0-9_-]{1,160})?$/.test(movieSeg)) return null;
+          return movieSeg;
+        }
+
+        function buildCineStarURL(cinemaSlug, movieSeg, values) {
+          const base = "https://cinestar.cz/cz/" + encodeURIComponent(cinemaSlug) + "/filmy/movie/" + movieSeg;
+          const params = new URLSearchParams();
+          if (values.date) params.set("date", values.date);
+          if (values.tag) params.set("tag", values.tag);
+          const q = params.toString();
+          return q ? base + "?" + q : base;
+        }
+
         function todayLocalISO() {
           const d = new Date();
           const yyyy = d.getFullYear();
@@ -1587,22 +1701,41 @@
           return yyyy + "-" + mm + "-" + dd;
         }
 
-        // UI-side catalogue for now. When templates become manageable (and tier
-        // aware), this should move behind an API and be fetched here instead.
+        // UI-side catalogue for now:
+        // - Kind 1 (capability: "seats"): Cinema City exposes live open seat ratios
+        //   without hacking and also supports schedule-only mode (&mode=schedule).
+        // - Kind 2 (capability: "schedule_only"): CineStar monitors whether a show
+        //   is scheduled on the programme (no seat-map or waiting-room scraping).
         const TEMPLATES = Object.freeze([
           Object.freeze({
             id: "cinemacity-flora-imax",
             kind: "cinemacity-flora-imax",
             provider: "cinemacity.cz",
+            capability: "seats",
+            capabilityBadge: "Seats + Schedule",
             title: "Cinema City Flora — IMAX",
-            description: "Pick an IMAX show at Cinema City Flora (or paste an upcoming film link) and optionally choose a screening date.",
+            description: "Monitors buyable open seats (or schedule release) for an IMAX show at Cinema City Flora, optionally on a specific date.",
             url: "https://www.cinemacity.cz/films/<slug>/<film-id>?cinema=1052&auditorium=IMAX",
+            defaultInterval: 3600,
+            fields: Object.freeze([]),
+          }),
+          Object.freeze({
+            id: "cinestar-schedule",
+            kind: "cinestar-schedule",
+            provider: "cinestar.cz",
+            capability: "schedule_only",
+            capabilityBadge: "Schedule only",
+            title: "CineStar — Show Schedule",
+            description: "Monitors CineStar's public programme for scheduled screenings on any or a specific date (no seat-map scraping).",
+            url: "https://cinestar.cz/cz/<cinema>/filmy/movie/<id>-<slug>",
             defaultInterval: 3600,
             fields: Object.freeze([]),
           }),
           Object.freeze({
             id: "example-com",
             provider: "Example.com",
+            capability: "http_status",
+            capabilityBadge: "HTTP 200",
             title: "Example.com availability",
             description: "Checks the example.com home page. HTTP 200 means the event is available.",
             url: "https://example.com/",
@@ -1654,6 +1787,8 @@
         const els = {
           notice: document.getElementById("notice"),
           subtitle: document.getElementById("subtitle"),
+          devPersona: document.getElementById("dev-persona"),
+          devPersonaSelect: document.getElementById("dev-persona-select"),
           account: document.getElementById("account"),
           accountEmail: document.getElementById("account-email"),
           signOut: document.getElementById("sign-out"),
@@ -1781,9 +1916,11 @@
             creating: false,
             nameTouched: false,
             floraState: null,
+            cinestarState: null,
           },
           floraShows: null,
           floraShowsLoading: false,
+          cinestarShowsByCinema: {},
         };
 
         function readThemePreference() {
@@ -1926,6 +2063,7 @@
           els.eventsPanel.hidden = true;
           els.adminPanel.hidden = true;
           els.viewSwitch.hidden = true;
+          els.devPersona.hidden = true;
           els.account.hidden = true;
           els.modeBadge.hidden = false;
           els.modeBadge.textContent = "private preview";
@@ -2071,7 +2209,66 @@
           }
         }
 
+        async function applyQueryImpersonation() {
+          const params = new URLSearchParams(window.location.search);
+          const asUser = (params.get("as") || "").trim();
+          const asRole = (params.get("role") || "").trim();
+          if (!asUser && !asRole) return;
+          params.delete("as");
+          params.delete("role");
+          const query = params.toString();
+          history.replaceState(null, "",
+            window.location.pathname + (query ? "?" + query : "") + window.location.hash);
+          try {
+            await api("/api/v1/dev/impersonate", {
+              method: "POST",
+              body: JSON.stringify({ user: asUser, role: asRole }),
+            });
+          } catch (_) {
+            /* Endpoint only exists when LOCAL_TEST_AUTH=true */
+          }
+        }
+
+        async function loadDevPersonas() {
+          if (!state.me || !state.me.local_test_auth) {
+            els.devPersona.hidden = true;
+            return;
+          }
+          try {
+            const data = await api("/api/v1/dev/users");
+            const users = data && Array.isArray(data.users) ? data.users : [];
+            const roles = data && Array.isArray(data.roles) ? data.roles : ["admin", "user", "vendor", "agent", "ai"];
+            const currentId = state.me.user ? state.me.user.id : "";
+
+            els.devPersonaSelect.replaceChildren();
+            const userGroup = document.createElement("optgroup");
+            userGroup.label = "Accounts";
+            for (const u of users) {
+              const opt = document.createElement("option");
+              opt.value = "user:" + u.id;
+              opt.textContent = (u.username || u.email || u.id) + " (" + u.role + (u.status !== "active" ? ", " + u.status : "") + ")";
+              if (u.id === currentId) opt.selected = true;
+              userGroup.append(opt);
+            }
+            els.devPersonaSelect.append(userGroup);
+
+            const roleGroup = document.createElement("optgroup");
+            roleGroup.label = "Quick role persona";
+            for (const r of roles) {
+              const opt = document.createElement("option");
+              opt.value = "role:" + r;
+              opt.textContent = "Act as role: " + r;
+              roleGroup.append(opt);
+            }
+            els.devPersonaSelect.append(roleGroup);
+            els.devPersona.hidden = false;
+          } catch (_) {
+            els.devPersona.hidden = true;
+          }
+        }
+
         async function boot() {
+          await applyQueryImpersonation();
           await load();
           if (state.authenticated && authErrorMessage) {
             showNotice(authErrorMessage, true);
@@ -2100,6 +2297,7 @@
           const me = state.me;
           if (!me) return;
           const local = Boolean(me.single_user);
+          const localTest = Boolean(me.local_test_auth);
           const admin = isAdminUser();
           if (!admin && state.view === "admin") state.view = "user";
           els.landing.hidden = true;
@@ -2110,18 +2308,29 @@
             button.setAttribute("aria-pressed", String(button.dataset.viewChoice === state.view));
           }
           els.modeBadge.hidden = false;
-          els.modeBadge.textContent = local ? "localhost only" : (admin ? "admin" : "signed in");
+          if (localTest) {
+            els.modeBadge.textContent = "local test · " + (me.user ? me.user.role : "user");
+          } else {
+            els.modeBadge.textContent = local ? "localhost only" : (admin ? "admin" : "signed in");
+          }
           els.subtitle.textContent = local
             ? "Ticket availability, single-user proof of concept."
             : "Ticket availability, without the refresh.";
-          els.accessNote.textContent = local
-            ? "Loopback only. Reach this page through the SSH tunnel."
-            : "Your watches are private to your account.";
-          els.account.hidden = local;
-          if (!local && me.user) {
+          els.accessNote.textContent = localTest
+            ? "Local headless test mode (LOCAL_TEST_AUTH=true). Switch roles in header or via X-Test-User / X-Test-Role."
+            : (local
+              ? "Loopback only. Reach this page through the SSH tunnel."
+              : "Your watches are private to your account.");
+          els.account.hidden = local || localTest;
+          if (!local && !localTest && me.user) {
             const label = me.user.email || me.user.display_name || me.user.username || "Signed in";
             els.accountEmail.textContent = label;
             els.accountEmail.title = "Signed in as " + label;
+          }
+          if (localTest) {
+            loadDevPersonas();
+          } else {
+            els.devPersona.hidden = true;
           }
           renderEmailChannelNote();
         }
@@ -2181,17 +2390,40 @@
           els.events.replaceChildren(...state.events.map(eventRow));
         }
 
-        function isCinemaCityWatch(raw) {
+        function inferCheckKind(event) {
+          if (event && event.check_kind) return event.check_kind;
           try {
-            const host = new URL(raw).hostname.toLowerCase();
-            return host === "www.cinemacity.cz" || host === "cinemacity.cz";
-          } catch (_) {
-            return false;
+            const u = new URL(event.url);
+            const host = u.hostname.toLowerCase();
+            if (host === "cinestar.cz" || host === "www.cinestar.cz") return "schedule";
+            if (host === "cinemacity.cz" || host === "www.cinemacity.cz") {
+              return u.searchParams.get("mode") === "schedule" ? "schedule" : "seats";
+            }
+          } catch (_) { /* ignore */ }
+          return "http_status";
+        }
+
+        function kindBadgeElement(kind) {
+          const badge = document.createElement("span");
+          if (kind === "seats") {
+            badge.className = "kind-badge seats";
+            badge.textContent = "Seats";
+            badge.title = "Kind 1 provider: checks buyable open seats";
+          } else if (kind === "schedule") {
+            badge.className = "kind-badge";
+            badge.textContent = "Schedule";
+            badge.title = "Checks whether matching screenings are scheduled on the programme";
+          } else {
+            badge.className = "kind-badge";
+            badge.textContent = "HTTP 200";
+            badge.title = "Generic HTTPS status check";
           }
+          return badge;
         }
 
         function eventRow(event) {
           const row = document.createElement("tr");
+          const kind = inferCheckKind(event);
 
           const statusCell = document.createElement("td");
           const pill = document.createElement("span");
@@ -2213,7 +2445,7 @@
           name.textContent = event.name;
           const added = document.createElement("div");
           added.className = "meta";
-          added.textContent = "Added " + relative(event.created_at);
+          added.append(kindBadgeElement(kind), document.createTextNode(" · Added " + relative(event.created_at)));
           added.title = absolute(event.created_at);
           nameCell.append(name, added);
           row.append(nameCell);
@@ -2241,11 +2473,16 @@
             detail.textContent = event.last_detail;
             if (!event.is_on) detail.className = "muted";
             checkCell.append(detail);
-          } else if (isCinemaCityWatch(event.url) && event.last_checked_at) {
+          } else if (kind === "seats" && event.last_checked_at) {
             const seats = document.createElement("div");
-            seats.textContent = event.is_on ? "Seats available" : "No seats available";
+            seats.textContent = event.is_on ? "Seats available" : "No open seats";
             if (!event.is_on) seats.className = "muted";
             checkCell.append(seats);
+          } else if (kind === "schedule" && event.last_checked_at) {
+            const sched = document.createElement("div");
+            sched.textContent = event.is_on ? "Scheduled" : "Not scheduled yet";
+            if (!event.is_on) sched.className = "muted";
+            checkCell.append(sched);
           } else if (event.last_status_code != null) {
             const code = document.createElement("div");
             code.textContent = "HTTP " + event.last_status_code;
@@ -2348,9 +2585,18 @@
           const card = document.createElement("div");
           card.className = "template-card";
 
+          const head = document.createElement("div");
+          head.className = "template-head";
           const provider = document.createElement("p");
           provider.className = "template-provider";
           provider.textContent = template.provider;
+          head.append(provider);
+          if (template.capabilityBadge) {
+            const cap = document.createElement("span");
+            cap.className = "kind-badge" + (template.capability === "seats" ? " seats" : "");
+            cap.textContent = template.capabilityBadge;
+            head.append(cap);
+          }
 
           const title = document.createElement("h3");
           title.textContent = template.title;
@@ -2362,7 +2608,7 @@
           url.className = "template-url";
           url.textContent = template.url;
 
-          card.append(provider, title, description, url);
+          card.append(head, title, description, url);
           return card;
         }
 
@@ -2411,15 +2657,24 @@
               els.templateSearch.setAttribute("aria-activedescendant", option.id);
             }
 
+            const head = document.createElement("span");
+            head.className = "template-head";
             const title = document.createElement("span");
             title.className = "option-title";
             title.textContent = template.provider + " — " + template.title;
+            head.append(title);
+            if (template.capabilityBadge) {
+              const cap = document.createElement("span");
+              cap.className = "kind-badge" + (template.capability === "seats" ? " seats" : "");
+              cap.textContent = template.capabilityBadge;
+              head.append(cap);
+            }
 
             const meta = document.createElement("span");
             meta.className = "option-meta";
             meta.textContent = template.description;
 
-            option.append(title, meta);
+            option.append(head, meta);
             els.templateList.append(option);
           }
 
@@ -2454,6 +2709,117 @@
           }
         }
 
+        async function ensureCineStarShows(cinemaSlug) {
+          const slug = (cinemaSlug || "praha5").toLowerCase();
+          if (Array.isArray(state.cinestarShowsByCinema[slug])) {
+            return state.cinestarShowsByCinema[slug];
+          }
+          try {
+            const data = await api("/api/v1/providers/cinestar/shows?cinema=" + encodeURIComponent(slug));
+            const shows = data && Array.isArray(data.shows) ? data.shows : [];
+            state.cinestarShowsByCinema[slug] = shows;
+            return shows;
+          } catch (_) {
+            return null;
+          }
+        }
+
+        function appendGroupedShowOptions(selectEl, shows, selectedUrl) {
+          const scheduled = [];
+          const upcoming = [];
+          for (const show of (shows || [])) {
+            if (show.scheduled === false) upcoming.push(show);
+            else scheduled.push(show);
+          }
+          const addOption = (parent, show) => {
+            const opt = document.createElement("option");
+            opt.value = show.url;
+            opt.dataset.filmName = show.name;
+            opt.textContent = formatShowOptionLabel(show);
+            if (selectedUrl === show.url) opt.selected = true;
+            parent.append(opt);
+          };
+          if (scheduled.length && upcoming.length) {
+            const schedGroup = document.createElement("optgroup");
+            schedGroup.label = "Currently scheduled";
+            for (const s of scheduled) addOption(schedGroup, s);
+            const soonGroup = document.createElement("optgroup");
+            soonGroup.label = "Coming soon (not scheduled yet)";
+            for (const s of upcoming) addOption(soonGroup, s);
+            selectEl.append(schedGroup, soonGroup);
+          } else {
+            for (const s of (shows || [])) addOption(selectEl, s);
+          }
+        }
+
+        function buildDateChoiceFieldset(prefix, saved) {
+          const dateFieldset = document.createElement("fieldset");
+          dateFieldset.className = "fieldset";
+          const legend = document.createElement("legend");
+          legend.textContent = "Screening date";
+          dateFieldset.append(legend);
+
+          const anyRow = document.createElement("div");
+          anyRow.className = "radio-row";
+          const anyRadio = document.createElement("input");
+          anyRadio.type = "radio";
+          anyRadio.id = prefix + "-date-any";
+          anyRadio.name = prefix + "_date_mode";
+          anyRadio.value = "any";
+          anyRadio.checked = saved.dateMode !== "specific";
+          const anyLabel = document.createElement("label");
+          anyLabel.setAttribute("for", prefix + "-date-any");
+          anyLabel.textContent = "Any upcoming date";
+          anyRow.append(anyRadio, anyLabel);
+
+          const specRow = document.createElement("div");
+          specRow.className = "radio-row";
+          const specRadio = document.createElement("input");
+          specRadio.type = "radio";
+          specRadio.id = prefix + "-date-specific";
+          specRadio.name = prefix + "_date_mode";
+          specRadio.value = "specific";
+          specRadio.checked = saved.dateMode === "specific";
+          const specLabel = document.createElement("label");
+          specLabel.setAttribute("for", prefix + "-date-specific");
+          specLabel.textContent = "Pick a specific date (e.g. 2026-12-21)";
+          specRow.append(specRadio, specLabel);
+
+          const datePickerWrap = document.createElement("div");
+          datePickerWrap.hidden = saved.dateMode !== "specific";
+          const dateLabel = document.createElement("label");
+          dateLabel.setAttribute("for", prefix + "-field-date");
+          dateLabel.textContent = "Date";
+          const dateInput = document.createElement("input");
+          dateInput.type = "date";
+          dateInput.id = prefix + "-field-date";
+          dateInput.name = "date";
+          dateInput.min = todayLocalISO();
+          dateInput.value = saved.date || "";
+          dateInput.required = saved.dateMode === "specific";
+          dateInput.setAttribute("aria-invalid", "false");
+          dateInput.addEventListener("input", () => {
+            saved.date = dateInput.value;
+            dateInput.setAttribute("aria-invalid", "false");
+          });
+          datePickerWrap.append(dateLabel, dateInput);
+
+          const syncDateMode = () => {
+            saved.dateMode = specRadio.checked ? "specific" : "any";
+            datePickerWrap.hidden = !specRadio.checked;
+            dateInput.required = specRadio.checked;
+            dateInput.setAttribute("aria-invalid", "false");
+            if (specRadio.checked && !dateInput.value) {
+              requestAnimationFrame(() => dateInput.focus());
+            }
+          };
+          anyRadio.addEventListener("change", syncDateMode);
+          specRadio.addEventListener("change", syncDateMode);
+
+          dateFieldset.append(anyRow, specRow, datePickerWrap);
+          return dateFieldset;
+        }
+
         function formatShowOptionLabel(show) {
           const suffix = [];
           if (show.release_date) suffix.push("from " + show.release_date);
@@ -2463,7 +2829,7 @@
 
         function renderFloraDetailsFields(resetFields) {
           const saved = resetFields || !state.wizard.floraState
-            ? { showUrl: "", customUrl: "", dateMode: "any", date: "" }
+            ? { showUrl: "", customUrl: "", checkMode: "seats", dateMode: "any", date: "" }
             : state.wizard.floraState;
           state.wizard.floraState = saved;
 
@@ -2478,6 +2844,7 @@
           showSelect.id = "template-field-show";
           showSelect.name = "show";
           showSelect.required = true;
+          showSelect.setAttribute("aria-invalid", "false");
 
           const customWrap = document.createElement("div");
           customWrap.id = "flora-custom-wrap";
@@ -2498,8 +2865,10 @@
           customInput.setAttribute("autocapitalize", "none");
           customInput.spellcheck = false;
           customInput.required = saved.showUrl === "__custom__";
+          customInput.setAttribute("aria-invalid", "false");
           customInput.addEventListener("input", () => {
             saved.customUrl = customInput.value;
+            customInput.setAttribute("aria-invalid", "false");
           });
           customWrap.append(customLabel, customInput);
 
@@ -2510,18 +2879,11 @@
             placeholder.disabled = true;
             placeholder.textContent = failed
               ? "Programme unavailable — choose custom URL below"
-              : "Choose an IMAX show…";
+              : "Choose an IMAX or coming-soon show…";
             placeholder.selected = !saved.showUrl;
             showSelect.append(placeholder);
 
-            for (const show of (shows || [])) {
-              const opt = document.createElement("option");
-              opt.value = show.url;
-              opt.dataset.filmName = show.name;
-              opt.textContent = formatShowOptionLabel(show);
-              if (saved.showUrl === show.url) opt.selected = true;
-              showSelect.append(opt);
-            }
+            appendGroupedShowOptions(showSelect, shows, saved.showUrl);
 
             const customOpt = document.createElement("option");
             customOpt.value = "__custom__";
@@ -2544,7 +2906,7 @@
             loadingOpt.value = "";
             loadingOpt.disabled = true;
             loadingOpt.selected = true;
-            loadingOpt.textContent = "Loading scheduled IMAX shows…";
+            loadingOpt.textContent = "Loading Cinema City Flora shows…";
             showSelect.append(loadingOpt);
             ensureFloraShows().then((shows) => {
               if (!els.wizard.open) return;
@@ -2554,6 +2916,7 @@
 
           showSelect.addEventListener("change", () => {
             saved.showUrl = showSelect.value;
+            showSelect.setAttribute("aria-invalid", "false");
             const isCustom = showSelect.value === "__custom__";
             customWrap.hidden = !isCustom;
             customInput.required = isCustom;
@@ -2569,69 +2932,223 @@
 
           showGroup.append(showLabel, showSelect, customWrap);
 
-          const dateFieldset = document.createElement("fieldset");
-          dateFieldset.className = "fieldset";
-          const legend = document.createElement("legend");
-          legend.textContent = "Screening date";
-          dateFieldset.append(legend);
+          const modeFieldset = document.createElement("fieldset");
+          modeFieldset.className = "fieldset";
+          const modeLegend = document.createElement("legend");
+          modeLegend.textContent = "What to monitor";
+          modeFieldset.append(modeLegend);
 
-          const anyRow = document.createElement("div");
-          anyRow.className = "radio-row";
-          const anyRadio = document.createElement("input");
-          anyRadio.type = "radio";
-          anyRadio.id = "flora-date-any";
-          anyRadio.name = "date_mode";
-          anyRadio.value = "any";
-          anyRadio.checked = saved.dateMode !== "specific";
-          const anyLabel = document.createElement("label");
-          anyLabel.setAttribute("for", "flora-date-any");
-          anyLabel.textContent = "Any upcoming date";
-          anyRow.append(anyRadio, anyLabel);
+          const seatsRow = document.createElement("div");
+          seatsRow.className = "radio-row";
+          const seatsRadio = document.createElement("input");
+          seatsRadio.type = "radio";
+          seatsRadio.id = "flora-mode-seats";
+          seatsRadio.name = "check_mode";
+          seatsRadio.value = "seats";
+          seatsRadio.checked = saved.checkMode !== "schedule";
+          const seatsLabel = document.createElement("label");
+          seatsLabel.setAttribute("for", "flora-mode-seats");
+          seatsLabel.textContent = "Buyable open seats (default)";
+          seatsRow.append(seatsRadio, seatsLabel);
 
-          const specRow = document.createElement("div");
-          specRow.className = "radio-row";
-          const specRadio = document.createElement("input");
-          specRadio.type = "radio";
-          specRadio.id = "flora-date-specific";
-          specRadio.name = "date_mode";
-          specRadio.value = "specific";
-          specRadio.checked = saved.dateMode === "specific";
-          const specLabel = document.createElement("label");
-          specLabel.setAttribute("for", "flora-date-specific");
-          specLabel.textContent = "Pick a specific date";
-          specRow.append(specRadio, specLabel);
+          const schedRow = document.createElement("div");
+          schedRow.className = "radio-row";
+          const schedRadio = document.createElement("input");
+          schedRadio.type = "radio";
+          schedRadio.id = "flora-mode-schedule";
+          schedRadio.name = "check_mode";
+          schedRadio.value = "schedule";
+          schedRadio.checked = saved.checkMode === "schedule";
+          const schedLabel = document.createElement("label");
+          schedLabel.setAttribute("for", "flora-mode-schedule");
+          schedLabel.textContent = "Show added to schedule (even if sold out or presale locked)";
+          schedRow.append(schedRadio, schedLabel);
 
-          const datePickerWrap = document.createElement("div");
-          datePickerWrap.hidden = saved.dateMode !== "specific";
-          const dateLabel = document.createElement("label");
-          dateLabel.setAttribute("for", "template-field-date");
-          dateLabel.textContent = "Date";
-          const dateInput = document.createElement("input");
-          dateInput.type = "date";
-          dateInput.id = "template-field-date";
-          dateInput.name = "date";
-          dateInput.min = todayLocalISO();
-          dateInput.value = saved.date || "";
-          dateInput.required = saved.dateMode === "specific";
-          dateInput.addEventListener("input", () => {
-            saved.date = dateInput.value;
-          });
-          datePickerWrap.append(dateLabel, dateInput);
-
-          const syncDateMode = () => {
-            saved.dateMode = specRadio.checked ? "specific" : "any";
-            datePickerWrap.hidden = !specRadio.checked;
-            dateInput.required = specRadio.checked;
-            if (specRadio.checked && !dateInput.value) {
-              requestAnimationFrame(() => dateInput.focus());
-            }
+          const syncCheckMode = () => {
+            saved.checkMode = schedRadio.checked ? "schedule" : "seats";
           };
-          anyRadio.addEventListener("change", syncDateMode);
-          specRadio.addEventListener("change", syncDateMode);
+          seatsRadio.addEventListener("change", syncCheckMode);
+          schedRadio.addEventListener("change", syncCheckMode);
+          modeFieldset.append(seatsRow, schedRow);
 
-          dateFieldset.append(anyRow, specRow, datePickerWrap);
+          const dateFieldset = buildDateChoiceFieldset("flora", saved);
 
-          els.templateFields.append(showGroup, dateFieldset);
+          els.templateFields.append(showGroup, modeFieldset, dateFieldset);
+          els.templateNoFields.hidden = true;
+        }
+
+        function renderCineStarDetailsFields(resetFields) {
+          const saved = resetFields || !state.wizard.cinestarState
+            ? { cinema: "praha5", showUrl: "", customUrl: "", tag: "", dateMode: "any", date: "" }
+            : state.wizard.cinestarState;
+          state.wizard.cinestarState = saved;
+
+          const note = document.createElement("p");
+          note.className = "provider-note";
+          note.textContent = "Schedule-only provider: checks whether screenings are published on CineStar's programme (e.g. \"Do they screen Dune 3 on 21/12?\"), without touching seat maps or queues.";
+
+          const cinemaWrap = document.createElement("div");
+          const cinemaLabel = document.createElement("label");
+          cinemaLabel.setAttribute("for", "cinestar-field-cinema");
+          cinemaLabel.textContent = "CineStar multiplex";
+          const cinemaSelect = document.createElement("select");
+          cinemaSelect.id = "cinestar-field-cinema";
+          cinemaSelect.name = "cinema";
+          for (const c of CINESTAR_CINEMAS) {
+            const opt = document.createElement("option");
+            opt.value = c.slug;
+            opt.textContent = c.name;
+            if (c.slug === saved.cinema) opt.selected = true;
+            cinemaSelect.append(opt);
+          }
+          cinemaWrap.append(cinemaLabel, cinemaSelect);
+
+          const showGroup = document.createElement("div");
+          showGroup.className = "stack";
+          const showLabel = document.createElement("label");
+          showLabel.setAttribute("for", "template-field-show");
+          showLabel.textContent = "Film / show";
+          const showSelect = document.createElement("select");
+          showSelect.id = "template-field-show";
+          showSelect.name = "show";
+          showSelect.required = true;
+          showSelect.setAttribute("aria-invalid", "false");
+
+          const customWrap = document.createElement("div");
+          customWrap.hidden = saved.showUrl !== "__custom__";
+          const customLabel = document.createElement("label");
+          customLabel.setAttribute("for", "cinestar-field-film_url");
+          customLabel.textContent = "CineStar film page URL";
+          const customInput = document.createElement("input");
+          customInput.type = "url";
+          customInput.id = "cinestar-field-film_url";
+          customInput.name = "film_url";
+          customInput.value = saved.customUrl || "";
+          customInput.placeholder = "https://cinestar.cz/cz/praha5/filmy/movie/10100-duna-cast-treti";
+          customInput.maxLength = 500;
+          customInput.setAttribute("autocorrect", "off");
+          customInput.setAttribute("autocapitalize", "none");
+          customInput.spellcheck = false;
+          customInput.required = saved.showUrl === "__custom__";
+          customInput.setAttribute("aria-invalid", "false");
+          customInput.addEventListener("input", () => {
+            saved.customUrl = customInput.value;
+            customInput.setAttribute("aria-invalid", "false");
+          });
+          customWrap.append(customLabel, customInput);
+
+          const populateShows = (shows, failed) => {
+            showSelect.replaceChildren();
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.disabled = true;
+            placeholder.textContent = failed
+              ? "Programme unavailable — choose custom URL below"
+              : "Choose a CineStar film…";
+            placeholder.selected = !saved.showUrl;
+            showSelect.append(placeholder);
+
+            appendGroupedShowOptions(showSelect, shows, saved.showUrl);
+
+            const customOpt = document.createElement("option");
+            customOpt.value = "__custom__";
+            customOpt.textContent = "Other / upcoming CineStar film URL…";
+            if (saved.showUrl === "__custom__" || (failed && !saved.showUrl)) {
+              customOpt.selected = true;
+              saved.showUrl = "__custom__";
+            }
+            showSelect.append(customOpt);
+
+            const isCustom = showSelect.value === "__custom__";
+            customWrap.hidden = !isCustom;
+            customInput.required = isCustom;
+          };
+
+          const refreshCinemaShows = () => {
+            const cached = state.cinestarShowsByCinema[saved.cinema];
+            if (Array.isArray(cached)) {
+              populateShows(cached, false);
+              return;
+            }
+            showSelect.replaceChildren();
+            const loadingOpt = document.createElement("option");
+            loadingOpt.value = "";
+            loadingOpt.disabled = true;
+            loadingOpt.selected = true;
+            loadingOpt.textContent = "Loading CineStar programme…";
+            showSelect.append(loadingOpt);
+            const targetCinema = saved.cinema;
+            ensureCineStarShows(targetCinema).then((shows) => {
+              if (!els.wizard.open || saved.cinema !== targetCinema) return;
+              populateShows(shows || [], shows === null);
+            });
+          };
+          refreshCinemaShows();
+
+          const updateAutoWatchName = () => {
+            if (state.wizard.nameTouched) return;
+            const cObj = CINESTAR_CINEMAS.find((c) => c.slug === saved.cinema);
+            const cLabel = cObj ? cObj.name : saved.cinema;
+            const selectedOption = showSelect.options[showSelect.selectedIndex];
+            const filmName = selectedOption && selectedOption.dataset ? selectedOption.dataset.filmName : "";
+            els.watchName.value = filmName
+              ? "CineStar " + cLabel + " — " + filmName
+              : "CineStar " + cLabel;
+          };
+
+          cinemaSelect.addEventListener("change", () => {
+            saved.cinema = cinemaSelect.value;
+            saved.showUrl = "";
+            refreshCinemaShows();
+            updateAutoWatchName();
+          });
+
+          showSelect.addEventListener("change", () => {
+            saved.showUrl = showSelect.value;
+            showSelect.setAttribute("aria-invalid", "false");
+            const isCustom = showSelect.value === "__custom__";
+            customWrap.hidden = !isCustom;
+            customInput.required = isCustom;
+            updateAutoWatchName();
+            if (isCustom) requestAnimationFrame(() => customInput.focus());
+          });
+
+          showGroup.append(showLabel, showSelect, customWrap);
+
+          const tagFieldset = document.createElement("fieldset");
+          tagFieldset.className = "fieldset";
+          const tagLegend = document.createElement("legend");
+          tagLegend.textContent = "Hall / format filter";
+          tagFieldset.append(tagLegend);
+          const tagChoices = [
+            ["", "Any format"],
+            ["GOLD CLASS", "Gold Class"],
+            ["TDL", "Theatre Deluxe (TDL)"],
+            ["Dolby Atmos", "Dolby Atmos"],
+          ];
+          for (const [val, labelText] of tagChoices) {
+            const row = document.createElement("div");
+            row.className = "radio-row";
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            const rid = "cinestar-tag-" + (val ? val.toLowerCase().replace(/\s+/g, "-") : "any");
+            radio.id = rid;
+            radio.name = "cinestar_tag";
+            radio.value = val;
+            radio.checked = (saved.tag || "") === val;
+            radio.addEventListener("change", () => {
+              if (radio.checked) saved.tag = val;
+            });
+            const lbl = document.createElement("label");
+            lbl.setAttribute("for", rid);
+            lbl.textContent = labelText;
+            row.append(radio, lbl);
+            tagFieldset.append(row);
+          }
+
+          const dateFieldset = buildDateChoiceFieldset("cinestar", saved);
+
+          els.templateFields.append(note, cinemaWrap, showGroup, tagFieldset, dateFieldset);
           els.templateNoFields.hidden = true;
         }
 
@@ -2648,6 +3165,13 @@
             els.templateSummary.replaceChildren(templateCard(template));
             els.templateFields.replaceChildren();
             renderFloraDetailsFields(resetFields);
+            return;
+          }
+
+          if (template.kind === "cinestar-schedule") {
+            els.templateSummary.replaceChildren(templateCard(template));
+            els.templateFields.replaceChildren();
+            renderCineStarDetailsFields(resetFields);
             return;
           }
 
@@ -2693,6 +3217,7 @@
           state.wizard.draft = null;
           state.wizard.nameTouched = false;
           state.wizard.floraState = null;
+          state.wizard.cinestarState = null;
           els.templateSearch.value = template.provider;
           els.watchName.value = template.title;
           els.watchInterval.value = String(template.defaultInterval);
@@ -2748,7 +3273,10 @@
             const showChoice = showSelect ? showSelect.value : "";
             if (!showChoice) {
               setStatus(els.wizardStatus, "Choose an IMAX show from the dropdown.", true);
-              if (showSelect) showSelect.focus();
+              if (showSelect) {
+                showSelect.setAttribute("aria-invalid", "true");
+                showSelect.focus();
+              }
               return null;
             }
             let basePath = "";
@@ -2758,7 +3286,10 @@
               basePath = extractCinemaCityFilmPath(rawCustom);
               if (!basePath) {
                 setStatus(els.wizardStatus, "Enter a valid Cinema City film page URL (https://www.cinemacity.cz/films/...).", true);
-                if (customInput) customInput.focus();
+                if (customInput) {
+                  customInput.setAttribute("aria-invalid", "true");
+                  customInput.focus();
+                }
                 return null;
               }
             } else {
@@ -2772,16 +3303,81 @@
             const specRadio = document.getElementById("flora-date-specific");
             let chosenDate = "";
             if (specRadio && specRadio.checked) {
-              const dateInput = document.getElementById("template-field-date");
+              const dateInput = document.getElementById("flora-field-date");
               chosenDate = dateInput ? dateInput.value.trim() : "";
               if (!/^\d{4}-\d{2}-\d{2}$/.test(chosenDate)) {
                 setStatus(els.wizardStatus, "Pick a valid screening date.", true);
-                if (dateInput) dateInput.focus();
+                if (dateInput) {
+                  dateInput.setAttribute("aria-invalid", "true");
+                  dateInput.focus();
+                }
                 return null;
               }
             }
 
-            const url = buildCinemaCityURL(basePath, { auditorium: "IMAX", date: chosenDate });
+            const schedModeRadio = document.getElementById("flora-mode-schedule");
+            const checkMode = schedModeRadio && schedModeRadio.checked ? "schedule" : "seats";
+            const url = buildCinemaCityURL(basePath, { auditorium: "IMAX", date: chosenDate, mode: checkMode });
+            return {
+              name,
+              url,
+              check_interval_seconds: interval,
+              enabled: els.watchEnabled.checked,
+            };
+          }
+
+          if (template.kind === "cinestar-schedule") {
+            const cinemaSelect = document.getElementById("cinestar-field-cinema");
+            const cinemaSlug = cinemaSelect ? cinemaSelect.value : "praha5";
+            const showSelect = document.getElementById("template-field-show");
+            const showChoice = showSelect ? showSelect.value : "";
+            if (!showChoice) {
+              setStatus(els.wizardStatus, "Choose a CineStar film from the dropdown.", true);
+              if (showSelect) {
+                showSelect.setAttribute("aria-invalid", "true");
+                showSelect.focus();
+              }
+              return null;
+            }
+            let movieSeg = "";
+            if (showChoice === "__custom__") {
+              const customInput = document.getElementById("cinestar-field-film_url");
+              const rawCustom = customInput ? customInput.value.trim() : "";
+              movieSeg = extractCineStarMovieSegment(rawCustom);
+              if (!movieSeg) {
+                setStatus(els.wizardStatus, "Enter a valid CineStar film URL (https://cinestar.cz/cz/<cinema>/filmy/movie/<id>-<slug>).", true);
+                if (customInput) {
+                  customInput.setAttribute("aria-invalid", "true");
+                  customInput.focus();
+                }
+                return null;
+              }
+            } else {
+              movieSeg = extractCineStarMovieSegment(showChoice);
+              if (!movieSeg) {
+                setStatus(els.wizardStatus, "Selected CineStar film URL is not valid.", true);
+                return null;
+              }
+            }
+
+            const specRadio = document.getElementById("cinestar-date-specific");
+            let chosenDate = "";
+            if (specRadio && specRadio.checked) {
+              const dateInput = document.getElementById("cinestar-field-date");
+              chosenDate = dateInput ? dateInput.value.trim() : "";
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(chosenDate)) {
+                setStatus(els.wizardStatus, "Pick a valid screening date.", true);
+                if (dateInput) {
+                  dateInput.setAttribute("aria-invalid", "true");
+                  dateInput.focus();
+                }
+                return null;
+              }
+            }
+
+            const checkedTag = els.templateFields.querySelector('input[name="cinestar_tag"]:checked');
+            const chosenTag = checkedTag ? checkedTag.value : "";
+            const url = buildCineStarURL(cinemaSlug, movieSeg, { date: chosenDate, tag: chosenTag });
             return {
               name,
               url,
@@ -2828,8 +3424,14 @@
             ? "One message when the event goes from off to on."
             : "Email is not configured on the server; this watch will be created without notifications.";
 
+          const draftKind = inferCheckKind({ url: draft.url });
+          const modeLabel = draftKind === "seats"
+            ? "Buyable open seats (Kind 1)"
+            : (draftKind === "schedule" ? "Show schedule presence (Kind 2 / schedule)" : "HTTP 200 status");
+
           const rows = [
             ["Template", template.provider + " — " + template.title],
+            ["Check mode", modeLabel],
             ["Watch name", draft.name],
             ["URL", draft.url],
             ["Check every", every(draft.check_interval_seconds)],
@@ -2912,6 +3514,7 @@
             creating: false,
             nameTouched: false,
             floraState: null,
+            cinestarState: null,
           };
           els.wizardForm.reset();
           els.templateSearch.value = "";
@@ -3191,6 +3794,32 @@
 
         els.signOut.addEventListener("click", signOut);
 
+        els.devPersonaSelect.addEventListener("change", async () => {
+          const val = els.devPersonaSelect.value || "";
+          let payload = null;
+          if (val.startsWith("user:")) {
+            payload = { user: val.slice(5) };
+          } else if (val.startsWith("role:")) {
+            const role = val.slice(5);
+            payload = { user: role === "admin" ? "admin" : ("test-" + role), role };
+          }
+          if (!payload) return;
+          els.devPersonaSelect.disabled = true;
+          try {
+            const res = await api("/api/v1/dev/impersonate", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+            const switched = res && res.user ? (res.user.username || res.user.email || res.user.role) : payload.user;
+            showNotice("Switched local test persona to " + switched + ".");
+            await load();
+          } catch (err) {
+            showNotice(err.message, true);
+          } finally {
+            els.devPersonaSelect.disabled = false;
+          }
+        });
+
         // --- Admin console ---
 
         async function loadAdmin() {
@@ -3311,7 +3940,10 @@
           title.textContent = w.name;
           const owner = document.createElement("div");
           owner.className = "meta";
-          owner.textContent = (w.owner_email || w.owner_username || w.owner_id) + " (" + w.owner_role + ")";
+          owner.append(
+            kindBadgeElement(inferCheckKind(w)),
+            document.createTextNode(" · " + (w.owner_email || w.owner_username || w.owner_id) + " (" + w.owner_role + ")"),
+          );
           nameCell.append(title, owner);
           if (w.last_error) {
             const e = document.createElement("div");

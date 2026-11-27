@@ -15,6 +15,7 @@ type meResponse struct {
 	Session              *sessionResponse    `json:"session,omitempty"`
 	Providers            []string            `json:"providers"`
 	SingleUser           bool                `json:"single_user"`
+	LocalTestAuth        bool                `json:"local_test_auth,omitempty"`
 	NotificationsEnabled bool                `json:"notifications_enabled"`
 }
 
@@ -64,6 +65,18 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 			Usage:                usageResponse{ActiveWatches: active},
 			Providers:            []string{},
 			SingleUser:           true,
+			NotificationsEnabled: s.notificationsEnabled(),
+		})
+		return
+	}
+	if principal.AuthKind == "local_test" {
+		writeJSON(w, http.StatusOK, meResponse{
+			User:                 principal.User,
+			Plan:                 planResponse{Code: principal.Entitlements.PlanCode},
+			Entitlements:         principal.Entitlements,
+			Usage:                usageResponse{ActiveWatches: active},
+			Providers:            []string{},
+			LocalTestAuth:        true,
 			NotificationsEnabled: s.notificationsEnabled(),
 		})
 		return

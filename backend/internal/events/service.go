@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers"
 	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinemacity"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers/cinestar"
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
 	"github.com/ondrej-li/DropPulse/backend/internal/watch"
 )
@@ -43,6 +45,12 @@ type Checker interface {
 // currently scheduled Cinema City films.
 type CinemaCityCatalogue interface {
 	ListCinemaCityFilms(ctx context.Context, cinemaID, attr string) ([]cinemacity.Film, error)
+}
+
+// CineStarCatalogue is an optional capability on Checker for listing
+// scheduled and upcoming CineStar films.
+type CineStarCatalogue interface {
+	ListCineStarFilms(ctx context.Context, cinemaSlug string) ([]cinestar.Film, error)
 }
 
 // Mailer sends one availability email.
@@ -104,12 +112,24 @@ func (s *Service) Admin() domain.User { return s.admin }
 
 // List returns the user's events.
 func (s *Service) List(ctx context.Context, userID string) ([]domain.Event, error) {
-	return s.repo.ListEvents(ctx, userID)
+	list, err := s.repo.ListEvents(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		list[i].CheckKind = providers.ClassifyURL(list[i].URL)
+	}
+	return list, nil
 }
 
 // Get returns one event belonging to the user.
 func (s *Service) Get(ctx context.Context, userID, id string) (domain.Event, error) {
-	return s.repo.GetEvent(ctx, userID, id)
+	ev, err := s.repo.GetEvent(ctx, userID, id)
+	if err != nil {
+		return domain.Event{}, err
+	}
+	ev.CheckKind = providers.ClassifyURL(ev.URL)
+	return ev, nil
 }
 
 // CountActive returns the number of enabled events.
@@ -123,7 +143,12 @@ func (s *Service) Create(ctx context.Context, userID string, input domain.EventI
 	if err != nil {
 		return domain.Event{}, err
 	}
-	return s.repo.CreateEvent(ctx, userID, validated)
+	ev, err := s.repo.CreateEvent(ctx, userID, validated)
+	if err != nil {
+		return domain.Event{}, err
+	}
+	ev.CheckKind = providers.ClassifyURL(ev.URL)
+	return ev, nil
 }
 
 // Update validates and replaces an event's editable fields.
@@ -132,7 +157,12 @@ func (s *Service) Update(ctx context.Context, userID, id string, input domain.Ev
 	if err != nil {
 		return domain.Event{}, err
 	}
-	return s.repo.UpdateEvent(ctx, userID, id, validated)
+	ev, err := s.repo.UpdateEvent(ctx, userID, id, validated)
+	if err != nil {
+		return domain.Event{}, err
+	}
+	ev.CheckKind = providers.ClassifyURL(ev.URL)
+	return ev, nil
 }
 
 // Delete removes an event.
@@ -160,6 +190,15 @@ func (s *Service) ListCinemaCityShows(ctx context.Context, cinemaID, attr string
 		return []cinemacity.Film{}, nil
 	}
 	return cat.ListCinemaCityFilms(ctx, cinemaID, attr)
+}
+
+// ListCineStarShows returns scheduled and upcoming CineStar films for a cinema slug.
+func (s *Service) ListCineStarShows(ctx context.Context, cinemaSlug string) ([]cinestar.Film, error) {
+	cat, ok := s.checker.(CineStarCatalogue)
+	if !ok {
+		return []cinestar.Film{}, nil
+	}
+	return cat.ListCineStarFilms(ctx, cinemaSlug)
 }
 
 // CheckNow checks one event immediately, outside the scheduler.
@@ -203,7 +242,12 @@ func (s *Service) DryRunCheck(ctx context.Context, id string) (domain.DryRunResu
 			isOn = *result.Available
 		}
 	}
+	kind := result.CheckKind
+	if kind == "" {
+		kind = providers.ClassifyURL(event.URL)
+	}
 	out := domain.DryRunResult{
+		CheckKind:         kind,
 		Outcome:           outcome,
 		IsOn:              isOn,
 		Available:         result.Available,
@@ -324,6 +368,7 @@ func (s *Service) check(ctx context.Context, eventID string, paced bool, trigger
 	if err != nil {
 		return domain.Event{}, err
 	}
+	updated.CheckKind = providers.ClassifyURL(updated.URL)
 
 	if updated.IsOn && !updated.NotifiedOn && updated.Enabled && s.mailer != nil {
 		notificationErr := ""
@@ -335,6 +380,7 @@ func (s *Service) check(ctx context.Context, eventID string, paced bool, trigger
 			s.logger.Error("record notification result", "event_id", updated.ID, "err", err)
 		} else if refreshed, err := s.repo.GetEventByID(ctx, updated.ID); err == nil {
 			updated = refreshed
+			updated.CheckKind = providers.ClassifyURL(updated.URL)
 		}
 	}
 

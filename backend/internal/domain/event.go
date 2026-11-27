@@ -20,12 +20,25 @@ const (
 	OutcomeBlocked CheckOutcome = "blocked"
 )
 
+// CheckKind describes what an availability check evaluates for a target URL.
+type CheckKind string
+
+const (
+	// CheckKindSeats checks that a future screening has buyable open seats.
+	CheckKindSeats CheckKind = "seats"
+	// CheckKindSchedule checks only whether a matching screening is scheduled.
+	CheckKindSchedule CheckKind = "schedule"
+	// CheckKindHTTPStatus checks generic HTTPS 200 reachability.
+	CheckKindHTTPStatus CheckKind = "http_status"
+)
+
 // Event is one watched availability page.
 type Event struct {
 	ID                   string       `json:"id"`
 	UserID               string       `json:"-"`
 	Name                 string       `json:"name"`
 	URL                  string       `json:"url"`
+	CheckKind            CheckKind    `json:"check_kind,omitempty"`
 	CheckIntervalSeconds int          `json:"check_interval_seconds"`
 	Enabled              bool         `json:"enabled"`
 	IsOn                 bool         `json:"is_on"`

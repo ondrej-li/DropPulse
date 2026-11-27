@@ -10,6 +10,7 @@ import (
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
 	"github.com/ondrej-li/DropPulse/backend/internal/events"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers"
 	"github.com/ondrej-li/DropPulse/backend/internal/store"
 )
 
@@ -89,6 +90,9 @@ func (s *Server) handleAdminListWatchers(w http.ResponseWriter, r *http.Request)
 		internalError(w)
 		return
 	}
+	for i := range list {
+		list[i].CheckKind = providers.ClassifyURL(list[i].URL)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"watchers": list})
 }
 
@@ -147,6 +151,7 @@ func (s *Server) handleAdminCreateWatcher(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusCreated, created)
 		return
 	}
+	watcher.CheckKind = providers.ClassifyURL(watcher.URL)
 	writeJSON(w, http.StatusCreated, watcher)
 }
 
@@ -161,6 +166,7 @@ func (s *Server) handleAdminGetWatcher(w http.ResponseWriter, r *http.Request) {
 		s.writeEventError(w, r, err)
 		return
 	}
+	watcher.CheckKind = providers.ClassifyURL(watcher.URL)
 	limit := parseLimitQuery(r, 50, 200)
 	checks, err := s.adminStore.ListEventChecks(r.Context(), id, limit)
 	if err != nil {
@@ -200,6 +206,7 @@ func (s *Server) handleAdminUpdateWatcher(w http.ResponseWriter, r *http.Request
 		s.writeEventError(w, r, err)
 		return
 	}
+	updated.CheckKind = providers.ClassifyURL(updated.URL)
 	s.audit(r, principal.User.ID, "update_watcher", updated.ID, map[string]any{
 		"name":     updated.Name,
 		"url":      updated.URL,
@@ -282,6 +289,7 @@ func (s *Server) handleAdminFetchWatcher(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusOK, map[string]any{"dry_run": false, "watcher": checked})
 		return
 	}
+	watcher.CheckKind = providers.ClassifyURL(watcher.URL)
 	writeJSON(w, http.StatusOK, map[string]any{"dry_run": false, "watcher": watcher})
 }
 
@@ -310,6 +318,7 @@ func (s *Server) handleAdminResetBackoff(w http.ResponseWriter, r *http.Request)
 		s.writeEventError(w, r, err)
 		return
 	}
+	updated.CheckKind = providers.ClassifyURL(updated.URL)
 	s.audit(r, principal.User.ID, "reset_backoff", updated.ID, map[string]any{"enable": enable})
 	writeJSON(w, http.StatusOK, updated)
 }

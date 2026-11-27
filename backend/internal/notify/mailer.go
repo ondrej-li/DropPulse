@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ondrej-li/DropPulse/backend/internal/domain"
+	"github.com/ondrej-li/DropPulse/backend/internal/providers"
 )
 
 // SMTPConfig describes an SMTP submission endpoint.
@@ -324,10 +325,19 @@ func (m *Mailer) buildMessage(event domain.Event, uiURL string) []byte {
 	now := m.now().UTC()
 	name := headerSafe(event.Name)
 	to := m.recipient(event)
+	kind := event.CheckKind
+	if kind == "" {
+		kind = providers.ClassifyURL(event.URL)
+	}
 	subject := "DropPulse: " + name + " is on"
 	status := "availability confirmed"
-	if event.LastStatusCode != nil {
+	switch {
+	case event.LastStatusCode != nil:
 		status = fmt.Sprintf("HTTP %d", *event.LastStatusCode)
+	case kind == domain.CheckKindSchedule:
+		status = "show scheduled"
+	case kind == domain.CheckKindSeats:
+		status = "seats available"
 	}
 	if detail := strings.TrimSpace(headerSafe(event.LastDetail)); detail != "" {
 		status += " — " + detail

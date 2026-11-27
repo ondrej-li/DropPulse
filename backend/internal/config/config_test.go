@@ -410,3 +410,76 @@ func TestLoadSMTPValidation(t *testing.T) {
 		t.Fatalf("unauthenticated loopback SMTP should be allowed: %v", err)
 	}
 }
+
+func TestLoadLocalTestAuthGuards(t *testing.T) {
+	t.Run("valid memory store with local test auth", func(t *testing.T) {
+		env := map[string]string{
+			"DATABASE_URL":    "memory://",
+			"LOCAL_TEST_AUTH": "true",
+			"PORT":            "18080",
+		}
+		cfg, err := LoadFrom(envLookup(env))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !cfg.LocalTestAuth || !cfg.UsesMemoryStore() {
+			t.Fatalf("expected LocalTestAuth and UsesMemoryStore: %+v", cfg)
+		}
+		for _, origin := range []string{"http://localhost:18080", "http://127.0.0.1:18080"} {
+			if !cfg.OriginAllowed(origin) {
+				t.Errorf("loopback origin %q should be allowed", origin)
+			}
+		}
+	})
+
+	rejectCases := []struct {
+		name string
+		env  map[string]string
+	}{
+		{
+			name: "memory store without local test auth",
+			env:  map[string]string{"DATABASE_URL": "memory://"},
+		},
+		{
+			name: "local test auth in production",
+			env: map[string]string{
+				"DATABASE_URL":    "postgres://localhost/dp",
+				"APP_ENV":         "production",
+				"LOCAL_TEST_AUTH": "true",
+				"ALLOWED_EMAILS":  "admin@example.com",
+			},
+		},
+		{
+			name: "local test auth on wildcard bind",
+			env: map[string]string{
+				"DATABASE_URL":    "postgres://localhost/dp",
+				"LOCAL_TEST_AUTH": "true",
+				"BIND_ADDR":       "0.0.0.0",
+			},
+		},
+		{
+			name: "local test auth with https public api",
+			env: map[string]string{
+				"DATABASE_URL":    "postgres://localhost/dp",
+				"LOCAL_TEST_AUTH": "true",
+				"PUBLIC_API_URL":  "https://dp.example.com",
+				"WEB_APP_URL":     "https://dp.example.com",
+			},
+		},
+		{
+			name: "local test auth combined with single user mode",
+			env: map[string]string{
+				"DATABASE_URL":     "postgres://localhost/dp",
+				"LOCAL_TEST_AUTH":  "true",
+				"SINGLE_USER_MODE": "true",
+			},
+		},
+	}
+	for _, tc := range rejectCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := LoadFrom(envLookup(tc.env)); err == nil {
+				t.Fatalf("case %q must be rejected", tc.name)
+			}
+		})
+	}
+}

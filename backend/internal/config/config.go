@@ -70,6 +70,12 @@ type Config struct {
 	SingleUserName string
 	FrontendFile   string
 
+	// LocalTestAuth enables loopback-only headless testing and multi-role/user
+	// impersonation (via X-Test-User / X-Test-Role headers or /api/v1/dev/*).
+	// It is strictly refused in production, on non-loopback listeners, on https
+	// public origins, and on any proxied request.
+	LocalTestAuth bool
+
 	// Notifications are optional. A fixed NotificationEmail is a single-user
 	// convenience; in multi-user mode mail goes to the verified address on the
 	// event owner's account. Mail is submitted over SMTP when SMTP_HOST is set
@@ -154,6 +160,26 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	if cfg.SingleUserMode && !bindIP.IsLoopback() {
 		return Config{}, errors.New("SINGLE_USER_MODE requires BIND_ADDR to be a loopback address")
 	}
+	if value := get("LOCAL_TEST_AUTH"); value != "" {
+		cfg.LocalTestAuth, err = strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, errors.New("LOCAL_TEST_AUTH must be true or false")
+		}
+	}
+	if cfg.LocalTestAuth {
+		if cfg.SingleUserMode {
+			return Config{}, errors.New("set only one of LOCAL_TEST_AUTH and SINGLE_USER_MODE")
+		}
+		if cfg.Environment == "production" {
+			return Config{}, errors.New("LOCAL_TEST_AUTH cannot be enabled when APP_ENV=production")
+		}
+		if !bindIP.IsLoopback() {
+			return Config{}, errors.New("LOCAL_TEST_AUTH requires BIND_ADDR to be a loopback address")
+		}
+	}
+	if cfg.UsesMemoryStore() && !cfg.LocalTestAuth {
+		return Config{}, errors.New("DATABASE_URL=memory:// is only supported when LOCAL_TEST_AUTH=true")
+	}
 	cfg.SingleUserName, err = parseUsername(getDefault("SINGLE_USER_NAME", defaultSingleUserName))
 	if err != nil {
 		return Config{}, err
@@ -165,7 +191,7 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	webDefault := defaultWebAppURL
-	if cfg.SingleUserMode || cfg.FrontendFile != "" {
+	if cfg.SingleUserMode || cfg.LocalTestAuth || cfg.FrontendFile != "" {
 		// The frontend is served by the API, so the browser's origin is the
 		// API origin unless an operator explicitly says otherwise.
 		webDefault = cfg.PublicAPIURL.String()
@@ -179,6 +205,9 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 	}
 	if cfg.WebAppURL.Scheme == "http" && !isLoopbackURL(cfg.WebAppURL) {
 		return Config{}, errors.New("WEB_APP_URL must use https unless it points at localhost")
+	}
+	if cfg.LocalTestAuth && (cfg.PublicAPIURL.Scheme != "http" || !isLoopbackURL(cfg.PublicAPIURL) || cfg.WebAppURL.Scheme != "http" || !isLoopbackURL(cfg.WebAppURL)) {
+		return Config{}, errors.New("LOCAL_TEST_AUTH requires loopback http:// PUBLIC_API_URL and WEB_APP_URL")
 	}
 	cfg.CookieSecure = cfg.PublicAPIURL.Scheme == "https"
 
@@ -196,7 +225,7 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 			}
 		}
 	}
-	if cfg.SingleUserMode && cfg.PublicAPIURL.Scheme == "http" {
+	if (cfg.SingleUserMode || cfg.LocalTestAuth) && cfg.PublicAPIURL.Scheme == "http" {
 		// The local UI may be opened as localhost, 127.0.0.1 or ::1 through the
 		// same tunnel. All three are loopback; none of them is a remote origin.
 		port := cfg.PublicAPIURL.Port()
@@ -301,8 +330,8 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	if raw := get("NOTIFICATION_EMAIL"); raw != "" {
-		if !cfg.SingleUserMode {
-			return Config{}, errors.New("NOTIFICATION_EMAIL is only supported with SINGLE_USER_MODE")
+		if !cfg.SingleUserMode && !cfg.LocalTestAuth {
+			return Config{}, errors.New("NOTIFICATION_EMAIL is only supported with SINGLE_USER_MODE or LOCAL_TEST_AUTH")
 		}
 		cfg.NotificationEmail, err = parseMailbox(raw, "NOTIFICATION_EMAIL")
 		if err != nil {
@@ -332,6 +361,13 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 func (c Config) Provider(name string) (ProviderConfig, bool) {
 	p, ok := c.Providers[strings.ToLower(strings.TrimSpace(name))]
 	return p, ok
+}
+
+// UsesMemoryStore reports whether DATABASE_URL selects the ephemeral in-memory
+// repository used for zero-Postgres local headless testing.
+func (c Config) UsesMemoryStore() bool {
+	raw := strings.ToLower(strings.TrimSpace(c.DatabaseURL))
+	return raw == "memory://" || raw == "memory"
 }
 
 // ProviderNames returns the configured provider names in a stable order.
