@@ -149,9 +149,34 @@
 
       .brand {
         display: flex;
-        align-items: center;
-        gap: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
         min-width: 0;
+      }
+
+      a.brand-home {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+        border-radius: 12px;
+        transition: color 0.15s ease;
+      }
+
+      a.brand-home:hover {
+        color: var(--accent);
+      }
+
+      a.brand-home:hover .brand-mark {
+        transform: translateY(-1px);
+      }
+
+      a.brand-home:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 4px;
       }
 
       .brand-mark {
@@ -165,6 +190,7 @@
         background: linear-gradient(135deg, var(--mark-1), var(--mark-2));
         color: var(--mark-ink);
         box-shadow: 0 8px 22px var(--glow);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
       }
 
       .brand-mark svg {
@@ -193,7 +219,7 @@
       }
 
       .sub {
-        margin: 3px 0 0;
+        margin: 0;
         color: var(--muted);
         font-size: 0.86rem;
       }
@@ -1216,16 +1242,16 @@
     <div class="wrap">
       <header>
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
-              <path d="M6 17h5l2.6-6.2L18.4 23l2.6-6H26" stroke="currentColor" stroke-width="2.4"
-                stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <div>
+          <a id="brand-home" class="brand-home" href="/">
+            <span class="brand-mark" aria-hidden="true">
+              <svg aria-hidden="true" viewBox="0 0 32 32" fill="none">
+                <path d="M6 17h5l2.6-6.2L18.4 23l2.6-6H26" stroke="currentColor" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
             <h1>DropPulse</h1>
-            <p class="sub" id="subtitle">Ticket availability, without the refresh.</p>
-          </div>
+          </a>
+          <p class="sub" id="subtitle">Ticket availability, without the refresh.</p>
         </div>
         <div class="header-tools">
           <div id="view-switch" class="theme-switch" role="group" aria-label="Workspace view" hidden>

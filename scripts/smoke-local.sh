@@ -42,6 +42,12 @@ for _ in $(seq 1 40); do
   sleep 0.25
 done
 curl -fsS "${BASE}/healthz" | grep -q '"ok"'
+curl -fsS "${BASE}/app/" | python3 -c '
+import re, sys
+html = sys.stdin.read()
+m = re.search(r"<a\b[^>]*id=\"brand-home\"[^>]*href=\"/\"[^>]*>(.*?)</a>", html, re.S)
+assert m and "brand-mark" in m.group(1) and "<h1>DropPulse</h1>" in m.group(1), "brand-home link missing icon or DropPulse text"
+'
 
 echo "[1/6] Verify default admin persona & seeded local accounts..."
 curl -fsS "${BASE}/api/v1/me" | python3 -c '
